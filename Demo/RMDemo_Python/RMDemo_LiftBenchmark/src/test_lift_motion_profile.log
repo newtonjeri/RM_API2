@@ -1,0 +1,69 @@
+
+========================================================================
+  Script : test_lift_motion_profile.py
+  Log    : test_lift_motion_profile.log
+  Started: 2026-05-21 21:24:07
+========================================================================
+========================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+========================================================================
+test_lift_motion_profile.py -- Q2: commanded vs actual velocity
+Trajectory: lift_trajectory.json
+========================================================================
+
+  [INFO] 25 waypoints  t=0..2.4s  75mm -> 290mm
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Homing to 75 mm (blocking) ...
+  [INFO] Replaying 25 waypoints ...
+  [INFO] Dispatch done  errors=0
+  [INFO] Waiting 4 s for final motion ...
+  [INFO] 1281 UDP samples captured
+
+  Velocity window: 100 ms  |  resolution ~10 mm/s
+
+    #   t_sched   cmd_mm   cmd_%   udp_mm   vel(mm/s)   err(mm)
+  ------------------------------------------------------------
+    0      0.00       75       1     75.0         0.0      +0.0
+    1      0.10       78      50     75.0         0.0      -3.0
+    2      0.20       85     100     75.0         0.0     -10.0
+    3      0.30       95     100     75.0         0.0     -20.0
+    4      0.40      105     100     75.0        15.0     -30.0
+    5      0.50      115     100     76.5         0.0     -38.5
+    6      0.60      125     100     76.5         0.0     -48.5
+    7      0.70      135     100     76.5        15.0     -58.5
+    8      0.80      145     100     79.5        29.9     -65.5
+    9      0.90      155     100     84.0        45.1     -71.0
+   10      1.00      165     100     88.5        59.9     -76.5
+   11      1.10      175     100     93.0        29.8     -82.0
+   12      1.20      185     100     96.0        30.2     -89.0
+   13      1.30      195     100     97.5         0.0     -97.5
+   14      1.40      205     100     97.5         0.0    -107.5
+   15      1.50      215     100     99.0        14.9    -116.0
+   16      1.60      225     100    100.5        30.2    -124.5
+   17      1.70      235     100    103.5        44.7    -131.5
+   18      1.80      245     100    111.0        75.3    -134.0
+   19      1.90      255     100    118.5       105.5    -136.5
+   20      2.00      265     100    129.0       104.4    -136.0
+   21      2.10      275     100    139.5       105.0    -135.5
+   22      2.20      285     100    150.0        90.5    -135.0
+   23      2.30      290      50    159.0        89.5    -131.0
+   24      2.40      290       1    166.5        60.3    -123.5
+
+  -- Profile summary ----------------------------------------------------
+  Motor-start latency                : 363 ms
+  Peak velocity (UDP)                : 120.8 mm/s
+  Acceleration phase                 : 1660 ms
+  Profile shape                      : trapezoidal (linear ramp)  mid-dev=+0.1 mm/s
+  Mean / max tracking error          : 84.0 / 136.5 mm
+  Trajectory file                    : lift_trajectory.json
+  API errors                         : 0
+
+  [PASS] All 25 waypoints dispatched ret=0
+  [PASS] Motor moved during trajectory  (peak=120.8 mm/s)
+  [PASS] Motor-start latency <= 500ms  (363 ms)
+  [FAIL] Max tracking error <= 30 mm  (136.5 mm)
+------------------------------------------------------------------------
+Results:  PASS=3  FAIL=1  SKIP=0
+------------------------------------------------------------------------

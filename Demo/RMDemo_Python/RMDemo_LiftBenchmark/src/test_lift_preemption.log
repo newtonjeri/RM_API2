@@ -1,0 +1,172 @@
+
+========================================================================
+  Script : test_lift_preemption.py
+  Log    : test_lift_preemption.log
+  Started: 2026-05-21 21:24:53
+========================================================================
+========================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+========================================================================
+test_lift_preemption.py -- Q3: MoveIt trajectory preemption
+Trajectory: lift_trajectory.json
+========================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  ------------------------------------------------------------
+  T1 -- early  (~20mm in)   inject_delay=0.3 s
+  ------------------------------------------------------------
+  [INFO] Homing to 75 mm (blocking) ...
+  [INFO] Replaying TRAJECTORY (75->290 mm) ...
+  [INFO] Position at inject: ~75.0 mm  (fwd errors=0)
+  [INFO] Issuing return trajectory: ~75->75 mm  (1 waypoints)
+  [INFO] Post-inject: 601 samples
+      dt_from_inject(ms)    pos(mm)
+  ----------------------  ---------
+                     2.1       75.0
+                   103.9       75.0
+                   205.4       75.0
+                   304.7       75.0
+                   404.7       75.0
+                   505.2       75.0
+                   604.9       75.0
+                   705.6       75.0
+                   805.2       75.0
+                   904.9       75.0
+                  1005.0       75.0
+                  1104.6       75.0
+                  1205.3       75.0
+                  1305.0       75.0
+                  1405.1       75.0
+                  1505.1       75.0
+                  1604.6       75.0
+                  1705.1       75.0
+                  1805.5       75.0
+                  1904.9       75.0
+                  2004.6       75.0
+                  2105.4       75.0
+                  2205.2       75.0
+                  2305.3       75.0
+                  2404.9       75.0
+                  2504.5       75.0
+                  2604.7       75.0
+                  2705.5       75.0
+                  2804.6       75.0
+                  2905.3       75.0
+                  3004.8       75.0
+
+  Peak: 75.0 mm  final: 75.0 mm
+  No reversal in 3.0s
+  Verdict: NO_REDIRECT
+
+  ------------------------------------------------------------
+  T2 -- mid    (~80mm in)   inject_delay=1.2 s
+  ------------------------------------------------------------
+  [INFO] Homing to 75 mm (blocking) ...
+  [INFO] Replaying TRAJECTORY (75->290 mm) ...
+  [INFO] Position at inject: ~96.0 mm  (fwd errors=0)
+  [INFO] Issuing return trajectory: ~96->75 mm  (3 waypoints)
+  [INFO] Post-inject: 642 samples
+      dt_from_inject(ms)    pos(mm)
+  ----------------------  ---------
+                     1.8       96.0
+                   106.8       99.0
+                   212.1       97.5
+                   316.5       97.5
+                   421.7       97.5
+                   526.9       97.5
+                   632.1       97.5
+                   737.1       97.5
+                   842.3       97.5
+                   946.9       97.5
+                  1052.2       97.5
+                  1156.6       97.5
+                  1262.1       97.5
+                  1366.9       97.5
+                  1471.7       97.5
+                  1577.0       96.0
+                  1681.7       96.0
+                  1787.1       96.0
+                  1892.0       96.0
+                  1996.9       96.0
+                  2101.8       96.0
+                  2207.6       96.0
+                  2311.8       96.0
+                  2416.7       96.0
+                  2521.6       96.0
+                  2627.4       96.0
+                  2732.6       96.0
+                  2836.9       96.0
+                  2941.6       96.0
+                  3046.6       96.0
+                  3152.3       94.5
+
+  Peak: 99.0 mm  final: 94.5 mm
+  No reversal in 3.0s
+  Verdict: NO_REDIRECT
+
+  ------------------------------------------------------------
+  T3 -- late   (~147mm in)   inject_delay=2.2 s
+  ------------------------------------------------------------
+  [INFO] Homing to 75 mm (blocking) ...
+  [INFO] Replaying TRAJECTORY (75->290 mm) ...
+  [INFO] Position at inject: ~144.0 mm  (fwd errors=0)
+  [INFO] Issuing return trajectory: ~144->75 mm  (8 waypoints)
+  [INFO] Post-inject: 742 samples
+      dt_from_inject(ms)    pos(mm)
+  ----------------------  ---------
+                     1.4      144.0
+                   122.7      144.0
+                   243.4      144.0
+                   362.5      144.0
+                   483.6      144.0
+                   603.1      141.0
+                   723.3      136.5
+                   842.9      132.0
+                   962.6      129.0
+                  1083.5      127.5
+                  1203.0      126.0
+                  1323.5      126.0
+                  1443.2      124.5
+                  1563.3      124.5
+                  1683.6      124.5
+                  1803.2      124.5
+                  1923.1      124.5
+                  2043.0      124.5
+                  2163.0      124.5
+                  2283.6      124.5
+                  2403.2      124.5
+                  2522.9      124.5
+                  2643.6      124.5
+                  2763.1      124.5
+                  2882.8      124.5
+                  3003.4      124.5
+                  3122.9      124.5
+                  3242.7      124.5
+                  3363.5      124.5
+                  3483.1      124.5
+                  3603.4      124.5
+
+  Peak after inject : 144.0 mm
+  Reversal detected : dropped >5 mm below peak
+  Reversal latency  : 658 ms from inject
+  Verdict: REDIRECT
+
+
+  Summary
+  --------------------------------------------------------------------
+  Label                                @inject(mm)  Verdict       Latency(ms)
+  --------------------------------------------------------------------
+  T1 -- early  (~20mm in)                     75.0  NO_REDIRECT             -
+  T2 -- mid    (~80mm in)                     96.0  NO_REDIRECT             -
+  T3 -- late   (~147mm in)                   144.0  REDIRECT              658
+  --------------------------------------------------------------------
+
+  [INFO] Some points -> NO_REDIRECT: motor queues or ignores mid-travel commands
+
+  [FAIL] T1 -- early  (~20mm in): no reversal in 3s
+  [FAIL] T2 -- mid    (~80mm in): no reversal in 3s
+  [PASS] T3 -- late   (~147mm in): motor redirected  (latency=658 ms)
+------------------------------------------------------------------------
+Results:  PASS=1  FAIL=2  SKIP=0
+------------------------------------------------------------------------

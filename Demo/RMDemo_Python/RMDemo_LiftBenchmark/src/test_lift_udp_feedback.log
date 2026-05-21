@@ -1,0 +1,84 @@
+
+========================================================================
+  Script : test_lift_udp_feedback.py
+  Log    : test_lift_udp_feedback.log
+  Started: 2026-05-21 21:19:57
+========================================================================
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_udp_feedback.py — UDP state push latency
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  ── Cycle parameter sweep ─────────────────────────────────
+  [INFO] cycle=1 (5 ms / 200 Hz): n=200  mean=5.00 ms  std=0.49 ms
+  [INFO] cycle=2 (10 ms / 100 Hz): n=100  mean=9.99 ms  std=0.52 ms
+  [INFO] cycle=4 (20 ms / 50 Hz): n=50  mean=19.98 ms  std=0.39 ms
+
+  ── Main latency test (cycle=2, 100 Hz) ───────────────────
+  [INFO] Moving to 50 mm at speed=50% (blocking, ≤ 5 s) …
+  [INFO] At 50 mm.  Stabilising 0.5 s …
+  [INFO] Non-blocking move issued: 50→250 mm at speed=50%
+  [INFO] Expected travel: ~4 s  |  Waiting up to 10 s for height ≥ 230 mm …
+
+  [INFO] First UDP ≥ 230 mm at latency = 2510.0 ms from command issue
+  [INFO] UDP packets received during move: 302
+  [INFO] Packet interval: mean=10.00 ms  std=0.47 ms  (expected ~10 ms)
+
+  Sample  t from cmd (s)   height (mm)
+  ------  --------------  ------------
+       0           0.010            49
+       7           0.080            49
+      14           0.149            49
+      21           0.220            49
+      28           0.289            49
+      35           0.359            51
+      42           0.430            54
+      49           0.499            57
+      56           0.569            61
+      63           0.640            64
+      70           0.709            70
+      77           0.779            75
+      84           0.850            81
+      91           0.919            87
+      98           0.990            93
+     105           1.060            99
+     112           1.129           105
+     119           1.199           111
+     126           1.270           118
+     133           1.339           124
+     140           1.409           130
+     147           1.479           136
+     154           1.549           144
+     161           1.619           150
+     168           1.689           156
+     175           1.760           163
+     182           1.829           169
+     189           1.899           177
+     196           1.969           183
+     203           2.040           189
+     210           2.110           196
+     217           2.179           202
+     224           2.249           210
+     231           2.319           214
+     238           2.390           222
+     245           2.460           226
+     252           2.529           232
+     259           2.600           235
+     266           2.670           240
+     273           2.739           241
+     280           2.810           243
+     287           2.879           244
+     294           2.949           246
+     301           3.019           247
+
+  [BASELINE] UDP interval window: [8.50, 11.50] ms  [= mean ± 3σ from test 3]
+  [PASS] UDP interval mean ∈ [8.5, 11.5] ms  (10.00 ms)
+  [PASS] UDP packet count ≥ 300  (302 packets)
+  [PASS] Height ≥ 230 mm within 5 s  (latency=2510 ms)
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=3  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────────

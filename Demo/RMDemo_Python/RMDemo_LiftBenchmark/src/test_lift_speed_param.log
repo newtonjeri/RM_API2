@@ -1,0 +1,60 @@
+
+========================================================================
+  Script : test_lift_speed_param.py
+  Log    : test_lift_speed_param.log
+  Started: 2026-05-21 21:22:55
+========================================================================
+========================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+========================================================================
+test_lift_speed_param.py — speed% → actual mm/s characterisation
+========================================================================
+
+  Stroke: 80 mm → 230 mm  (150 mm)
+  Speeds: [10, 20, 30, 50, 70, 100]
+  Expected: speed_pct × 1.0 mm/s  (100% = 100 mm/s)
+  Tolerance: ±30%
+
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=10%  (expected ~22.5 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 8.677 s → adj 8.669 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=20%  (expected ~11.3 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 4.685 s → adj 4.677 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=30%  (expected ~7.5 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 3.518 s → adj 3.510 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=50%  (expected ~4.5 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 2.666 s → adj 2.658 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=70%  (expected ~3.2 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 2.380 s → adj 2.372 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=100%  (expected ~2.3 s) …
+  [BASELINE] API overhead subtracted: 8.0 ms (raw travel 2.250 s → adj 2.242 s)
+
+   Speed%   Travel(s)    Eff mm/s    Exp mm/s    ±30%?
+  -------  ----------  ----------  ----------  -------
+       10       8.677        17.3         6.7     FAIL
+       20       4.685        32.1        13.3     FAIL
+       30       3.518        42.7        20.0     FAIL
+       50       2.666        56.4        33.3     FAIL
+       70       2.380        63.2        46.7     FAIL
+      100       2.250        66.9        66.7     PASS
+
+  Pole physical max speed (measured at speed=100%): 66.9 mm/s
+  Rated max speed: 100.0 mm/s
+  Ratio: 0.67  (should be ≈ 1.0)
+
+  [PASS] Travel time decreases monotonically with speed%
+  [PASS] speed=100%: eff ≤ 110 mm/s  (66.9 mm/s)
+  [PASS] speed=100%: eff ≥ 57 mm/s  (66.9 mm/s)
+  [PASS] speed=10%: travel time ≥ 5 s  (8.68 s)
+  [PASS] All 6 speeds physically sane (0 < eff ≤ 100 mm/s)
+  [BASELINE] Saved → hw_baseline.json  (speed_map)
+────────────────────────────────────────────────────────────────────────
+Results:  PASS=5  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────────────────

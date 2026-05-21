@@ -1,0 +1,24 @@
+
+========================================================================
+  Script : test_lift_connect.py
+  Log    : test_lift_connect.log
+  Started: 2026-05-21 21:15:19
+========================================================================
+============================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+============================================================
+test_lift_connect.py — connection & basic state (no motion)
+============================================================
+current c api version:  v1.1.5
+  [PASS] T1: SDK init (TRIPLE mode)
+  [PASS] T2: rm_create_robot_arm (handle.id=1, connect=78 ms)
+  [BASELINE] Saved → hw_baseline.json  (connect_time_ms)
+  [PASS] T3: rm_get_robot_info (arm_dof=7 → RM-75)
+  [PASS] T4: rm_get_lift_state (pos=229.5 mm physical, within [0, 300])
+  [PASS] T5: err_flag == 0 (no errors)
+  [SKIP] T6: en_flag (not present in rm_expand_state_t; use UDP callback for en_flag)
+  [PASS] T7: teardown (rm_delete_robot_arm=0, rm_destroy=0)
+
+────────────────────────────────────────────────────────────
+Results:  PASS=6  FAIL=0  SKIP=1
+────────────────────────────────────────────────────────────

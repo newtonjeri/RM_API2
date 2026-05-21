@@ -1,0 +1,45 @@
+
+========================================================================
+  Script : test_lift_nonblocking_rate.py
+  Log    : test_lift_nonblocking_rate.log
+  Started: 2026-05-21 21:16:54
+========================================================================
+============================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+============================================================
+test_lift_nonblocking_rate.py — non-blocking command rate
+============================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Homing to 150 mm at speed=50% (blocking, expect ≤ 3 s from any position) …
+  [INFO] Homed in 1.89 s (ret=0)
+
+  [INFO] Burst: sending 200 non-blocking commands (alternating 140/160 mm) …
+
+  Burst results                 
+  N commands                    : 200
+  Total wall time               : 1597.6 ms
+  Mean per-call latency         : 7986.6 µs
+  Min per-call latency          : 4099.6 µs
+  Max per-call latency          : 45652.1 µs
+  Achieved command rate         : 125.2 Hz
+  Non-zero returns (errors)     : 0
+  [BASELINE] Latency threshold: 15242 µs (15.2 ms)  [= prior mean × 2.0]
+  [PASS] Mean per-call latency ≤ 15 ms  (7986.6 µs)
+  [PASS] ≥ 80% calls returned 0  (100.0%)
+  [BASELINE] Saved → hw_baseline.json  (mean_lat_us, min_lat_us, max_lat_us, cmd_rate_hz)
+
+  [INFO] Physical note: at 100 mm/s max, a 20 mm stroke takes ≥ 0.2 s.
+  [INFO] Commanding faster than 5 Hz will outpace the mechanism.
+  [INFO] API rate (how fast commands are accepted) is measured separately above.
+
+   Rate (Hz)    Errors   Actual Hz  Note
+  ----------  --------  ----------  ------------------------------
+          10         0        10.0  above 5 Hz physical limit
+          25         0        24.9  above 5 Hz physical limit
+          50         0        48.4  above 5 Hz physical limit
+
+────────────────────────────────────────────────────────────
+Results:  PASS=2  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────
