@@ -156,12 +156,6 @@
           "positions": [0.295000],
           "velocities": [0.000000],
           "accelerations": [-0.500000]
-        },
-        {
-          "time_from_start": 2.400000,
-          "positions": [0.295000],
-          "velocities": [0.000000],
-          "accelerations": [-0.500000]
         }
       ]
     }
