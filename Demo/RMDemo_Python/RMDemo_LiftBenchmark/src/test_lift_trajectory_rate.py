@@ -48,6 +48,7 @@ Exit codes:
 """
 
 import sys
+import json
 import time
 import statistics
 from collections import deque
@@ -131,40 +132,13 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 # ─── Trajectory data ─────────────────────────────────────────────────────────
-# Mirrors the JSON trajectory supplied by the user.
-# Units: time_from_start in seconds, positions in metres, velocities in m/s.
-# Accelerations are included for completeness but ignored by this API
-# (the RM_API2 rm_set_lift_height interface does not accept an acceleration
-# parameter; the controller uses its own internal profile).
-TRAJECTORY = [
-    {"time_from_start": 0.0,   "positions": [0.075000], "velocities": [0.000500], "accelerations": [ 0.500000]},
-    {"time_from_start": 0.1,   "positions": [0.077500], "velocities": [0.050000], "accelerations": [ 0.500000]},
-    {"time_from_start": 0.2,   "positions": [0.085000], "velocities": [0.100000], "accelerations": [ 0.500000]},
-    {"time_from_start": 0.3,   "positions": [0.095000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 0.4,   "positions": [0.105000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 0.5,   "positions": [0.115000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 0.6,   "positions": [0.125000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 0.7,   "positions": [0.135000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 0.8,   "positions": [0.145000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 0.9,   "positions": [0.155000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.0,   "positions": [0.165000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.1,   "positions": [0.175000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 1.2,   "positions": [0.185000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.3,   "positions": [0.195000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.4,   "positions": [0.205000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.5,   "positions": [0.215000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.6,   "positions": [0.225000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.7,   "positions": [0.235000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.8,   "positions": [0.245000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 1.9,   "positions": [0.255000], "velocities": [0.100000], "accelerations": [-0.000000]},
-    {"time_from_start": 2.0,   "positions": [0.265000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 2.1,   "positions": [0.275000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 2.2,   "positions": [0.285000], "velocities": [0.100000], "accelerations": [ 0.000000]},
-    {"time_from_start": 2.3,   "positions": [0.292500], "velocities": [0.050000], "accelerations": [-0.500000]},
-    {"time_from_start": 2.4,   "positions": [0.295000], "velocities": [0.000000], "accelerations": [-0.500000]},
-    # duplicate final waypoint (as in original JSON)
-    {"time_from_start": 2.4,   "positions": [0.295000], "velocities": [0.000000], "accelerations": [-0.500000]},
-]
+# Loaded from lift_trajectory.json (same directory as this file).
+# Format: list of {time_from_start, positions, velocities, accelerations}
+# Units: time in seconds, positions in metres, velocities in m/s.
+_TRAJ_JSON = pathlib.Path(__file__).resolve().parent / "lift_trajectory.json"
+with _TRAJ_JSON.open() as _f:
+    _traj_data = json.load(_f)
+    TRAJECTORY = _traj_data["waypoints"] if isinstance(_traj_data, dict) else _traj_data
 
 
 def parse_trajectory(traj):

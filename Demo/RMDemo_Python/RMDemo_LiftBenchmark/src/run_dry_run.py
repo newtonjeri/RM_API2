@@ -361,6 +361,8 @@ TEST_MODULES = [
     "test_lift_udp_feedback",
     "test_lift_blocking_vs_nonblocking",
     "test_lift_speed_param",
+    "test_lift_motion_profile",
+    "test_lift_preemption",
 ]
 
 for mod_name in TEST_MODULES:
