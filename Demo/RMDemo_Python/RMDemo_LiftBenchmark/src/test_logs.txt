@@ -1,0 +1,571 @@
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_connect.py 
+============================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+============================================================
+test_lift_connect.py — connection & basic state (no motion)
+============================================================
+current c api version:  v1.1.5
+  [PASS] T1: SDK init (TRIPLE mode)
+  [PASS] T2: rm_create_robot_arm (handle.id=1, connect=66 ms)
+  [BASELINE] Saved → hw_baseline.json  (connect_time_ms)
+  [PASS] T3: rm_get_robot_info (arm_dof=7 → RM-75)
+  [PASS] T4: rm_get_lift_state (pos=289.5 mm physical, within [0, 300])
+  [PASS] T5: err_flag == 0 (no errors)
+  [SKIP] T6: en_flag (not present in rm_expand_state_t; use UDP callback for en_flag)
+  [PASS] T7: teardown (rm_delete_robot_arm=0, rm_destroy=0)
+
+────────────────────────────────────────────────────────────
+Results:  PASS=6  FAIL=0  SKIP=1
+────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_nonblocking_rate.py
+============================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+============================================================
+test_lift_nonblocking_rate.py — non-blocking command rate
+============================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Homing to 150 mm at speed=50% (blocking, expect ≤ 3 s from any position) …
+  [INFO] Homed in 2.56 s (ret=0)
+
+  [INFO] Burst: sending 200 non-blocking commands (alternating 140/160 mm) …
+
+  Burst results                 
+  N commands                    : 200
+  Total wall time               : 1524.5 ms
+  Mean per-call latency         : 7621.1 µs
+  Min per-call latency          : 4107.0 µs
+  Max per-call latency          : 22644.2 µs
+  Achieved command rate         : 131.2 Hz
+  Non-zero returns (errors)     : 0
+  [BASELINE] Latency threshold: 30000 µs (30.0 ms)  [= prior mean × 2.0]
+  [PASS] Mean per-call latency ≤ 30 ms  (7621.1 µs)
+  [PASS] ≥ 80% calls returned 0  (100.0%)
+  [BASELINE] Saved → hw_baseline.json  (mean_lat_us, min_lat_us, max_lat_us, cmd_rate_hz)
+
+  [INFO] Physical note: at 100 mm/s max, a 20 mm stroke takes ≥ 0.2 s.
+  [INFO] Commanding faster than 5 Hz will outpace the mechanism.
+  [INFO] API rate (how fast commands are accepted) is measured separately above.
+
+   Rate (Hz)    Errors   Actual Hz  Note
+  ----------  --------  ----------  ------------------------------
+          10         0        10.0  above 5 Hz physical limit
+          25         0        24.9  above 5 Hz physical limit
+          50         0        49.6  above 5 Hz physical limit
+
+────────────────────────────────────────────────────────────
+Results:  PASS=2  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_trajectory_rate.py
+==================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+==================================================================
+test_lift_trajectory_rate.py — trajectory waypoint replay (pos + vel inputs)
+==================================================================
+
+  [INFO] Trajectory: 25 unique waypoints  (total duration 2.4 s)
+  [INFO] First waypoint : t=0.0s  pos=75 mm  speed=1%
+  [INFO] Last waypoint  : t=2.4s  pos=290 mm  speed=1%
+
+    #   t (s)   pos (m)   vel (m/s)    → mm    → %  clamped?
+  ---  ------  --------  ----------  ------  -----  --------
+    0     0.0  0.075000    0.000500      75      1          
+    1     0.1  0.077500    0.050000      78     50          
+    2     0.2  0.085000    0.100000      85    100          
+    3     0.3  0.095000    0.100000      95    100          
+    4     0.4  0.105000    0.100000     105    100          
+    5     0.5  0.115000    0.100000     115    100          
+    6     0.6  0.125000    0.100000     125    100          
+    7     0.7  0.135000    0.100000     135    100          
+    8     0.8  0.145000    0.100000     145    100          
+    9     0.9  0.155000    0.100000     155    100          
+   10     1.0  0.165000    0.100000     165    100          
+   11     1.1  0.175000    0.100000     175    100          
+   12     1.2  0.185000    0.100000     185    100          
+   13     1.3  0.195000    0.100000     195    100          
+   14     1.4  0.205000    0.100000     205    100          
+   15     1.5  0.215000    0.100000     215    100          
+   16     1.6  0.225000    0.100000     225    100          
+   17     1.7  0.235000    0.100000     235    100          
+   18     1.8  0.245000    0.100000     245    100          
+   19     1.9  0.255000    0.100000     255    100          
+   20     2.0  0.265000    0.100000     265    100          
+   21     2.1  0.275000    0.100000     275    100          
+   22     2.2  0.285000    0.100000     285    100          
+   23     2.3  0.292500    0.050000     290     50       YES
+   24     2.4  0.295000    0.000000     290      1       YES
+
+  [INFO] Physical note: at 100 mm/s max, a 20 mm stroke takes ≥ 0.2 s.
+  [INFO] Commanding faster than 5 Hz will outpace the mechanism.
+  [INFO] API rate (how fast commands are accepted) is measured below.
+
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+  [INFO] Homing to trajectory start: 75 mm at speed=50% (blocking, expect ≤ 3 s) …
+  [INFO] Homed in 1.95 s
+
+  [INFO] Executing 25 trajectory waypoints …
+    #  t_sched (s)  t_actual (s)  jitter (ms)     mm     %   ret    lat (µs)
+  ---  -----------  ------------  -----------  -----  ----  ----  ----------
+    0        0.000         0.000         +0.0     75     1     0      6240.8
+    1        0.100         0.100         +0.1     78    50     0     12519.3
+    2        0.200         0.200         +0.2     85   100     0      6230.3
+    3        0.300         0.300         +0.1     95   100     0      6221.7
+    4        0.400         0.400         +0.1    105   100     0      6207.4
+    5        0.500         0.500         +0.1    115   100     0      6255.9
+    6        0.600         0.600         +0.2    125   100     0      6246.4
+    7        0.700         0.700         +0.1    135   100     0      6322.8
+    8        0.800         0.800         +0.0    145   100     0      6204.7
+    9        0.900         0.900         +0.2    155   100     0      6293.7
+   10        1.000         1.000         +0.2    165   100     0      6265.6
+   11        1.100         1.100         +0.2    175   100     0      6203.0
+   12        1.200         1.200         +0.1    185   100     0      6244.7
+   13        1.300         1.300         +0.2    195   100     0      6264.7
+   14        1.400         1.400         +0.1    205   100     0      6323.5
+   15        1.500         1.500         +0.2    215   100     0      6324.5
+   16        1.600         1.600         +0.2    225   100     0     10531.1
+   17        1.700         1.700         +0.1    235   100     0      6196.0
+   18        1.800         1.800         +0.1    245   100     0      6239.2
+   19        1.900         1.900         +0.1    255   100     0      6218.9
+   20        2.000         2.000         +0.1    265   100     0      6194.2
+   21        2.100         2.100         +0.1    275   100     0      6191.7
+   22        2.200         2.200         +0.1    285   100     0     10339.4
+   23        2.300         2.300         +0.1    290    50     0     10379.6
+   24        2.400         2.400         +0.2    290     1     0      6283.4
+
+  [INFO] Trajectory dispatch done in 2.406 s (scheduled 2.400 s)
+  [INFO] Waiting up to 4 s for final waypoint motion …
+
+  ── Trajectory execution statistics ──────────────────────
+  Waypoints dispatched               : 25
+  Total dispatch time                : 2406.5 ms
+  Mean per-call latency              : 6997.7 µs
+  Min / Max per-call latency         : 6191.7 / 12519.3 µs
+  Mean timing jitter                 : 0.1 ms
+  Max timing jitter                  : 0.2 ms
+  API errors (non-zero ret)          : 0
+
+  ── UDP feedback (observed during trajectory) ────
+  UDP packets received               : 641
+  Mean packet interval               : 10.0 ms
+  Std dev interval                   : 0.48 ms
+
+  Sample     t (s)   height (mm)
+  ------  --------  ------------
+       0     0.000            75
+      42     0.420            76
+      84     0.841            81
+     126     1.261            96
+     168     1.680           106
+     210     2.100           145
+     252     2.520           163
+     294     2.941           178
+     336     3.361           211
+     378     3.781           249
+     420     4.201           279
+     462     4.620           286
+     504     5.040           288
+     546     5.461           288
+     588     5.880           289
+     630     6.301           289
+  [BASELINE] Saved → hw_baseline.json  (udp_interval_ms, udp_sigma_ms, jitter_mean_ms, jitter_max_ms)
+
+  [BASELINE] Latency threshold: 15242 µs (15.2 ms)  [= prior mean × 2.0]
+  [PASS] Mean per-call latency ≤ 15 ms  (6997.7 µs)
+  [PASS] ≥ 80% calls returned 0  (100.0%)
+  [PASS] Max timing jitter ≤ 50 ms  (0.2 ms)
+  [PASS] Lift moved toward target (start=75 mm → pos=289.5 mm, target=290 mm)
+
+──────────────────────────────────────────────────────────────────
+Results:  PASS=4  FAIL=0  SKIP=0
+──────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_udp_feedback.py
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_udp_feedback.py — UDP state push latency
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  ── Cycle parameter sweep ─────────────────────────────────
+  [INFO] cycle=1 (5 ms / 200 Hz): n=200  mean=5.00 ms  std=0.54 ms
+  [INFO] cycle=2 (10 ms / 100 Hz): n=100  mean=10.01 ms  std=0.47 ms
+  [INFO] cycle=4 (20 ms / 50 Hz): n=50  mean=20.01 ms  std=0.48 ms
+
+  ── Main latency test (cycle=2, 100 Hz) ───────────────────
+  [INFO] Moving to 50 mm at speed=50% (blocking, ≤ 5 s) …
+  [INFO] At 50 mm.  Stabilising 0.5 s …
+  [INFO] Non-blocking move issued: 50→250 mm at speed=50%
+  [INFO] Expected travel: ~4 s  |  Waiting up to 10 s for height ≥ 230 mm …
+
+  [INFO] First UDP ≥ 230 mm at latency = 2501.7 ms from command issue
+  [INFO] UDP packets received during move: 301
+  [INFO] Packet interval: mean=10.00 ms  std=0.48 ms  (expected ~10 ms)
+
+  Sample  t from cmd (s)   height (mm)
+  ------  --------------  ------------
+       0           0.002            49
+       7           0.072            49
+      14           0.142            49
+      21           0.212            49
+      28           0.282            49
+      35           0.352            51
+      42           0.422            54
+      49           0.492            57
+      56           0.563            60
+      63           0.632            66
+      70           0.702            70
+      77           0.772            75
+      84           0.842            81
+      91           0.912            87
+      98           0.982            93
+     105           1.052            99
+     112           1.122           105
+     119           1.192           111
+     126           1.262           118
+     133           1.332           124
+     140           1.402           130
+     147           1.472           136
+     154           1.542           144
+     161           1.612           150
+     168           1.682           156
+     175           1.752           163
+     182           1.822           169
+     189           1.892           177
+     196           1.962           183
+     203           2.032           189
+     210           2.102           196
+     217           2.172           202
+     224           2.242           208
+     231           2.312           214
+     238           2.382           222
+     245           2.453           226
+     252           2.522           232
+     259           2.592           235
+     266           2.662           240
+     273           2.732           241
+     280           2.802           243
+     287           2.872           244
+     294           2.942           246
+
+  [BASELINE] UDP interval window: [8.55, 11.45] ms  [= mean ± 3σ from test 3]
+  [PASS] UDP interval mean ∈ [8.5, 11.5] ms  (10.00 ms)
+  [PASS] UDP packet count ≥ 300  (301 packets)
+  [PASS] Height ≥ 230 mm within 5 s  (latency=2502 ms)
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=3  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_udp_feedback.py
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_udp_feedback.py — UDP state push latency
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  ── Cycle parameter sweep ─────────────────────────────────
+  [INFO] cycle=1 (5 ms / 200 Hz): n=199  mean=5.00 ms  std=0.50 ms
+  [INFO] cycle=2 (10 ms / 100 Hz): n=100  mean=10.00 ms  std=0.45 ms
+  [INFO] cycle=4 (20 ms / 50 Hz): n=50  mean=20.00 ms  std=0.39 ms
+
+  ── Main latency test (cycle=2, 100 Hz) ───────────────────
+  [INFO] Moving to 50 mm at speed=50% (blocking, ≤ 5 s) …
+  [INFO] At 50 mm.  Stabilising 0.5 s …
+  [INFO] Non-blocking move issued: 50→250 mm at speed=50%
+  [INFO] Expected travel: ~4 s  |  Waiting up to 10 s for height ≥ 230 mm …
+
+  [INFO] First UDP ≥ 230 mm at latency = 2501.6 ms from command issue
+  [INFO] UDP packets received during move: 301
+  [INFO] Packet interval: mean=10.00 ms  std=0.47 ms  (expected ~10 ms)
+
+  Sample  t from cmd (s)   height (mm)
+  ------  --------------  ------------
+       0           0.002            49
+       7           0.072            49
+      14           0.142            49
+      21           0.212            49
+      28           0.281            49
+      35           0.352            51
+      42           0.421            54
+      49           0.492            57
+      56           0.562            60
+      63           0.631            64
+      70           0.701            70
+      77           0.771            75
+      84           0.842            81
+      91           0.911            87
+      98           0.981            93
+     105           1.051            99
+     112           1.122           105
+     119           1.192           111
+     126           1.262           118
+     133           1.332           124
+     140           1.402           130
+     147           1.472           136
+     154           1.542           142
+     161           1.612           150
+     168           1.682           156
+     175           1.751           163
+     182           1.821           169
+     189           1.892           175
+     196           1.962           183
+     203           2.032           189
+     210           2.101           196
+     217           2.172           202
+     224           2.242           208
+     231           2.311           214
+     238           2.381           222
+     245           2.452           226
+     252           2.522           232
+     259           2.592           235
+     266           2.661           238
+     273           2.732           241
+     280           2.802           243
+     287           2.872           244
+     294           2.941           246
+
+  [BASELINE] UDP interval window: [8.55, 11.45] ms  [= mean ± 3σ from test 3]
+  [PASS] UDP interval mean ∈ [8.5, 11.5] ms  (10.00 ms)
+  [PASS] UDP packet count ≥ 300  (301 packets)
+  [PASS] Height ≥ 230 mm within 5 s  (latency=2502 ms)
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=3  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_blocking_vs_nonblocking.py 
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_blocking_vs_nonblocking.py — timing & event callbacks
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Pre-positioning to 80 mm at speed=100% (blocking) …
+
+  [INFO] T1: Blocking call — 80→220 mm at speed=50% …
+  [INFO] T1: wall_time=2.574 s  ret=0
+  [PASS] T1: blocking wall_time ∈ [2.0, 5.0] s  (2.574 s)
+
+  [INFO] T2: Non-blocking call — 220→80 mm at speed=50% …
+  [INFO] T2: call returned in 4.29 ms  ret=0
+  [BASELINE] Non-blocking call limit: 22.9 ms  [= measured mean × 3.0]
+  [PASS] T2: non-blocking call ≤ 23 ms  (4.29 ms)
+  [INFO] T2: waiting 5 s for motion to complete …
+
+  [INFO] T3: Event callback (blocking) — 80→150 mm, speed=50% …
+  [INFO] T3: blocking call returned in 0.006 s  ret=0  event_received=False
+  [INFO] T3: last event = {}
+  [FAIL] T3: event not received or fields incorrect  ({})
+
+  [INFO] T4: Event callback (non-blocking) — 150→220 mm, speed=50% …
+  [INFO] T4: non-blocking call returned in 4.15 ms
+  [INFO] T4: event_received=True  travel_time=1.914 s  event={'event_type': 1, 'device': 3, 'trajectory_state': True, 'trajectory_connect': 0}
+  [PASS] T4: event fired for non-blocking move  (travel=1.91 s)
+
+  [INFO] T5: Pre-position to 80 mm for cancellation test …
+  [INFO] T5: Non-blocking full-range move 80→290 mm at speed=100% (~2.1 s) …
+  [INFO] T5: issuing rm_set_arm_stop() …
+  [INFO] T5: rm_set_arm_stop ret=0
+  [PASS] T5: rm_set_arm_stop returned 0
+  [SKIP] T5: mode=0 check — state may not be immediately reflected via polling
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=4  FAIL=1  SKIP=1
+────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_blocking_vs_nonblocking.py 
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_blocking_vs_nonblocking.py — timing & event callbacks
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Pre-positioning to 80 mm at speed=100% (blocking) …
+
+  [INFO] T1: Blocking call — 80→220 mm at speed=50% …
+  [INFO] T1: wall_time=2.557 s  ret=0
+  [PASS] T1: blocking wall_time ∈ [2.0, 5.0] s  (2.557 s)
+
+  [INFO] T2: Non-blocking call — 220→80 mm at speed=50% …
+  [INFO] T2: call returned in 6.46 ms  ret=0
+  [BASELINE] Non-blocking call limit: 22.9 ms  [= measured mean × 3.0]
+  [PASS] T2: non-blocking call ≤ 23 ms  (6.46 ms)
+  [INFO] T2: waiting 5 s for motion to complete …
+
+  [INFO] T3: Event callback (blocking) — 80→150 mm, speed=50% …
+  [INFO] T3: blocking call returned in 0.004 s  ret=0  event_received=False
+  [INFO] T3: last event = {}
+  [FAIL] T3: event not received or fields incorrect  ({})
+
+  [INFO] T4: Event callback (non-blocking) — 150→220 mm, speed=50% …
+  [INFO] T4: non-blocking call returned in 6.35 ms
+  [INFO] T4: event_received=True  travel_time=1.910 s  event={'event_type': 1, 'device': 3, 'trajectory_state': True, 'trajectory_connect': 0}
+  [PASS] T4: event fired for non-blocking move  (travel=1.91 s)
+
+  [INFO] T5: Pre-position to 80 mm for cancellation test …
+  [INFO] T5: Non-blocking full-range move 80→290 mm at speed=100% (~2.1 s) …
+  [INFO] T5: issuing rm_set_arm_stop() …
+  [INFO] T5: rm_set_arm_stop ret=0
+  [PASS] T5: rm_set_arm_stop returned 0
+  [SKIP] T5: mode=0 check — state may not be immediately reflected via polling
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=4  FAIL=1  SKIP=1
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_blocking_vs_nonblocking.py 
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_blocking_vs_nonblocking.py — timing & event callbacks
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Pre-positioning to 80 mm at speed=100% (blocking) …
+
+  [INFO] T1: Blocking call — 80→220 mm at speed=50% …
+  [INFO] T1: wall_time=2.536 s  ret=0
+  [PASS] T1: blocking wall_time ∈ [2.0, 5.0] s  (2.536 s)
+
+  [INFO] T2: Non-blocking call — 220→80 mm at speed=50% …
+  [INFO] T2: call returned in 6.51 ms  ret=0
+  [BASELINE] Non-blocking call limit: 22.9 ms  [= measured mean × 3.0]
+  [PASS] T2: non-blocking call ≤ 23 ms  (6.51 ms)
+  [INFO] T2: waiting 5 s for motion to complete …
+
+  [INFO] T3: Blocking call — 80→150 mm, speed=50% …
+  [INFO] T3: call returned in 8.3 ms  ret=0
+  [INFO] T3: event_fired=False  (expected False — blocking calls use synchronous return)
+  [PASS] T3: blocking call ret=0; no spurious event callback (synchronous return is completion signal)
+
+  [INFO] T4: Event callback (non-blocking) — 150→220 mm, speed=50% …
+  [INFO] T4: non-blocking call returned in 10.27 ms
+  [INFO] T4: event_received=True  travel_time=1.790 s  event={'event_type': 1, 'device': 3, 'trajectory_state': True, 'trajectory_connect': 0}
+  [PASS] T4: event fired for non-blocking move  (travel=1.79 s)
+
+  [INFO] T5: Pre-position to 80 mm for cancellation test …
+  [INFO] T5: Non-blocking full-range move 80→290 mm at speed=100% (~2.1 s) …
+  [INFO] T5: issuing rm_set_arm_stop() …
+  [INFO] T5: rm_set_arm_stop ret=0
+  [PASS] T5: rm_set_arm_stop returned 0
+  [SKIP] T5: mode=0 check — state may not be immediately reflected via polling
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=5  FAIL=0  SKIP=1
+────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_speed_param.py
+========================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+========================================================================
+test_lift_speed_param.py — speed% → actual mm/s characterisation
+========================================================================
+
+  Stroke: 80 mm → 230 mm  (150 mm)
+  Speeds: [10, 20, 30, 50, 70, 100]
+  Expected: speed_pct × 1.0 mm/s  (100% = 100 mm/s)
+  Tolerance: ±30%
+
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=10%  (expected ~15.0 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 8.667 s → adj 8.659 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=20%  (expected ~7.5 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 4.668 s → adj 4.661 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=30%  (expected ~5.0 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 3.515 s → adj 3.507 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=50%  (expected ~3.0 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.658 s → adj 2.651 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=70%  (expected ~2.1 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.365 s → adj 2.357 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=100%  (expected ~1.5 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.253 s → adj 2.245 s)
+
+   Speed%   Travel(s)    Eff mm/s    Exp mm/s    ±30%?
+  -------  ----------  ----------  ----------  -------
+       10       8.667        17.3        10.0     FAIL
+       20       4.668        32.2        20.0     FAIL
+       30       3.515        42.8        30.0     FAIL
+       50       2.658        56.6        50.0     PASS
+       70       2.365        63.6        70.0     PASS
+      100       2.253        66.8       100.0     FAIL
+
+  Pole physical max speed (measured at speed=100%): 66.8 mm/s
+  Rated max speed: 100.0 mm/s
+  Ratio: 0.67  (should be ≈ 1.0)
+
+  [PASS] Travel time decreases monotonically with speed%
+  [PASS] speed=100%: eff ≤ 110 mm/s  (66.8 mm/s)
+  [FAIL] speed=100%: eff=66.8 mm/s below 70 mm/s
+  [FAIL] speed=10%: travel time 8.67 s < 10 s
+  [FAIL] 4/6 speeds outside ±30% tolerance  (['10%: 17.3 mm/s', '20%: 32.2 mm/s', '30%: 42.8 mm/s', '100%: 66.8 mm/s'])
+  [BASELINE] Saved → hw_baseline.json  (speed_map)
+────────────────────────────────────────────────────────────────────────
+Results:  PASS=2  FAIL=3  SKIP=0
+────────────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ python3 src/test_lift_speed_param.py
+========================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+========================================================================
+test_lift_speed_param.py — speed% → actual mm/s characterisation
+========================================================================
+
+  Stroke: 80 mm → 230 mm  (150 mm)
+  Speeds: [10, 20, 30, 50, 70, 100]
+  Expected: speed_pct × 1.0 mm/s  (100% = 100 mm/s)
+  Tolerance: ±30%
+
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=10%  (expected ~22.5 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 8.671 s → adj 8.663 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=20%  (expected ~11.3 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 4.689 s → adj 4.682 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=30%  (expected ~7.5 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 3.520 s → adj 3.513 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=50%  (expected ~4.5 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.659 s → adj 2.652 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=70%  (expected ~3.2 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.360 s → adj 2.352 s)
+  [INFO] Reset to 80 mm at speed=100% (max reset time ~2.2 s) …
+  [INFO] Testing speed=100%  (expected ~2.3 s) …
+  [BASELINE] API overhead subtracted: 7.6 ms (raw travel 2.255 s → adj 2.247 s)
+
+   Speed%   Travel(s)    Eff mm/s    Exp mm/s    ±30%?
+  -------  ----------  ----------  ----------  -------
+       10       8.671        17.3         6.7     FAIL
+       20       4.689        32.0        13.3     FAIL
+       30       3.520        42.7        20.0     FAIL
+       50       2.659        56.6        33.3     FAIL
+       70       2.360        63.8        46.7     FAIL
+      100       2.255        66.7        66.7     PASS
+
+  Pole physical max speed (measured at speed=100%): 66.7 mm/s
+  Rated max speed: 100.0 mm/s
+  Ratio: 0.67  (should be ≈ 1.0)
+
+  [PASS] Travel time decreases monotonically with speed%
+  [PASS] speed=100%: eff ≤ 110 mm/s  (66.7 mm/s)
+  [PASS] speed=100%: eff ≥ 57 mm/s  (66.7 mm/s)
+  [PASS] speed=10%: travel time ≥ 5 s  (8.67 s)
+  [PASS] All 6 speeds physically sane (0 < eff ≤ 100 mm/s)
+  [BASELINE] Saved → hw_baseline.json  (speed_map)
+────────────────────────────────────────────────────────────────────────
+Results:  PASS=5  FAIL=0  SKIP=0
+────────────────────────────────────────────────────────────────────────
+alai-sg@alai-sg-Legion-Y9000P-IRX9:~/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark$ 
