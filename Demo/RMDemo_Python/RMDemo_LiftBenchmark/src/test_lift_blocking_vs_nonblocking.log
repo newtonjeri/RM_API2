@@ -1,0 +1,46 @@
+
+========================================================================
+  Script : test_lift_blocking_vs_nonblocking.py
+  Log    : test_lift_blocking_vs_nonblocking.log
+  Started: 2026-05-21 21:20:42
+========================================================================
+================================================================
+Pole hardware: travel=300 mm, max_speed=100 mm/s, safe range=[10, 290] mm
+================================================================
+test_lift_blocking_vs_nonblocking.py — timing & event callbacks
+================================================================
+current c api version:  v1.1.5
+  [INFO] Connected (handle.id=1)
+
+  [INFO] Pre-positioning to 80 mm at speed=100% (blocking) …
+
+  [INFO] T1: Blocking call — 80→220 mm at speed=50% …
+  [INFO] T1: wall_time=2.555 s  ret=0
+  [PASS] T1: blocking wall_time ∈ [2.0, 5.0] s  (2.555 s)
+
+  [INFO] T2: Non-blocking call — 220→80 mm at speed=50% …
+  [INFO] T2: call returned in 4.18 ms  ret=0
+  [BASELINE] Non-blocking call limit: 24.0 ms  [= measured mean × 3.0]
+  [PASS] T2: non-blocking call ≤ 24 ms  (4.18 ms)
+  [INFO] T2: waiting 5 s for motion to complete …
+
+  [INFO] T3: Blocking call — 80→150 mm, speed=50% …
+  [INFO] T3: call returned in 4.2 ms  ret=0
+  [INFO] T3: event_fired=False  (expected False — blocking calls use synchronous return)
+  [PASS] T3: blocking call ret=0; no spurious event callback (synchronous return is completion signal)
+
+  [INFO] T4: Event callback (non-blocking) — 150→220 mm, speed=50% …
+  [INFO] T4: non-blocking call returned in 8.58 ms
+  [INFO] T4: event_received=True  travel_time=1.786 s  event={'event_type': 1, 'device': 3, 'trajectory_state': True, 'trajectory_connect': 0}
+  [PASS] T4: event fired for non-blocking move  (travel=1.79 s)
+
+  [INFO] T5: Pre-position to 80 mm for cancellation test …
+  [INFO] T5: Non-blocking full-range move 80→290 mm at speed=100% (~2.1 s) …
+  [INFO] T5: issuing rm_set_arm_stop() …
+  [INFO] T5: rm_set_arm_stop ret=0
+  [PASS] T5: rm_set_arm_stop returned 0
+  [SKIP] T5: mode=0 check — state may not be immediately reflected via polling
+
+────────────────────────────────────────────────────────────────
+Results:  PASS=5  FAIL=0  SKIP=1
+────────────────────────────────────────────────────────────────
