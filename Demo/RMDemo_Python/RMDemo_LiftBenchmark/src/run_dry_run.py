@@ -58,6 +58,10 @@ def section(title: str):
     print(f"\n{'─'*64}\n  {title}\n{'─'*64}")
 
 
+# ─── Start logging ────────────────────────────────────────────────────────────
+from log_utils import setup_log as _setup_log
+_log_path = _setup_log(__file__)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # A  Scale-factor math
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -408,5 +412,6 @@ total = _pass + _fail
 print(f"  Dry-run complete:  {_pass}/{total} passed  "
       f"({_fail} failed)")
 print("=" * 64)
+print(f"\n  Log saved: {_log_path}")
 
 sys.exit(0 if _fail == 0 else 1)

@@ -233,4 +233,6 @@ def main():
 
 
 if __name__ == "__main__":
+    from log_utils import setup_log
+    setup_log(__file__)
     sys.exit(main())
