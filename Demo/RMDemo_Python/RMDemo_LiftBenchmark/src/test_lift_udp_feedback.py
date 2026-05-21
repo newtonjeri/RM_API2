@@ -21,8 +21,10 @@ import time
 import statistics
 import threading
 from collections import deque
+import pathlib
 
-sys.path.insert(0, '/home/newtonjeri/realman_API/RM_API2/Python')
+# Resolve SDK location relative to this file: src/ → … → RM_API2/Python
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import (
     rm_thread_mode_e,

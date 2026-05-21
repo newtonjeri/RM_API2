@@ -26,6 +26,7 @@ import time
 import types
 import threading
 import importlib
+import pathlib
 import unittest.mock as mock
 
 # ─── Common constants (duplicated here so this script is standalone) ─────────
@@ -349,7 +350,7 @@ for ht in [_hw_height(80), _hw_height(150), _hw_height(220)]:
         fail(f"MockRobot: rm_set_lift_height(50, hw={ht}) returned {r}")
 
 # ── Import and smoke-run each test module ──────────────────────────────────
-_SRC = "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_LiftBenchmark/src"
+_SRC = str(pathlib.Path(__file__).resolve().parent)
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
