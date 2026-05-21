@@ -15,12 +15,14 @@ Exit codes:
 
 import sys
 import os
+import time
 import pathlib
 
 # Resolve SDK location relative to this file: src/ → … → RM_API2/Python
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP         = "192.168.1.10"
@@ -91,14 +93,18 @@ def main():
 
         # ── Test 2: connect to robot arm ────────────────────────────────────
         try:
+            t_conn = time.perf_counter()
             handle = robot.rm_create_robot_arm(ROBOT_IP, ROBOT_PORT, 3)
+            connect_ms = (time.perf_counter() - t_conn) * 1000.0
             if handle is None or handle.id <= 0:
                 print(f"  [SKIP] T2–T7: hardware not reachable at "
                       f"{ROBOT_IP}:{ROBOT_PORT}  (handle.id="
                       f"{getattr(handle,'id',None)})")
                 _results["SKIP"] += 6
                 return 0
-            result("PASS", f"T2: rm_create_robot_arm (handle.id={handle.id})")
+            result("PASS", f"T2: rm_create_robot_arm (handle.id={handle.id}, "
+                           f"connect={connect_ms:.0f} ms)")
+            hw_baseline.update({"connect_time_ms": connect_ms})
         except Exception as exc:
             print(f"  [SKIP] T2–T7: hardware not reachable – {exc}")
             _results["SKIP"] += 6

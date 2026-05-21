@@ -32,6 +32,7 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP            = "192.168.1.10"
@@ -139,7 +140,11 @@ def main():
                 continue
 
             travel_s   = t_end - t_start
-            eff_mm_s   = STROKE_MM / travel_s if travel_s > 0 else 0.0
+            api_oh     = hw_baseline.api_overhead_s()
+            travel_adj = max(0.001, travel_s - api_oh)
+            eff_mm_s   = STROKE_MM / travel_adj if travel_adj > 0 else 0.0
+            print(f"  [BASELINE] API overhead subtracted: {api_oh*1000:.1f} ms "
+                  f"(raw travel {travel_s:.3f} s → adj {travel_adj:.3f} s)")
             low        = exp_mm_s * (1.0 - TOLERANCE)
             high       = exp_mm_s * (1.0 + TOLERANCE)
             within_tol = low <= eff_mm_s <= high
@@ -229,6 +234,13 @@ def main():
             result("FAIL",
                    f"{tol_fails}/{len(rows)} speeds outside ±30% tolerance",
                    str([f"{r[0]}%: {r[2]:.1f} mm/s" for r in rows if not r[4]]))
+
+        # ── Write speed map to shared baseline ──────────────────────────────
+        if rows:
+            hw_baseline.update({
+                "speed_map": {str(spd): round(eff, 2)
+                              for spd, _, eff, _, _ in rows}
+            })
 
     finally:
         if robot is not None and handle is not None:

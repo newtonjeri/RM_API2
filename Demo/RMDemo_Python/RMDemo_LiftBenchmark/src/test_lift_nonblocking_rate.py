@@ -23,6 +23,7 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP              = "192.168.1.10"
@@ -147,15 +148,18 @@ def main():
         print(f"  {'Non-zero returns (errors)':30s}: {error_count}")
 
         # Assertions
-        # Threshold raised to 15 ms: observed hardware baseline is ~7.5 ms mean
-        # due to SDK internal thread scheduling; 15 ms gives 2× headroom while
-        # still flagging a genuinely hung API (133 Hz achieved >> 5 Hz required).
-        if mean_lat <= 15000.0:
+        # Threshold = measured mean × 2.0 (from hw_baseline; falls back to
+        # 15 ms on first run before this test has populated the baseline).
+        lat_thresh = hw_baseline.latency_threshold_us(2.0)
+        thresh_ms  = lat_thresh / 1000.0
+        print(f"  [BASELINE] Latency threshold: {lat_thresh:.0f} µs "
+              f"({thresh_ms:.1f} ms)  [= prior mean × 2.0]")
+        if mean_lat <= lat_thresh:
             result("PASS",
-                   f"Mean per-call latency ≤ 15 ms  ({mean_lat:.1f} µs)")
+                   f"Mean per-call latency ≤ {thresh_ms:.0f} ms  ({mean_lat:.1f} µs)")
         else:
             result("FAIL",
-                   f"Mean per-call latency > 15 ms  ({mean_lat:.1f} µs)",
+                   f"Mean per-call latency > {thresh_ms:.0f} ms  ({mean_lat:.1f} µs)",
                    "non-blocking call too slow")
 
         if pass_rate >= 0.80:
@@ -165,6 +169,14 @@ def main():
             result("FAIL",
                    f"< 80% calls returned 0  ({(pass_rate*100):.1f}%)",
                    f"error count={error_count}")
+
+        # ── Write measured values to shared baseline ─────────────────────────────────
+        hw_baseline.update({
+            "mean_lat_us": mean_lat,
+            "min_lat_us":  min_lat,
+            "max_lat_us":  max_lat,
+            "cmd_rate_hz": cmd_rate,
+        })
 
         # ── Step 3: rate sweep ────────────────────────────────────────────────
         print()

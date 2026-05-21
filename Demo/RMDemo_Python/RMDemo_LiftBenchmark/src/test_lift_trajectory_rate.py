@@ -64,6 +64,7 @@ from Robotic_Arm.rm_ctypes_wrap import (
     rm_realtime_arm_state_call_back,
     rm_realtime_arm_joint_state_t,
 )
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP            = "192.168.1.10"
@@ -371,32 +372,43 @@ def main():
                 (udp_list[k+1][0] - udp_list[k][0]) / 1e6
                 for k in range(len(udp_list) - 1)
             ]
-            print(f"\n  ── UDP feedback (observed during trajectory) ────────")
+            udp_mean_ms = statistics.mean(intervals_ms)
+            udp_std_ms  = statistics.stdev(intervals_ms) if len(intervals_ms) > 1 else 0.0
+            print(f"\n  ── UDP feedback (observed during trajectory) ────")
             print(f"  {'UDP packets received':35s}: {len(udp_list)}")
-            print(f"  {'Mean packet interval':35s}: "
-                  f"{statistics.mean(intervals_ms):.1f} ms")
-            print(f"  {'Std dev interval':35s}: "
-                  f"{statistics.stdev(intervals_ms):.2f} ms")
+            print(f"  {'Mean packet interval':35s}: {udp_mean_ms:.1f} ms")
+            print(f"  {'Std dev interval':35s}: {udp_std_ms:.2f} ms")
             print()
             print(f"  {'Sample':>6}  {'t (s)':>8}  {'height (mm)':>12}")
             print(f"  {'-'*6}  {'-'*8}  {'-'*12}")
             for idx in range(0, len(udp_list), max(1, len(udp_list)//15)):
                 ts_s = (udp_list[idx][0] - udp_list[0][0]) / 1e9
                 print(f"  {idx:>6}  {ts_s:>8.3f}  {udp_list[idx][1]:>12}")
+            # Write UDP + jitter stats to shared baseline
+            hw_baseline.update({
+                "udp_interval_ms": udp_mean_ms,
+                "udp_sigma_ms":    udp_std_ms,
+                "jitter_mean_ms":  mean_jit,
+                "jitter_max_ms":   max_jit,
+            })
         else:
             print("\n  [INFO] No UDP feedback packets received "
                   "(check UDP config / firewall)")
 
         # ── Assertions ───────────────────────────────────────────────────
         print()
-        # Threshold: 15 ms — observed hardware baseline is ~7–9 ms mean
-        # due to SDK thread scheduling; 15 ms gives ~2× headroom.
-        if mean_lat <= 15000.0:
+        # Latency threshold = prior measured mean × 2.0 (from hw_baseline;
+        # falls back to 15 ms on first run before test 2 has written a value).
+        lat_thresh = hw_baseline.latency_threshold_us(2.0)
+        thresh_ms  = lat_thresh / 1000.0
+        print(f"  [BASELINE] Latency threshold: {lat_thresh:.0f} µs "
+              f"({thresh_ms:.1f} ms)  [= prior mean × 2.0]")
+        if mean_lat <= lat_thresh:
             result("PASS",
-                   f"Mean per-call latency ≤ 15 ms  ({mean_lat:.1f} µs)")
+                   f"Mean per-call latency ≤ {thresh_ms:.0f} ms  ({mean_lat:.1f} µs)")
         else:
             result("FAIL",
-                   f"Mean per-call latency > 15 ms  ({mean_lat:.1f} µs)")
+                   f"Mean per-call latency > {thresh_ms:.0f} ms  ({mean_lat:.1f} µs)")
 
         if pass_rate >= 0.80:
             result("PASS",

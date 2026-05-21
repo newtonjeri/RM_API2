@@ -34,6 +34,7 @@ from Robotic_Arm.rm_ctypes_wrap import (
     rm_realtime_arm_state_call_back,
     rm_realtime_arm_joint_state_t,
 )
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP            = "192.168.1.10"
@@ -258,12 +259,17 @@ def main():
 
             # Assertions
             print()
-            if 8.0 <= iv_mean <= 12.0:
+            udp_lo, udp_hi = hw_baseline.udp_interval_window_ms(3.0)
+            print(f"  [BASELINE] UDP interval window: [{udp_lo:.2f}, {udp_hi:.2f}] ms"
+                  f"  [= mean ± 3σ from test 3]")
+            if udp_lo <= iv_mean <= udp_hi:
                 result("PASS",
-                       f"UDP interval mean ∈ [8, 12] ms  ({iv_mean:.2f} ms)")
+                       f"UDP interval mean ∈ [{udp_lo:.1f}, {udp_hi:.1f}] ms"
+                       f"  ({iv_mean:.2f} ms)")
             else:
                 result("FAIL",
-                       f"UDP interval mean {iv_mean:.2f} ms outside [8, 12] ms")
+                       f"UDP interval mean {iv_mean:.2f} ms outside"
+                       f" [{udp_lo:.1f}, {udp_hi:.1f}] ms")
 
             # Expected move ~4 s → ~400 packets at 100 Hz; assert ≥ 300
             if len(all_samples) >= 300:

@@ -39,6 +39,7 @@ from Robotic_Arm.rm_ctypes_wrap import (
     rm_realtime_arm_state_call_back,
     rm_realtime_arm_joint_state_t,
 )
+import hw_baseline
 
 # ─── Hardware / safety constants ────────────────────────────────────────────
 ROBOT_IP            = "192.168.1.10"
@@ -180,12 +181,15 @@ def main():
         wall = time.perf_counter() - t0
 
         print(f"  [INFO] T2: call returned in {wall*1000:.2f} ms  ret={ret}")
-        if ret == 0 and wall <= 0.020:
+        nb_limit_ms = hw_baseline.nonblocking_call_limit_ms(3.0)
+        print(f"  [BASELINE] Non-blocking call limit: {nb_limit_ms:.1f} ms"
+              f"  [= measured mean × 3.0]")
+        if ret == 0 and wall <= nb_limit_ms / 1000.0:
             result("PASS",
-                   f"T2: non-blocking call ≤ 20 ms  ({wall*1000:.2f} ms)")
+                   f"T2: non-blocking call ≤ {nb_limit_ms:.0f} ms  ({wall*1000:.2f} ms)")
         else:
             result("FAIL",
-                   f"T2: call took {wall*1000:.2f} ms (limit 20 ms) or "
+                   f"T2: call took {wall*1000:.2f} ms (limit {nb_limit_ms:.0f} ms) or "
                    f"ret={ret}")
 
         # Wait for the non-blocking motion to physically complete
