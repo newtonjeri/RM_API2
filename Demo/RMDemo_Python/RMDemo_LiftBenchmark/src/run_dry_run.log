@@ -1,0 +1,258 @@
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-05-21 16:09:54
+========================================================================
+
+────────────────────────────────────────────────────────────────
+  A  Scale-factor math (PHYS_TO_HW × HW_TO_PHYS round-trip)
+────────────────────────────────────────────────────────────────
+  [PASS] phys 0 mm → hw 0 mm
+  [PASS] phys 150 mm → hw 100 mm
+  [PASS] phys 300 mm → hw 200 mm
+  [PASS] phys 10 mm → hw 7 mm
+  [PASS] phys 290 mm → hw 193 mm
+  [PASS] round-trip 10 mm  → hw=7 → phys=10.5 mm
+  [PASS] round-trip 50 mm  → hw=33 → phys=49.5 mm
+  [PASS] round-trip 100 mm  → hw=67 → phys=100.5 mm
+  [PASS] round-trip 150 mm  → hw=100 → phys=150.0 mm
+  [PASS] round-trip 200 mm  → hw=133 → phys=199.5 mm
+  [PASS] round-trip 250 mm  → hw=167 → phys=250.5 mm
+  [PASS] round-trip 290 mm  → hw=193 → phys=289.5 mm
+
+────────────────────────────────────────────────────────────────
+  B  safe_height() boundary conditions
+────────────────────────────────────────────────────────────────
+  [PASS] safe_height(10) accepted
+  [PASS] safe_height(290) accepted
+  [PASS] safe_height(150) accepted
+  [PASS] safe_height(9) correctly rejected
+  [PASS] safe_height(291) correctly rejected
+  [PASS] safe_height(-1) correctly rejected
+  [PASS] safe_height(0) correctly rejected
+  [PASS] safe_height(300) correctly rejected
+  [PASS] safe_height(500) correctly rejected
+
+────────────────────────────────────────────────────────────────
+  C  hw_height() conversion (physical mm → hardware units)
+────────────────────────────────────────────────────────────────
+  [PASS] hw_height(10) = 7
+  [PASS] hw_height(150) = 100
+  [PASS] hw_height(290) = 193
+  [PASS] hw_height(h) ∈ [0, 200] for all h ∈ [POLE_MIN_MM, POLE_MAX_MM]
+
+────────────────────────────────────────────────────────────────
+  D  phys_height() conversion (hardware units → physical mm)
+────────────────────────────────────────────────────────────────
+  [PASS] phys_height(0) = 0.0 mm
+  [PASS] phys_height(100) = 150.0 mm
+  [PASS] phys_height(200) = 300.0 mm
+  [PASS] phys_height(7) = 10.5 mm
+  [PASS] phys_height(193) = 289.5 mm
+
+────────────────────────────────────────────────────────────────
+  E  Trajectory unit-conversion helpers
+────────────────────────────────────────────────────────────────
+  [PASS] pos_m_to_mm(0.075) = 75
+  [PASS] pos_m_to_mm(0.150) = 150
+  [PASS] pos_m_to_mm(0.295) = 295
+  [PASS] vel_m_s_to_pct(0.10) = 100
+  [PASS] vel_m_s_to_pct(0.05) = 50
+  [PASS] vel_m_s_to_pct(0.005) = 5
+  [PASS] vel_m_s_to_pct(0.0) = 1
+  [PASS] vel_m_s_to_pct(0.2) = 100
+  [PASS] trajectory height 75 mm → hw=50 (clamped to [10,290])
+  [PASS] trajectory height 100 mm → hw=67 (clamped to [10,290])
+  [PASS] trajectory height 150 mm → hw=100 (clamped to [10,290])
+  [PASS] trajectory height 200 mm → hw=133 (clamped to [10,290])
+  [PASS] trajectory height 250 mm → hw=167 (clamped to [10,290])
+  [PASS] trajectory height 280 mm → hw=187 (clamped to [10,290])
+  [PASS] trajectory height 295 mm → hw=193 (clamped to [10,290])
+
+────────────────────────────────────────────────────────────────
+  F  Smoke tests with MockRobot (no hardware)
+────────────────────────────────────────────────────────────────
+
+  F.0  Direct MockRobot API checks
+  [PASS] MockRobot: rm_create_robot_arm returns handle.id=1
+  [PASS] MockRobot: rm_get_robot_info arm_dof=7
+  [PASS] MockRobot: rm_get_lift_state pos_hw=100 → phys=150.0 mm
+  [PASS] MockRobot: rm_set_lift_height(50, hw=53, block=False) = 0
+  [PASS] MockRobot: rm_set_lift_height(50, hw=100, block=False) = 0
+  [PASS] MockRobot: rm_set_lift_height(50, hw=147, block=False) = 0
+
+  F.1  Smoke-import: test_lift_connect
+  [PASS] test_lift_connect: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_connect.hw_height(150) = 100 ✓
+  [PASS] test_lift_connect.phys_height(100) = 150.0 ✓
+
+  F.2  Smoke-import: test_lift_nonblocking_rate
+  [PASS] test_lift_nonblocking_rate: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_nonblocking_rate.hw_height(150) = 100 ✓
+  [PASS] test_lift_nonblocking_rate.phys_height(100) = 150.0 ✓
+
+  F.3  Smoke-import: test_lift_trajectory_rate
+  [PASS] test_lift_trajectory_rate: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_trajectory_rate.hw_height(150) = 100 ✓
+  [PASS] test_lift_trajectory_rate.phys_height(100) = 150.0 ✓
+
+  F.4  Smoke-import: test_lift_udp_feedback
+  [PASS] test_lift_udp_feedback: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_udp_feedback.hw_height(150) = 100 ✓
+  [PASS] test_lift_udp_feedback.phys_height(100) = 150.0 ✓
+
+  F.5  Smoke-import: test_lift_blocking_vs_nonblocking
+  [PASS] test_lift_blocking_vs_nonblocking: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_blocking_vs_nonblocking.hw_height(150) = 100 ✓
+  [PASS] test_lift_blocking_vs_nonblocking.phys_height(100) = 150.0 ✓
+
+  F.6  Smoke-import: test_lift_speed_param
+  [PASS] test_lift_speed_param: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_speed_param.hw_height(150) = 100 ✓
+  [PASS] test_lift_speed_param.phys_height(100) = 150.0 ✓
+
+  F.7  Smoke-import: test_lift_motion_profile
+  [PASS] test_lift_motion_profile: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_motion_profile.hw_height(150) = 100 ✓
+  [PASS] test_lift_motion_profile.phys_height(100) = 150.0 ✓
+
+  F.8  Smoke-import: test_lift_preemption
+  [PASS] test_lift_preemption: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_preemption.hw_height(150) = 100 ✓
+  [PASS] test_lift_preemption.phys_height(100) = 150.0 ✓
+
+================================================================
+  Dry-run complete:  75/75 passed  (0 failed)
+================================================================
+
+  Log saved: run_dry_run.log
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-05-21 16:09:54
+========================================================================
+
+────────────────────────────────────────────────────────────────
+  A  Scale-factor math (PHYS_TO_HW × HW_TO_PHYS round-trip)
+────────────────────────────────────────────────────────────────
+  [PASS] phys 0 mm → hw 0 mm
+  [PASS] phys 150 mm → hw 100 mm
+  [PASS] phys 300 mm → hw 200 mm
+  [PASS] phys 10 mm → hw 7 mm
+  [PASS] phys 290 mm → hw 193 mm
+  [PASS] round-trip 10 mm  → hw=7 → phys=10.5 mm
+  [PASS] round-trip 50 mm  → hw=33 → phys=49.5 mm
+  [PASS] round-trip 100 mm  → hw=67 → phys=100.5 mm
+  [PASS] round-trip 150 mm  → hw=100 → phys=150.0 mm
+  [PASS] round-trip 200 mm  → hw=133 → phys=199.5 mm
+  [PASS] round-trip 250 mm  → hw=167 → phys=250.5 mm
+  [PASS] round-trip 290 mm  → hw=193 → phys=289.5 mm
+
+────────────────────────────────────────────────────────────────
+  B  safe_height() boundary conditions
+────────────────────────────────────────────────────────────────
+  [PASS] safe_height(10) accepted
+  [PASS] safe_height(290) accepted
+  [PASS] safe_height(150) accepted
+  [PASS] safe_height(9) correctly rejected
+  [PASS] safe_height(291) correctly rejected
+  [PASS] safe_height(-1) correctly rejected
+  [PASS] safe_height(0) correctly rejected
+  [PASS] safe_height(300) correctly rejected
+  [PASS] safe_height(500) correctly rejected
+
+────────────────────────────────────────────────────────────────
+  C  hw_height() conversion (physical mm → hardware units)
+────────────────────────────────────────────────────────────────
+  [PASS] hw_height(10) = 7
+  [PASS] hw_height(150) = 100
+  [PASS] hw_height(290) = 193
+  [PASS] hw_height(h) ∈ [0, 200] for all h ∈ [POLE_MIN_MM, POLE_MAX_MM]
+
+────────────────────────────────────────────────────────────────
+  D  phys_height() conversion (hardware units → physical mm)
+────────────────────────────────────────────────────────────────
+  [PASS] phys_height(0) = 0.0 mm
+  [PASS] phys_height(100) = 150.0 mm
+  [PASS] phys_height(200) = 300.0 mm
+  [PASS] phys_height(7) = 10.5 mm
+  [PASS] phys_height(193) = 289.5 mm
+
+────────────────────────────────────────────────────────────────
+  E  Trajectory unit-conversion helpers
+────────────────────────────────────────────────────────────────
+  [PASS] pos_m_to_mm(0.075) = 75
+  [PASS] pos_m_to_mm(0.150) = 150
+  [PASS] pos_m_to_mm(0.295) = 295
+  [PASS] vel_m_s_to_pct(0.10) = 100
+  [PASS] vel_m_s_to_pct(0.05) = 50
+  [PASS] vel_m_s_to_pct(0.005) = 5
+  [PASS] vel_m_s_to_pct(0.0) = 1
+  [PASS] vel_m_s_to_pct(0.2) = 100
+  [PASS] trajectory height 75 mm → hw=50 (clamped to [10,290])
+  [PASS] trajectory height 100 mm → hw=67 (clamped to [10,290])
+  [PASS] trajectory height 150 mm → hw=100 (clamped to [10,290])
+  [PASS] trajectory height 200 mm → hw=133 (clamped to [10,290])
+  [PASS] trajectory height 250 mm → hw=167 (clamped to [10,290])
+  [PASS] trajectory height 280 mm → hw=187 (clamped to [10,290])
+  [PASS] trajectory height 295 mm → hw=193 (clamped to [10,290])
+
+────────────────────────────────────────────────────────────────
+  F  Smoke tests with MockRobot (no hardware)
+────────────────────────────────────────────────────────────────
+
+  F.0  Direct MockRobot API checks
+  [PASS] MockRobot: rm_create_robot_arm returns handle.id=1
+  [PASS] MockRobot: rm_get_robot_info arm_dof=7
+  [PASS] MockRobot: rm_get_lift_state pos_hw=100 → phys=150.0 mm
+  [PASS] MockRobot: rm_set_lift_height(50, hw=53, block=False) = 0
+  [PASS] MockRobot: rm_set_lift_height(50, hw=100, block=False) = 0
+  [PASS] MockRobot: rm_set_lift_height(50, hw=147, block=False) = 0
+
+  F.1  Smoke-import: test_lift_connect
+  [PASS] test_lift_connect: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_connect.hw_height(150) = 100 ✓
+  [PASS] test_lift_connect.phys_height(100) = 150.0 ✓
+
+  F.2  Smoke-import: test_lift_nonblocking_rate
+  [PASS] test_lift_nonblocking_rate: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_nonblocking_rate.hw_height(150) = 100 ✓
+  [PASS] test_lift_nonblocking_rate.phys_height(100) = 150.0 ✓
+
+  F.3  Smoke-import: test_lift_trajectory_rate
+  [PASS] test_lift_trajectory_rate: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_trajectory_rate.hw_height(150) = 100 ✓
+  [PASS] test_lift_trajectory_rate.phys_height(100) = 150.0 ✓
+
+  F.4  Smoke-import: test_lift_udp_feedback
+  [PASS] test_lift_udp_feedback: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_udp_feedback.hw_height(150) = 100 ✓
+  [PASS] test_lift_udp_feedback.phys_height(100) = 150.0 ✓
+
+  F.5  Smoke-import: test_lift_blocking_vs_nonblocking
+  [PASS] test_lift_blocking_vs_nonblocking: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_blocking_vs_nonblocking.hw_height(150) = 100 ✓
+  [PASS] test_lift_blocking_vs_nonblocking.phys_height(100) = 150.0 ✓
+
+  F.6  Smoke-import: test_lift_speed_param
+  [PASS] test_lift_speed_param: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_speed_param.hw_height(150) = 100 ✓
+  [PASS] test_lift_speed_param.phys_height(100) = 150.0 ✓
+
+  F.7  Smoke-import: test_lift_motion_profile
+  [PASS] test_lift_motion_profile: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_motion_profile.hw_height(150) = 100 ✓
+  [PASS] test_lift_motion_profile.phys_height(100) = 150.0 ✓
+
+  F.8  Smoke-import: test_lift_preemption
+  [PASS] test_lift_preemption: has PHYS_TO_HW, HW_TO_PHYS, hw_height, phys_height
+  [PASS] test_lift_preemption.hw_height(150) = 100 ✓
+  [PASS] test_lift_preemption.phys_height(100) = 150.0 ✓
+
+================================================================
+  Dry-run complete:  75/75 passed  (0 failed)
+================================================================
+
+  Log saved: run_dry_run.log

@@ -62,18 +62,18 @@ def setup_log(script_path: str) -> pathlib.Path:
         Absolute path of the created log file.
     """
     script  = pathlib.Path(script_path).resolve()
-    ts      = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    logpath = script.parent / f"{script.stem}_{ts}.log"
-    logfile = logpath.open("w", encoding="utf-8", errors="replace")
+    logpath = script.parent / f"{script.stem}.log"
+    logfile = logpath.open("a", encoding="utf-8", errors="replace")
 
     sys.stdout = _Tee(sys.stdout, logfile)
     sys.stderr = _Tee(sys.stderr, logfile)
 
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     header = (
-        f"{'='*72}\n"
+        f"\n{'='*72}\n"
         f"  Script : {script.name}\n"
-        f"  Log    : {logpath}\n"
-        f"  Started: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"  Log    : {logpath.name}\n"
+        f"  Started: {ts}\n"
         f"{'='*72}\n"
     )
     sys.stdout.write(header)

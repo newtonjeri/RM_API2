@@ -412,6 +412,6 @@ total = _pass + _fail
 print(f"  Dry-run complete:  {_pass}/{total} passed  "
       f"({_fail} failed)")
 print("=" * 64)
-print(f"\n  Log saved: {_log_path}")
+print(f"\n  Log saved: {_log_path.name}")
 
 sys.exit(0 if _fail == 0 else 1)
