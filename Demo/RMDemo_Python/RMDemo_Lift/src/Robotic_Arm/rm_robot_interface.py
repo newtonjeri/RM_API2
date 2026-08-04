@@ -2368,6 +2368,42 @@ class ControllerConfig:
 
         return ret, version.to_dict(self.robot_controller_version)
 
+    def rm_set_sn(self, sn: str) -> int:
+        """
+        设置机械臂序列号(SN)
+
+        Args:
+            sn (str): 序列号字符串，不能为空字符串
+
+        Returns:
+            int: 函数执行的状态码。
+                - 0: 成功。
+                - 1: 控制器返回false，传递参数错误（如 sn 为空字符串）或机械臂状态发生错误。
+                - -1: 数据发送失败，通信过程中出现问题。
+                - -2: 数据接收失败，通信过程中出现问题或者控制器超时没有返回。
+                - -3: 返回值解析失败，接收到的数据格式不正确或不完整。
+        """
+        tag = rm_set_sn(self.handle, sn)
+        return tag
+
+    def rm_get_sn(self) -> tuple[int, str]:
+        """
+        获取机械臂序列号(SN)
+
+        Returns:
+            tuple[int, str]: 包含两个元素的元组。
+            - int: 函数执行的状态码。
+                - 0: 成功。
+                - 1: 控制器返回false，传递参数错误或机械臂状态发生错误。
+                - -1: 数据发送失败，通信过程中出现问题。
+                - -2: 数据接收失败，通信过程中出现问题或者控制器超时没有返回。
+                - -3: 返回值解析失败，接收到的数据格式不正确或不完整。
+            - str: 返回的序列号字符串。未设置过时返回空字符串。
+        """
+        sn = ctypes.create_string_buffer(28)
+        ret = rm_get_sn(self.handle, sn)
+        return ret, sn.value.decode()
+
     def rm_set_NetIP(self, ip: str, netmask: str, gw: str) -> int:
         """
         配置有线网口 IP 地址
@@ -2425,7 +2461,7 @@ class ControllerConfig:
     def rm_get_webserver_enabled(self) -> tuple[int, int]:
         """
         获取Web服务器使能状态
-        
+
         @attention 仅支持四代控制器
         Returns:
             tuple[int,int]: 包含两个元素的元组。
@@ -2441,7 +2477,261 @@ class ControllerConfig:
         tag = rm_get_webserver_enabled(self.handle, byref(enable))
         return tag, enable.value
 
+    def rm_torque_arm_impedence_move(
+            self,
+            joint: list[float],
+            speed: list[float] = None,
+            kp: list[float] = None,
+            kd: list[float] = None
+        ) -> tuple[int, bool]:
+        """
+        关节空间阻抗控制（力矩传感器）| 阻抗透传运动
 
+        Args:
+            joint (list[float]): 关节目标角度数组，单位：°
+            speed (list[float], optional): 关节目标速度数组，单位：°/s，None表示自动计算
+            kp (list[float]): 阻抗控制刚度参数
+            kd (list[float]): 阻抗控制阻尼参数
+
+        Returns:
+            tuple[int,bool]:
+                - int: 状态码
+                - bool: state，False表示参数错误
+        """
+
+        state = c_bool()
+
+        dof = len(joint)
+
+        # ✅ float数组
+        joint_arr = (c_float * dof)(*joint)
+
+        # speed 可选
+        speed_arr = None
+        if speed is not None:
+            speed_arr = (c_float * dof)(*speed)
+
+        kp_arr = (c_float * dof)(*kp)
+        kd_arr = (c_float * dof)(*kd)
+
+        tag = rm_torque_arm_impedence_move(
+            self.handle,
+            joint_arr,
+            speed_arr,
+            kp_arr,
+            kd_arr,
+            byref(state)
+        )
+
+        return tag, state.value
+    
+    def rm_force_impedence_position_move(
+                                            self,
+                                            pose,
+                                            mode: int = 0,
+                                            follow: bool = True,
+                                            control_mode=None
+                                        ) -> tuple[int, bool]:
+        """
+        位姿空间阻抗控制（力矩传感器）| 位姿阻抗透传运动
+
+        Args:
+            pose (rm_pose_t):
+                位姿结构体：
+                - position: 单位 m
+                - quaternion: 四元数（优先使用）
+                - euler: 欧拉角列表[rx.ry,rz]，单位：rad（四元数无效时使用）
+
+            mode (int): 
+                - 0: 工作坐标系
+                - 1: 工具坐标系
+
+            follow (bool):
+                - True: 高跟随
+                - False: 低跟随
+
+            control_mode (list[int]):
+                六维模式 [Fx,Fy,Fz,Mx,My,Mz]
+
+        Returns:
+            tuple[int, bool]:
+                - int: 状态码
+                - bool: state（False表示失败）
+        """
+
+        if pose is None:
+            raise ValueError("pose must not be None")
+
+        # control_mode 默认值
+        if control_mode is None:
+            control_mode = [0, 0, 0, 0, 0, 0]
+
+        control_mode_arr = (c_int * 6)(*control_mode)
+
+        state = c_bool()
+
+        tag = rm_force_impedence_position_move(
+            self.handle,
+            byref(pose),
+            mode,
+            follow,
+            control_mode_arr,
+            byref(state)
+        )
+
+        return tag, state.value
+    
+    def rm_set_force_impedence_mbk_data(self,
+                                        b,
+                                        k) -> tuple[int, bool]:
+        """
+        设置位姿力控MBK参数
+
+        Args:
+            b (list[float]): 阻尼参数数组
+            k (list[float]): 刚度参数数组
+
+        Returns:
+            tuple[int, bool]:
+                - int: 函数执行的状态码。
+                    - 0: 成功。
+                    - 1: 控制器返回false，传递参数错误或机械臂状态发生错误。
+                    - -1: 数据发送失败，通信过程中出现问题。
+                    - -2: 数据接收失败，通信过程中出现问题或者控制器超时没有返回。
+                    - -3: 返回值解析失败，接收到的数据格式不正确或不完整。
+                - bool: set_state（True表示执行成功，False表示参数错误或控制器执行失败）
+
+        """
+
+        # 转换为 ctypes float 数组（由底层统一 ×1000 处理）
+        b_arr = (c_float * len(b))(*b)
+        k_arr = (c_float * len(k))(*k)
+
+        state = c_bool()
+
+        tag = rm_set_force_impedence_mbk_data(
+            self.handle,
+            b_arr,
+            k_arr,
+            byref(state)
+        )
+
+        return tag, state.value
+
+    def rm_set_force_impedence_mbk_init(self) -> tuple[int, bool]:
+        """
+        设置力控阻尼MBK参数初始化
+
+        Returns:
+            tuple[int, bool]: 包含两个元素的元组
+                - int: 函数执行的状态码
+                    0: 成功
+                    1: 控制器返回false，参数错误或机械臂状态错误
+                    -1: 数据发送失败，通信异常
+                    -2: 数据接收失败，通信异常或控制器超时
+                    -3: 返回值解析失败，数据格式错误
+                - bool: set_state，初始化结果，True=成功，False=失败
+        """
+        # 定义输出状态变量
+        set_state = c_bool()
+
+        # 调用底层C接口
+        tag = rm_set_force_impedence_mbk_init(
+            self.handle,
+            byref(set_state)
+        )
+
+        # 返回状态码和初始化结果
+        return tag, set_state.value
+    def rm_get_self_endeffector_collision_enable(self) -> tuple[int, bool]:
+        """
+        获取负载自碰撞使能状态
+
+        Returns:
+            tuple[int, bool]: 包含两个元素的元组
+                - int: 函数执行的状态码
+                    0: 成功
+                    1: 控制器返回false，参数错误或机械臂状态错误
+                    -1: 数据发送失败，通信异常
+                    -2: 数据接收失败，通信异常或控制器超时
+                    -3: 返回值解析失败，数据格式错误
+                - bool: enable_state，自碰撞使能状态，True=已使能，False=未使能
+        """
+        # 定义输出状态变量
+        enable_state = c_bool()
+
+        # 调用底层C接口
+        tag = rm_get_self_endeffector_collision_enable(
+            self.handle,
+            byref(enable_state)
+        )
+
+        # 返回状态码和使能状态
+        return tag, enable_state.value
+    
+    def rm_set_self_endeffector_collision_enable(self, set_enable: bool) -> tuple[int, bool]:
+        """
+        负载自碰撞使能设置
+
+        Args:
+            set_enable (bool): 自碰撞功能设置值，True=使能，False=禁使能
+
+        Returns:
+            tuple[int, bool]: 包含两个元素的元组
+                - int: 函数执行的状态码
+                    0: 成功
+                    1: 控制器返回false，参数错误或机械臂状态错误
+                    -1: 数据发送失败，通信异常
+                    -2: 数据接收失败，通信异常或控制器超时
+                    -3: 返回值解析失败，数据格式错误
+                - bool: set_state，设置结果，True=成功，False=失败
+        """
+        # 定义输出状态变量
+        set_state = c_bool()
+
+        # 调用底层C接口
+        tag = rm_set_self_endeffector_collision_enable(
+            self.handle,
+            set_enable,
+            byref(set_state)
+        )
+
+        # 返回状态码和设置结果
+        return tag, set_state.value
+
+
+    def rm_get_torque_data(self) -> tuple[int, list[int], int]:
+        """
+        力矩传感器数据获取
+
+        Returns:
+            tuple[int, list[int], int]: 包含三个元素的元组
+                - int: 函数执行的状态码
+                    0: 成功
+                    1: 控制器返回false，参数错误或机械臂状态错误
+                    -1: 数据发送失败，通信异常
+                    -2: 数据接收失败，通信异常或控制器超时
+                    -3: 返回值解析失败，数据格式错误
+                - list[int]: 力矩数据列表，单位0.001Nm，顺序对应关节1到关节N
+                - int: 力矩数据的实际长度（即机械臂自由度）
+        """
+        # 机械臂最大自由度为10，预分配足够长度的数组
+        max_dof = 10
+        torque_arr = (c_int * max_dof)()
+        data_len = c_int()
+
+        # 调用底层C接口
+        tag = rm_get_torque_data(
+            self.handle,
+            torque_arr,
+            byref(data_len)
+        )
+
+        # 转换为Python列表，仅截取实际有效长度的数据
+        torque_data = list(torque_arr[:data_len.value])
+
+        # 返回状态码、力矩数据、数据长度
+        return tag, torque_data, data_len.value
 class CommunicationConfig:
     """
     配置通讯内容
@@ -5886,7 +6176,9 @@ class Algo:
             rm_robot_arm_model_e.RM_MODEL_ZPFL74_E,
             rm_robot_arm_model_e.RM_MODEL_ZPFR74_E, 
             rm_robot_arm_model_e.RM_MODEL_RXL75II_E,   
-            rm_robot_arm_model_e.RM_MODEL_RXR75II_E,    
+            rm_robot_arm_model_e.RM_MODEL_RXR75II_E,
+            rm_robot_arm_model_e.RM_MODEL_RXL75T_E,
+            rm_robot_arm_model_e.RM_MODEL_RXR75T_E    
 
         }
         if arm_model == rm_robot_arm_model_e.RM_MODEL_UNIVERSAL_E:
@@ -5903,7 +6195,8 @@ class Algo:
         if(arm_model == rm_robot_arm_model_e.RM_MODEL_ZM7L_E or arm_model == rm_robot_arm_model_e.RM_MODEL_ZM7R_E or 
            arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75_E or arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75_E or
            arm_model == rm_robot_arm_model_e.RM_MODEL_ZPFL74_E or arm_model == rm_robot_arm_model_e.RM_MODEL_ZPFR74_E or
-           arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75II_E or arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75II_E):
+           arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75II_E or arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75II_E or
+           arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75T_E or arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75T_E):
             self.dh_dof = 8
         else:
             self.dh_dof = self.arm_dof
@@ -6856,7 +7149,8 @@ class RoboticArm(ArmState, MovePlan, JointConfigSettings, JointConfigReader, Arm
                 if(info.arm_model == rm_robot_arm_model_e.RM_MODEL_ZM7L_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_ZM7R_E or
                    info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75_E or
                    info.arm_model == rm_robot_arm_model_e.RM_MODEL_ZPFL74_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_ZPFR74_E or
-                   info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75II_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75II_E):
+                   info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75II_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75II_E or
+                   info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXL75T_E or info.arm_model == rm_robot_arm_model_e.RM_MODEL_RXR75T_E):
                     self.dh_dof = 8
                 else:
                     self.dh_dof = self.arm_dof

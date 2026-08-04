@@ -960,6 +960,8 @@ class rm_robot_arm_model_e(IntEnum):
         RM_MODEL_ZPFR74_E (int)   ///< ZM7RII
         RM_MODEL_RXL75II_E (int)    ///< 人型机器人左臂II
         RM_MODEL_RXR75II_E (int)    ///< 人型机器人右臂II
+        RM_MODEL_RXL75T_E (int)    ///< 力矩左臂
+        RM_MODEL_RXR75T_E (int)    ///< 力矩右臂
     """
     # RM_65型号
     RM_MODEL_RM_65_E = 0
@@ -997,6 +999,10 @@ class rm_robot_arm_model_e(IntEnum):
     RM_MODEL_RXL75II_E = RM_MODEL_ZPFR74_E + 1
     # 人型机器人右臂II
     RM_MODEL_RXR75II_E = RM_MODEL_RXL75II_E + 1
+    # 力矩左臂
+    RM_MODEL_RXL75T_E = RM_MODEL_RXR75II_E + 1
+    # 力矩右臂
+    RM_MODEL_RXR75T_E = RM_MODEL_RXL75T_E + 1
 
 
 class rm_force_type_e(IntEnum):
@@ -3579,7 +3585,9 @@ class rm_robot_info_t(Structure):
             rm_robot_arm_model_e.RM_MODEL_ZPFL74_E: "ZM7LII",
             rm_robot_arm_model_e.RM_MODEL_ZPFR74_E: "ZM7RII", 
             rm_robot_arm_model_e.RM_MODEL_RXL75II_E: "RXL75II",   
-            rm_robot_arm_model_e.RM_MODEL_RXR75II_E: "RXR75II",                     
+            rm_robot_arm_model_e.RM_MODEL_RXR75II_E: "RXR75II",
+            rm_robot_arm_model_e.RM_MODEL_RXL75T_E: "RXL75T",
+            rm_robot_arm_model_e.RM_MODEL_RXR75T_E: "RXR75T"                     
         }
         force_to_string = {
             rm_force_type_e.RM_MODEL_RM_B_E: "B",
@@ -4762,6 +4770,16 @@ if _libs[libname].has("rm_get_arm_software_info", "cdecl"):
         POINTER(rm_robot_handle), POINTER(rm_arm_software_version_t)]
     rm_get_arm_software_info.restype = c_int
 
+if _libs[libname].has("rm_set_sn", "cdecl"):
+    rm_set_sn = _libs[libname].get("rm_set_sn", "cdecl")
+    rm_set_sn.argtypes = [POINTER(rm_robot_handle), String]
+    rm_set_sn.restype = c_int
+
+if _libs[libname].has("rm_get_sn", "cdecl"):
+    rm_get_sn = _libs[libname].get("rm_get_sn", "cdecl")
+    rm_get_sn.argtypes = [POINTER(rm_robot_handle), String]
+    rm_get_sn.restype = c_int
+
 if _libs[libname].has("rm_set_wifi_ap", "cdecl"):
     rm_set_wifi_ap = _libs[libname].get("rm_set_wifi_ap", "cdecl")
     rm_set_wifi_ap.argtypes = [POINTER(rm_robot_handle), String, String]
@@ -5517,6 +5535,20 @@ if _libs[libname].has("rm_get_webserver_enabled", "cdecl"):
         POINTER(rm_robot_handle), POINTER(c_int)]
     rm_get_webserver_enabled.restype = c_int
 
+if _libs[libname].has("rm_torque_arm_impedence_move", "cdecl"):
+    rm_torque_arm_impedence_move = _libs[libname].get(
+        "rm_torque_arm_impedence_move", "cdecl")
+
+    rm_torque_arm_impedence_move.argtypes = [
+        POINTER(rm_robot_handle),   # handle
+        POINTER(c_float),           # joint
+        POINTER(c_float),           # speed
+        POINTER(c_float),           # kp
+        POINTER(c_float),           # kd
+        POINTER(c_bool)             # state
+    ]
+    rm_torque_arm_impedence_move.restype = c_int
+
 if _libs[libname].has("rm_algo_version", "cdecl"):
     rm_algo_version = _libs[libname].get("rm_algo_version", "cdecl")
     rm_algo_version.argtypes = []
@@ -6055,6 +6087,25 @@ if _libs[libname].has("rm_read_modbus_tcp_input_registers", "cdecl"):
     rm_read_modbus_tcp_input_registers.argtypes = [POINTER(rm_robot_handle), rm_modbus_tcp_read_params_t, POINTER(c_int)]
     rm_read_modbus_tcp_input_registers.restype = c_int
 
+if _libs[libname].has("rm_set_current_canfd_enable", "cdecl"):
+    rm_set_current_canfd_enable = _libs[libname].get(
+        "rm_set_current_canfd_enable", "cdecl")
+    rm_set_current_canfd_enable.argtypes = [POINTER(rm_robot_handle), c_bool]
+    rm_set_current_canfd_enable.restype = c_int
+
+if _libs[libname].has("rm_get_current_canfd_enable", "cdecl"):
+    rm_get_current_canfd_enable = _libs[libname].get(
+        "rm_get_current_canfd_enable", "cdecl")
+    rm_get_current_canfd_enable.argtypes = [
+        POINTER(rm_robot_handle), POINTER(c_bool)]
+    rm_get_current_canfd_enable.restype = c_int
+
+if _libs[libname].has("rm_current_canfd", "cdecl"):
+    rm_current_canfd = _libs[libname].get(
+        "rm_current_canfd", "cdecl")
+    rm_current_canfd.argtypes = [POINTER(rm_robot_handle), POINTER(c_float)]
+    rm_current_canfd.restype = c_int
+
 if _libs[libname].has("rm_get_tool_action_list", "cdecl"):
     rm_get_tool_action_list = _libs[libname].get(
         "rm_get_tool_action_list", "cdecl")
@@ -6122,6 +6173,90 @@ if _libs[libname].has("rm_set_rm_plus_reg", "cdecl"):
     rm_set_rm_plus_reg.argtypes = [POINTER(rm_robot_handle), c_int, c_int, POINTER(c_int)]
     rm_set_rm_plus_reg.restype = c_int
 
+if _libs[libname].has("rm_force_impedence_position_move", "cdecl"):
+    rm_force_impedence_position_move = _libs[libname].get(
+        "rm_force_impedence_position_move", "cdecl")
+
+    rm_force_impedence_position_move.argtypes = [
+        POINTER(rm_robot_handle),   # handle
+        POINTER(rm_pose_t),         # pose ✅
+        c_int,                      # mode
+        c_bool,                     # follow
+        POINTER(c_int),             # control_mode
+        POINTER(c_bool)             # state
+    ]
+
+    rm_force_impedence_position_move.restype = c_int
+
+if _libs[libname].has("rm_set_force_impedence_mbk_data", "cdecl"):
+    rm_set_force_impedence_mbk_data = _libs[libname].get(
+        "rm_set_force_impedence_mbk_data", "cdecl")
+
+    rm_set_force_impedence_mbk_data.argtypes = [
+        POINTER(rm_robot_handle),
+        POINTER(c_float),   # ✅ 改成 float
+        POINTER(c_float),   # ✅ 改成 float
+        POINTER(c_bool)
+    ]
+
+    rm_set_force_impedence_mbk_data.restype = c_int
+
+
+if _libs[libname].has("rm_set_force_impedence_mbk_init", "cdecl"):
+    rm_set_force_impedence_mbk_init = _libs[libname].get(
+        "rm_set_force_impedence_mbk_init", "cdecl")
+
+    # 定义入参类型
+    rm_set_force_impedence_mbk_init.argtypes = [
+        POINTER(rm_robot_handle),   # 机械臂句柄
+        POINTER(c_bool)             # 输出状态set_state
+    ]
+
+    # 定义返回值类型
+    rm_set_force_impedence_mbk_init.restype = c_int
+
+
+if _libs[libname].has("rm_set_self_endeffector_collision_enable", "cdecl"):
+    rm_set_self_endeffector_collision_enable = _libs[libname].get(
+        "rm_set_self_endeffector_collision_enable", "cdecl")
+
+    # 定义入参类型
+    rm_set_self_endeffector_collision_enable.argtypes = [
+        POINTER(rm_robot_handle),   # 机械臂句柄
+        c_bool,                      # 使能设置值set_enable
+        POINTER(c_bool)              # 输出状态set_state
+    ]
+
+    # 定义返回值类型
+    rm_set_self_endeffector_collision_enable.restype = c_int
+
+
+if _libs[libname].has("rm_get_torque_data", "cdecl"):
+    rm_get_torque_data = _libs[libname].get(
+        "rm_get_torque_data", "cdecl")
+
+    # 定义入参类型
+    rm_get_torque_data.argtypes = [
+        POINTER(rm_robot_handle),   # 机械臂句柄
+        POINTER(c_int),             # 力矩数据输出数组
+        POINTER(c_int)              # 数据长度输出
+    ]
+
+    # 定义返回值类型
+    rm_get_torque_data.restype = c_int
+
+if _libs[libname].has("rm_get_self_endeffector_collision_enable", "cdecl"):
+    rm_get_self_endeffector_collision_enable = _libs[libname].get(
+        "rm_get_self_endeffector_collision_enable", "cdecl")
+
+    # 定义入参类型
+    rm_get_self_endeffector_collision_enable.argtypes = [
+        POINTER(rm_robot_handle),   # 机械臂句柄
+        POINTER(c_bool)             # 输出状态enable_state
+    ]
+
+    # 定义返回值类型
+    rm_get_self_endeffector_collision_enable.restype = c_int
 try:
     ARM_DOF = 7
 except:
