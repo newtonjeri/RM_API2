@@ -68,3 +68,38 @@ current c api version:  1.1.6
   [PASS] end-port state restored
 
   Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_hand_only.py
+  Log    : test_hand_only.log
+  Started: 2026-08-06 20:14:44
+========================================================================
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=1)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [991, 993, 995, 995, 980, 975])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[991, 993, 995, 995, 980, 975]  (max err 17)
+    grasp      reached in  0.9 s  ACT=[28, 28, 30, 31, 127, 932]  (max err 12)
+    half_grasp reached in  0.6 s  ACT=[518, 523, 521, 521, 127, 932]  (max err 12)
+    release    reached in  0.9 s  ACT=[991, 999, 996, 995, 979, 976]  (max err 16)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([65528, 1, 65534, 65531, 65497, 65463] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
