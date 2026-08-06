@@ -256,6 +256,28 @@ def main() -> int:
     rep = dac.run_free(left, right, mon)
     check("free stops partner on failure", not rep["ok"] and right.robot.stopped)
 
+    # ── F1b. Pole pre-positioning helper ────────────────────────────────
+    print("\nF1b. Pole homing to full length")
+    mon = fresh_monitor()
+    left, right = make_pair(mon)
+    check("pole homing completes on both arms",
+          dac.home_poles_full(mon, left, right))
+    mon = fresh_monitor()
+    left, right = make_pair(mon, fail_at=1)   # left's homing dispatch rejected
+    check("pole homing failure halts the arms",
+          not dac.home_poles_full(mon, left, right) and left.robot.stopped)
+
+    # ── F2. --mode argument parser ──────────────────────────────────────
+    print("\nF2. --mode SIM|REAL parser")
+    check("--mode SIM -> 0", dac.parse_mode_arg(["--mode", "SIM"]) == 0)
+    check("--mode=real -> 1", dac.parse_mode_arg(["--mode=real"]) == 1)
+    check("absent -> None", dac.parse_mode_arg([]) is None)
+    try:
+        dac.parse_mode_arg(["--mode", "banana"])
+        check("invalid value exits with usage", False)
+    except SystemExit:
+        check("invalid value exits with usage", True)
+
     # ── G. Endpoint configuration plumbing ──────────────────────────────
     print("\nG. Endpoint configuration (env overrides)")
     import json

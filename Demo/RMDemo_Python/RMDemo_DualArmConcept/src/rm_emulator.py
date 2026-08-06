@@ -40,9 +40,53 @@ data, hands, CANFD passthrough, online programming, fence/collision config.
 
 import itertools
 import os
+import pathlib
+import sys as _sys
 import threading
 import time
 from types import ModuleType, SimpleNamespace
+
+# ── RealMan's REAL offline solver (same algo family as the controller;
+#    local lib v1.6.0 vs controller 1.5.5). Loaded at import time, BEFORE
+#    install() replaces the Robotic_Arm modules with the emulated ones —
+#    captured references stay alive afterwards.
+_sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
+try:
+    from Robotic_Arm.rm_robot_interface import (
+        Algo as _RealAlgo,
+        rm_robot_arm_model_e as _arm_model_e,
+        rm_force_type_e as _force_e,
+        rm_inverse_kinematics_params_t as _ik_params_t,
+    )
+    _ALGO = _RealAlgo(_arm_model_e.RM_MODEL_RM_75_E, _force_e.RM_MODEL_RM_B_E)
+    _ALGO.handle = None          # offline: no controller handle
+except Exception as _exc:        # pragma: no cover - platform without the .so
+    _ALGO = None
+    print(f"[emu] WARNING: RealMan algo library unavailable ({_exc!r}) — "
+          "pose feedback will be zeros and rm_movej_p will be rejected")
+
+
+def _fk_pose(joints_deg):
+    """FK via RealMan's own solver: [x,y,z, rx,ry,rz] (m / rad).
+
+    Arm-base frame with the library's default mounting/tool config — NOT
+    the butterfli world frame (per-arm mounting is controller-side config).
+    """
+    if _ALGO is None:
+        return [0.0] * 6
+    return list(_ALGO.rm_algo_forward_kinematics(list(joints_deg), 1))[:6]
+
+
+def _ik_seeded(seed_deg, pose6):
+    """Seeded IK via RealMan's own solver (the controller's scheme).
+
+    Returns (ret, joints_deg): ret 0 = solved; nonzero = no solution.
+    """
+    if _ALGO is None:
+        return 1, None
+    params = _ik_params_t(q_in=list(seed_deg), q_pose=list(pose6), flag=1)
+    ret, q = _ALGO.rm_algo_inverse_kinematics(params)
+    return ret, (list(q)[:7] if ret == 0 else None)
 
 # ─── Timing model (measured values where available) ─────────────────────────
 ARM_MAX_DEG_S = 180.0          # synchronized-profile joint speed at v=100
@@ -299,6 +343,41 @@ class EmuController:
             if self._lift_motion is None:
                 self._start_next_lift()
 
+    # ── pose-target joint-planned move (rm_movej_p, REAL seeded IK) ──
+    def movej_p(self, pose6, v: int, block: int) -> int:
+        if not (1 <= int(v) <= 100) or len(pose6) != 6:
+            return 1
+        with self._lock:
+            seed = self.current_joints_locked()
+        ret, target_deg = _ik_seeded(seed, pose6)
+        if ret != 0:
+            return 1                # IK failure — the controller's ret 1
+        if any(abs(q) > lim + 1e-6
+               for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
+            return 1                # solution beyond joint limits
+        # The offline algo lib can return ret 0 with a best-effort solution
+        # for UNREACHABLE poses (observed: 2 m target, ret 0). The real
+        # controller refuses those, so FK-verify the solution against the
+        # request before moving (2 mm / ~0.6 deg tolerance).
+        import math as _m
+        fk = _fk_pose(target_deg)
+        if _m.dist(fk[:3], list(pose6[:3])) > 0.002 \
+                or any(abs((a - b + _m.pi) % (2 * _m.pi) - _m.pi) > 0.01
+                       for a, b in zip(fk[3:6], pose6[3:6])):
+            return 1                # solver could not actually reach the pose
+        # From here it IS a joint-space planned move, like the real one.
+        return self.movej(target_deg, v, block)
+
+    def current_pose(self):
+        """TCP pose = FK(current joints) via RealMan's solver."""
+        return _fk_pose(self.current_joints())
+
+    def current_joints_locked(self):
+        # caller holds self._lock
+        if self._arm_motion and not self._arm_motion.done.is_set():
+            return self._arm_motion.current()
+        return list(self.joints_deg)
+
     # ── hand motion (Inspire RH56, protocol path rm_set_hand_angle) ──
     def set_hand_angle(self, values, block: bool, timeout_s: int) -> int:
         if len(values) != 6 or any(not (-1 <= int(v) <= 1000) for v in values):
@@ -538,7 +617,7 @@ class RoboticArm:
         # Real V1.7.1 pads a clean arm as err_len=1 with code '0'
         # (observed on both arms, 2026-08-06).
         return 0, {"joint": joints,
-                   "pose": [0.0] * 6,
+                   "pose": [round(c, 6) for c in self._ctrl.current_pose()],
                    "err": {"err_len": 1, "err": ["0"]}}
 
     def rm_get_joint_degree(self):
@@ -580,6 +659,10 @@ class RoboticArm:
 
     def rm_set_arm_stop(self):
         return self._ctrl.stop_arm()
+
+    def rm_movej_p(self, pose, v, r, connect, block):
+        # r/connect accepted but not emulated (immediate exact-stop move).
+        return self._ctrl.movej_p(list(pose), v, block)
 
     def rm_set_hand_angle(self, hand_angle, block=True, timeout=10):
         return self._ctrl.set_hand_angle(hand_angle, block, timeout)

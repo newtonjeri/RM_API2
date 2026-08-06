@@ -10,11 +10,12 @@ import sys
 
 from dual_arm_common import (
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
-    ArrivalMonitor, connect_both, countdown, run_free, teardown,
+    ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
+    home_poles_full, parse_mode_arg, report_run_modes, restore_run_modes, run_free, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
-N_CHECKS = 3
+N_CHECKS = 4
 
 
 def result(tag: str, name: str, detail: str = ""):
@@ -24,15 +25,21 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    forced = parse_mode_arg()
     print("=" * 68)
     print("C4  Free-running dual-arm execution (no cross-arm gates)")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}  "
           f"arm v={ARM_SPEED_PCT}%  lift v={LIFT_SPEED_PCT}%")
     print(f"    sequence: {CONCEPT_SEQUENCE}")
-    print("    BOTH ARMS AND BOTH POLES WILL MOVE")
+    print(f"    mode: {mode_label(forced)}"
+          + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
+    print("    poles pre-positioned to full length (0.29 m) before the sequence")
+    print("    BOTH ARMS AND BOTH POLES WILL MOVE"
+          + (" (VIRTUALLY — SIM forced)" if forced == 0 else ""))
     print("=" * 68)
 
     left = right = None
+    originals = {}
     try:
         left, right = connect_both()
         if left is None:
@@ -42,7 +49,19 @@ def main() -> int:
 
         monitor = ArrivalMonitor()
         monitor.register(left.robot)
+        originals = apply_run_mode(forced, left, right)
+        if originals is None:
+            result("FAIL", "run-mode selection",
+                   "requested mode did not engage — aborting before motion")
+            return 1
+        report_run_modes(left, right)
         countdown(5)
+
+        if home_poles_full(monitor, left, right):
+            result("PASS", "poles pre-positioned to full length")
+        else:
+            result("FAIL", "poles pre-positioned to full length")
+            return 1
 
         report = run_free(left, right, monitor)
 
@@ -93,6 +112,7 @@ def main() -> int:
                   "fallback, not event")
         return 0 if _results["FAIL"] == 0 else 1
     finally:
+        restore_run_modes(originals)
         teardown(left, right)
         print(f"\n  Summary: {_results['PASS']} PASS, "
               f"{_results['FAIL']} FAIL, {_results['SKIP']} SKIP")

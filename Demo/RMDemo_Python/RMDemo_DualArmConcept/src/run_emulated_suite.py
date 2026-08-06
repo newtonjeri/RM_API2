@@ -27,6 +27,7 @@ import test_sim_motion_visibility
 import test_dual_locked
 import test_dual_chained
 import test_dual_free
+import test_single_arm_planned
 
 SUITE = [
     ("C1 connect", test_dual_connect),
@@ -34,6 +35,7 @@ SUITE = [
     ("C2 locked", test_dual_locked),
     ("C3 chained", test_dual_chained),
     ("C4 free", test_dual_free),
+    ("C6 single-arm", test_single_arm_planned),
 ]
 
 

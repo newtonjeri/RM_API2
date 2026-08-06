@@ -145,6 +145,108 @@ def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float) -> int:
     return max(LIFT_MIN_MATCH_PCT, min(100, pct))
 
 
+def parse_mode_arg(argv=None):
+    """Parse --mode SIM|REAL (also --mode=..., case-insensitive).
+
+    Returns 1 (REAL), 0 (SIM), or None when the flag is absent.
+    Exits with usage on an invalid value.
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
+    for i, a in enumerate(args):
+        if a == "--mode":
+            val = args[i + 1] if i + 1 < len(args) else None
+        elif a.startswith("--mode="):
+            val = a.split("=", 1)[1]
+        else:
+            continue
+        v = (val or "").strip().upper()
+        if v in ("SIM", "SIMULATION", "0"):
+            return 0
+        if v in ("REAL", "1"):
+            return 1
+        raise SystemExit(f"usage: --mode SIM|REAL  (got {val!r})")
+    return None
+
+
+def mode_label(mode) -> str:
+    return {0: "SIMULATION", 1: "REAL"}.get(mode, "as-found")
+
+
+def apply_run_mode(target, *arms):
+    """Engage the requested run mode on every arm, VERIFIED by readback.
+
+    target None -> no-op, returns {}. On success returns {arm: original
+    mode} for restore_run_modes(). On ANY refusal returns None after
+    rolling back — callers must abort before dispatching motion (a SIM
+    request that silently stayed REAL would move real metal, and vice
+    versa a REAL request stuck in SIM produces phantom runs).
+    """
+    if target is None:
+        return {}
+    originals = {}
+    ok = True
+    for arm in arms:
+        if arm is None:
+            continue
+        try:
+            ret, orig = arm.robot.rm_get_arm_run_mode()
+            originals[arm] = orig if ret == 0 else None
+            arm.robot.rm_set_arm_run_mode(target)
+            ret, now = arm.robot.rm_get_arm_run_mode()
+            if ret != 0 or now != target:
+                print(f"  [FAIL] {arm.side}: could not engage "
+                      f"{mode_label(target)} (ret={ret} mode={now})")
+                ok = False
+            else:
+                print(f"  [INFO] {arm.side}: run mode set to "
+                      f"{mode_label(target)} (--mode)")
+        except Exception as exc:
+            print(f"  [FAIL] {arm.side}: run-mode set exception {exc!r}")
+            ok = False
+    if not ok:
+        restore_run_modes(originals)
+        return None
+    return originals
+
+
+def restore_run_modes(originals):
+    """Put every arm back to its pre-run mode (teardown path)."""
+    for arm, mode in (originals or {}).items():
+        if mode is None:
+            continue
+        try:
+            arm.robot.rm_set_arm_run_mode(mode)
+            print(f"  [INFO] {arm.side}: run mode restored to "
+                  f"{mode_label(mode)}")
+        except Exception:
+            pass
+
+
+def report_run_modes(*arms) -> bool:
+    """Print each arm's run mode; returns True if ALL are in REAL mode.
+
+    A SIM-mode arm executes every planned move virtually: dispatches
+    succeed, events fire, but NOTHING physical moves (root cause of the
+    2026-08-06 'no motion at all' locked run).
+    """
+    all_real = True
+    for arm in arms:
+        if arm is None:
+            continue
+        try:
+            ret, mode = arm.robot.rm_get_arm_run_mode()
+        except Exception:
+            ret, mode = -1, None
+        label = {0: "SIMULATION", 1: "REAL"}.get(mode, f"? ({mode})")
+        print(f"  [INFO] {arm.side}: run mode = {label}")
+        if mode != 1:
+            all_real = False
+            print(f"  [WARN] {arm.side} is in {label} — NO PHYSICAL MOTION "
+                  "will occur; flip to REAL in the Web GUI or "
+                  "rm_set_arm_run_mode(1) for a hardware run")
+    return all_real
+
+
 def countdown(seconds: int = 5):
     for s in range(seconds, 0, -1):
         print(f"  starting in {s} ...")
@@ -381,6 +483,33 @@ def stop_all(*arms):
     for arm in arms:
         if arm is not None:
             arm.halt()
+
+
+def home_poles_full(monitor: ArrivalMonitor, *arms) -> bool:
+    """Pre-position every pole to full_length (0.29 m) before a run.
+
+    All runs start from this deterministic state (maximum clearance).
+    Dispatches all poles concurrently, waits for every arrival; on any
+    failure halts all arms and returns False.
+    """
+    live = [a for a in arms if a is not None]
+    print(f"  pre-positioning pole(s) to full_length "
+          f"({LIFT_M['full']} m = {lift_hw_mm(LIFT_M['full'])} hw-mm) ...")
+    begs = [(arm, arm.begin(monitor, ("lift", "full"))) for arm in live]
+    ok = True
+    for arm, beg in begs:
+        rec = arm.finish(monitor, beg)
+        if rec["ok"]:
+            dur = rec["t_done"] - rec["t_dispatch"]
+            print(f"  [INFO] {arm.side}: pole at full length "
+                  f"({dur:.2f} s, event={rec['event']})")
+        else:
+            print(f"  [WARN] {arm.side}: pole homing FAILED "
+                  f"(ret={rec['ret']}, event={rec['event']})")
+            ok = False
+    if not ok:
+        stop_all(*live)
+    return ok
 
 
 def run_step(arm: ConceptArm, monitor: ArrivalMonitor, step) -> dict:

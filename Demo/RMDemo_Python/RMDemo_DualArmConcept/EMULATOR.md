@@ -57,6 +57,7 @@ it plants emulated `rm_robot_interface` / `rm_ctypes_wrap` modules in
 | Single-thread mode | `RoboticArm(RM_SINGLE_MODE_E)` prints a warning and events are never delivered | real SDK @attention |
 | Getter latency | `rm_get_current_arm_state`/`rm_get_lift_state` cost one command latency | TCP round trip |
 | Clean-arm err shape | `err_len=1`, `err=['0']` (padded no-error entry) | observed on both real arms, 2026-08-06 |
+| **Kinematics: RealMan's REAL solver** | FK/IK via the repo's offline `rm_algo` library (same solver family the controller runs; local v1.6.0 vs controller 1.5.5). Pose = FK(joints) always; `rm_movej_p` = seeded IK (the controller's scheme) + joint-limit check + **FK-verification guard** (the algo lib returns ret 0 with a best-effort solution for unreachable poses — observed 1.54 m off on a 2 m target — so solutions >2 mm / >0.6° from the request are rejected with ret 1, like the real controller). Singular seeds (e.g. straightened elbow, J4=0) correctly fail. Poses are arm-base frame with default mounting/tool config — NOT the butterfli world frame (per-arm mounting is controller-side config). | rm_algo offline library + observed solver behavior |
 
 **Not emulated** (extend when needed): Cartesian moves (`rm_movel`,
 `rm_movej_p`), pose in arm state (zeros), force-sensor data (zeros in push

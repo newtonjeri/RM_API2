@@ -51,6 +51,8 @@ Values stored in **radians verbatim** from the SRDF; converted to degrees at dis
 
 ### 1.4 Concept sequence (both arms, per run)
 
+**Every motion run first pre-positions the pole(s) to `full_length` (0.29 m = 193 hw-mm)** — a deterministic start state with maximum clearance — dispatched concurrently after the countdown and arrival-verified; a failed homing aborts the run with all arms halted. Then:
+
 `arm→ready` → `hand→release` → `sync(arm→zero + pole→half)` → `hand→grasp` → `sync(arm→ready + pole→full)` → `hand→half_grasp` → `arm→rest`
 
 First step doubles as homing from any start pose. Hand states come from the SRDF `inspire_hand_*` groups via butterfli_hw's `hand_rad_to_hw` (cross-checked against the bench §3.8 ANGLE_SET echo: grasp = `33/33/33/33/133/944`). The sequence is collision-free by construction; collision gating for arbitrary free-running tasks is future work.
@@ -92,7 +94,7 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `46/46 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
+Expected: `52/52 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -169,6 +171,29 @@ On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)
 | CH3 | Ordering invariant | follower dispatch(k) ≥ leader done(k), all k |
 | CH4 | Follower gate latency | max < 1.0 s from gate-open to dispatch |
 
+### C6 — `test_single_arm_planned.py` (**moves one arm** — arm only)
+
+**Purpose**: single-arm control through the controller's PLANNED functions
+only (no passthrough): `ready` → `rest_pose` via `rm_movej`, **+20 cm X in
+the world/base frame via `rm_movej_p`** (joint-space planning to a pose
+target), back to `ready` via `rm_movej`. Verifies the Cartesian
+displacement from the controller's own pose feedback and reports per-move
+durations. Arm selection: `RM_ARM=left` (default) or `RM_ARM=right`.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| SA1 | movej to ready | event arrival, ok |
+| SA2 | movej to rest_pose | event arrival, ok |
+| SA3 | Cartesian displacement | `dx = +0.20 ± 0.02 m`, `|dy|,|dz| ≤ 0.03 m` (movej_p ret 1 ⇒ IK/unreachable, fails cleanly with no motion) |
+| SA4 | movej back to ready | event arrival, ok |
+| SA5 | Planned pipeline | movej ×3 + movej_p ×1, no passthrough used |
+
+All motion tests now print each arm's **run mode** before the countdown and
+WARN loudly on SIMULATION (dispatches succeed and events fire in sim, but
+nothing physical moves — root cause of the 2026-08-06 "no motion" run).
+PL4 was also corrected: it now FAILS when a dispatched device never
+delivers an arrival event (the hand has no position fallback).
+
 ### C4 — `test_dual_free.py` (**moves both arms and both poles**)
 
 **Purpose**: free execution — both arms run the sequence independently, no cross-arm gates. Valid only because this sequence is collision-free by construction.
@@ -183,6 +208,21 @@ On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)
 ---
 
 ## 5. Running the Full Suite
+
+Every motion test (C2/C3/C4/C6) accepts **`--mode SIM|REAL`**: the requested
+mode is engaged on the arm(s) and VERIFIED by readback before any dispatch
+(refusal aborts the run before motion), and the pre-run mode is restored on
+exit. `--mode SIM` runs the full test virtually on the real controller (a
+rehearsal — dispatches, planning, and events are real; nothing physical
+moves). Without the flag the test runs in whatever mode the arms are in,
+warning loudly on SIMULATION.
+
+```bash
+cd src
+python3 test_dual_locked.py --mode SIM      # controller-side rehearsal
+python3 test_dual_locked.py --mode REAL     # physical run
+RM_ARM=right python3 test_single_arm_planned.py --mode REAL
+```
 
 ```bash
 cd src
@@ -205,13 +245,14 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 46 | 0 | 0 | offline |
+| run_dry_run | 52 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
-| test_dual_locked | 5 | 0 | 0 | incl. PL5 sync-finish; WARN if event fallback used |
-| test_dual_chained | 4 | 0 | 0 | |
-| test_dual_free | 3 | 0 | 0 | |
-| **Total** | **72** | **0** | **0** | |
+| test_dual_locked | 6 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
+| test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
+| test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
+| test_single_arm_planned | 6 | 0 | 0 | one arm + its pole |
+| **Total** | **87** | **0** | **0** | |
 
 ---
 
@@ -226,6 +267,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_locked.py | `src/test_dual_locked.log` |
 | test_dual_chained.py | `src/test_dual_chained.log` |
 | test_dual_free.py | `src/test_dual_free.log` |
+| test_single_arm_planned.py | `src/test_single_arm_planned.log` |
 
 Logs append across runs with a timestamped banner per run (same `log_utils` as RMDemo_LiftBenchmark).
 
