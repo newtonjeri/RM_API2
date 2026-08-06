@@ -1,0 +1,167 @@
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 16:46:55
+========================================================================
+====================================================================
+C6  Single-arm planned-move benchmark (controller planning only)
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    mode: SIMULATION
+    pole pre-positioned to full length (0.29 m), then arm only
+    THE LEFT ARM AND ITS POLE WILL MOVE (no hand) (VIRTUALLY — SIM forced)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m = 193 hw-mm) ...
+  [WARN] left: pole homing FAILED (ret=0, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] left: run mode restored to SIMULATION
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 16:47:49
+========================================================================
+====================================================================
+C6  Single-arm planned-move benchmark (controller planning only)
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m), then arm only
+    THE LEFT ARM AND ITS POLE WILL MOVE (no hand)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m = 193 hw-mm) ...
+  [INFO] left: pole at full length (2.98 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej -> ready   ret=0  event=True  duration   1.32 s
+  [PASS] movej to ready
+  movej -> rest    ret=0  event=True  duration   2.15 s
+  [PASS] movej to rest_pose
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X: duration 2.77 s   dx=+0.196 dy=-0.000 dz=-0.002 m
+  [PASS] Cartesian displacement verified  (dx=+0.196 m (target +0.20))
+  movej -> ready   ret=0  event=True  duration   2.95 s
+  [PASS] movej back to ready
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1, no passthrough)
+  [INFO] left: run mode restored to SIMULATION
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 16:48:38
+========================================================================
+====================================================================
+C6  Single-arm planned-move benchmark (controller planning only)
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m), then arm only
+    THE LEFT ARM AND ITS POLE WILL MOVE (no hand)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m = 193 hw-mm) ...
+  [INFO] left: pole at full length (0.01 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej -> ready   ret=0  event=True  duration   0.05 s
+  [PASS] movej to ready
+  movej -> rest    ret=0  event=True  duration   2.13 s
+  [PASS] movej to rest_pose
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X: duration 2.78 s   dx=+0.196 dy=-0.000 dz=-0.002 m
+  [PASS] Cartesian displacement verified  (dx=+0.196 m (target +0.20))
+  movej -> ready   ret=0  event=True  duration   2.95 s
+  [PASS] movej back to ready
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1, no passthrough)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 16:49:30
+========================================================================
+====================================================================
+C6  Single-arm planned-move benchmark (controller planning only)
+    arm=right @ 192.168.1.103   movej v=20%   X offset +20 cm (world frame)
+    mode: SIMULATION
+    pole pre-positioned to full length (0.29 m), then arm only
+    THE RIGHT ARM AND ITS POLE WILL MOVE (no hand) (VIRTUALLY — SIM forced)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  [INFO] right: run mode = SIMULATION
+  [WARN] right is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m = 193 hw-mm) ...
+  [WARN] right: pole homing FAILED (ret=0, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] right: run mode restored to SIMULATION
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 16:50:18
+========================================================================
+====================================================================
+C6  Single-arm planned-move benchmark (controller planning only)
+    arm=right @ 192.168.1.103   movej v=20%   X offset +20 cm (world frame)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m), then arm only
+    THE RIGHT ARM AND ITS POLE WILL MOVE (no hand)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m = 193 hw-mm) ...
+  [INFO] right: pole at full length (3.58 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej -> ready   ret=0  event=True  duration   1.34 s
+  [PASS] movej to ready
+  movej -> rest    ret=0  event=True  duration   2.14 s
+  [PASS] movej to rest_pose
+  pose at rest: x=+0.492 y=-0.102 z=+0.041  ->  target x=+0.692
+  movej_p +X: duration 2.78 s   dx=+0.196 dy=+0.001 dz=-0.002 m
+  [PASS] Cartesian displacement verified  (dx=+0.196 m (target +0.20))
+  movej -> ready   ret=0  event=True  duration   2.95 s
+  [PASS] movej back to ready
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1, no passthrough)
+  [INFO] right: run mode restored to SIMULATION
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
