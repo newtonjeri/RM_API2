@@ -78,6 +78,9 @@ class MockRobot:
         self.dispatched += 1
         if self.fail_at is not None and self.dispatched == self.fail_at:
             return 1
+        if block:
+            time.sleep(self.arm_s)      # blocking path: SDK-internal wait
+            return 0
         self._arrive(dac.DEV_HAND, self.arm_s)
         return 0
 

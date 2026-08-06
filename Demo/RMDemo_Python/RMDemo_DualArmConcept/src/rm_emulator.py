@@ -420,7 +420,11 @@ class EmuController:
                              [float(t) for t in target],
                              _scaled(dur), self._hand_done)
             motion.will_fail = self._consume_fail_flag()
-            motion.emit_event = not _modbus   # modbus writes: no device-2 event
+            # OBSERVED (2026-08-06): device-2 arrivals never reach the
+            # user event callback on fw 1.7.1/1.7.4 + SDK 1.1.6 — only
+            # the SDK-internal blocking wait sees them. Emulate: hand
+            # motions NEVER emit user-callback events.
+            motion.emit_event = False
             self._hand_motion = motion
         if block:
             if not motion.done.wait(_scaled(max(timeout_s, 1)) + 5.0):

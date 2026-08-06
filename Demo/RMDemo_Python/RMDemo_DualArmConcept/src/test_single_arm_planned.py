@@ -157,30 +157,29 @@ def main() -> int:
               f"z={pose0[2]:+.3f}  ->  target x={target[0]:+.3f}")
 
         monitor.expect(arm.handle_id, DEV_JOINT)
-        monitor.expect(arm.handle_id, DEV_HAND)
         t0 = time.perf_counter()
         ret = robot.rm_movej_p(target, ARM_SPEED_PCT, 0, 0, 0)
-        ret_h = robot.rm_set_hand_angle(HAND_STATES_HW["half_grasp"],
-                                        False, 2)
+        # Hand: blocking-in-thread (device-2 events never reach the user
+        # callback on this fw/SDK — C7-proven working path).
+        hand = arm.start_hand_blocking("half_grasp")
         if ret != 0:
             result("FAIL", "movej_p +X accepted",
                    f"ret={ret} (1 can mean IK failure / unreachable)")
             return 1
         arrived, success = monitor.wait(arm.handle_id, DEV_JOINT,
                                         ARM_TIMEOUT_S)
-        h_arrived, h_success = monitor.wait(arm.handle_id, DEV_HAND,
-                                            HAND_TIMEOUT_S)
+        hand["thread"].join(HAND_TIMEOUT_S + 5.0)
         t_arm = monitor.last_arrival(arm.handle_id, DEV_JOINT) \
             or time.perf_counter()
-        t_hand = monitor.last_arrival(arm.handle_id, DEV_HAND) \
-            or time.perf_counter()
+        t_hand = hand["t_done"] or time.perf_counter()
+        h_ret = hand["ret"] if hand["ret"] is not None else -5
         pose1 = _pose(robot)
         if not (arrived and success) or pose1 is None:
             result("FAIL", "movej_p +X completed",
                    f"arrived={arrived} success={success}")
             arm.halt()
             return 1
-        hand_ok = ret_h == 0 and h_arrived and h_success
+        hand_ok = h_ret == 0
         skew = (t_hand - t_arm) if hand_ok else None
         if skew is not None:
             hand_skews.append(skew)

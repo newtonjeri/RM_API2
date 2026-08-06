@@ -375,7 +375,31 @@ class ConceptArm:
             return self.robot.rm_set_lift_height(
                 lift_speed or LIFT_SPEED_PCT,
                 lift_hw_mm(self.side, LIFT_M[target]), 0)
-        return self.robot.rm_set_hand_angle(HAND_STATES_HW[target], False, 2)
+        raise ValueError("hand parts use start_hand_blocking()")
+
+    def start_hand_blocking(self, target) -> dict:
+        """Run rm_set_hand_angle BLOCKING in a worker thread.
+
+        Device-2 arrival events are NOT delivered to the user event
+        callback on fw V1.7.1/V1.7.4 + SDK 1.1.6 (observed 2026-08-06:
+        arm/lift events fire, hand events never do, while the blocking
+        variant confirms arrival on the SDK's internal receive path — C7
+        proved it works on both arms). So the hand runs its proven
+        blocking call concurrently via a thread instead of waiting for an
+        event that never comes.
+        """
+        holder = {"ret": None, "t_dispatch": time.perf_counter(),
+                  "t_done": None}
+
+        def work():
+            holder["ret"] = self.robot.rm_set_hand_angle(
+                HAND_STATES_HW[target], True, int(HAND_TIMEOUT_S))
+            holder["t_done"] = time.perf_counter()
+
+        t = threading.Thread(target=work, daemon=True)
+        holder["thread"] = t
+        t.start()
+        return holder
 
     def begin(self, monitor: ArrivalMonitor, step) -> dict:
         """Expect + dispatch every device of the step (non-blocking).
@@ -404,8 +428,17 @@ class ConceptArm:
                 lift_speed = LIFT_SPEED_PCT
 
         for device, target in parts:
-            monitor.expect(self.handle_id, device)
+            if device != DEV_HAND:
+                monitor.expect(self.handle_id, device)
         for device, target in parts:
+            if device == DEV_HAND:
+                holder = self.start_hand_blocking(target)
+                beg["devices"][device] = {"target": target, "ret": 0,
+                                          "t_dispatch": holder["t_dispatch"],
+                                          "t_done": None, "event": False,
+                                          "verified": False, "ok": False,
+                                          "_hand": holder}
+                continue
             t0 = time.perf_counter()
             ret = self._dispatch_device(device, target, lift_speed)
             beg["devices"][device] = {"target": target, "ret": ret,
@@ -417,6 +450,15 @@ class ConceptArm:
     def finish(self, monitor: ArrivalMonitor, beg: dict) -> dict:
         """Wait for every device dispatched by begin(); aggregate a record."""
         for device, d in beg["devices"].items():
+            if device == DEV_HAND:
+                holder = d.pop("_hand")
+                holder["thread"].join(self.timeout_for(device) + 5.0)
+                d["ret"] = holder["ret"] if holder["ret"] is not None else -5
+                d["t_done"] = holder["t_done"] or time.perf_counter()
+                # ret 0 IS an SDK-confirmed arrival (device==2 checked
+                # internally) — count it as an event for PL4 purposes.
+                d["event"] = d["ok"] = (d["ret"] == 0)
+                continue
             if d["ret"] != 0:
                 continue
             arrived, success = monitor.wait(self.handle_id, device,
