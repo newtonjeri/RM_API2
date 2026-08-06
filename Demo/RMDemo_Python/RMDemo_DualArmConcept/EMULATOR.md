@@ -92,6 +92,15 @@ ctrl.drop_next_event = True        # arrival event lost -> exercises the
                                    #   position-verify fallback path
 ctrl.command_latency_s = 0.05      # inflate per-command latency
 
+ctrl.lift_locked = True            # LATCHED lift rejection: every
+ctrl.sys_err_code = 4103           #   rm_set_lift_height/speed returns
+                                   #   ret 1 (the REAL 2026-08-06 20:38
+                                   #   signature on both arms); arm-state
+                                   #   err reports the code, lift err_flag
+                                   #   reads 1; rm_clear_system_err()
+                                   #   unlatches (the modelled recovery).
+                                   #   Env: RM_EMU_LIFT_LOCKED=left[,right]
+
 rm_emulator.emu_power_off("192.168.1.103")   # connect refused (socket err)
 rm_emulator.emu_power_on("192.168.1.103")
 ```

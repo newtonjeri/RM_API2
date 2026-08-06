@@ -233,6 +233,16 @@ class EmuController:
         self.fail_next_motion = False
         self.drop_next_event = False
         self.command_latency_s = CMD_LATENCY_S
+        # Latched lift-rejection state (observed on REAL hardware
+        # 2026-08-06 20:38: both controllers rejected every proven-good
+        # lift command with set_state false).  RM_EMU_LIFT_LOCKED=
+        # left[,right] starts the side latched; rm_clear_system_err
+        # unlatches (the modelled recovery path).
+        locked = {s.strip() for s in
+                  os.environ.get("RM_EMU_LIFT_LOCKED", "").lower().split(",")
+                  if s.strip()}
+        self.lift_locked = side in locked
+        self.sys_err_code = 4103 if self.lift_locked else 0
 
     # ── event delivery ──
     def _emit(self, device: int, ok: bool = True):
@@ -304,6 +314,8 @@ class EmuController:
     # ── lift motion (queued, like the real controller) ──
     def set_lift_height(self, speed_pct: int, hw_mm: int, block: int) -> int:
         with self._lock:
+            if self.lift_locked:
+                return 1                   # latched rejection, no motion
             if self.reject_next_dispatch:
                 self.reject_next_dispatch = False
                 return 1
@@ -476,6 +488,8 @@ class EmuController:
 
     def stop_lift(self):
         with self._lock:
+            if self.lift_locked:
+                return 1                   # rejects the stop command too
             self._halt_lift_locked()
         return 0
 
@@ -649,9 +663,24 @@ class RoboticArm:
         joints = self._ctrl.current_joints()
         # Real V1.7.1 pads a clean arm as err_len=1 with code '0'
         # (observed on both arms, 2026-08-06).
+        code = self._ctrl.sys_err_code
         return 0, {"joint": joints,
                    "pose": [round(c, 6) for c in self._ctrl.current_pose()],
-                   "err": {"err_len": 1, "err": ["0"]}}
+                   "err": {"err_len": 1, "err": [str(code)]}}
+
+    def rm_get_arm_power_state(self):
+        return 0, 1
+
+    def rm_get_joint_err_flag(self):
+        return {"return_code": 0, "err_flag": [0] * 7,
+                "brake_state": [0] * 7}
+
+    def rm_clear_system_err(self):
+        ctrl = self._ctrl
+        with ctrl._lock:
+            ctrl.sys_err_code = 0
+            ctrl.lift_locked = False       # modelled recovery path
+        return 0
 
     def rm_get_joint_degree(self):
         return 0, self._ctrl.current_joints()
@@ -665,7 +694,8 @@ class RoboticArm:
         else:
             mode = 2 if m.direction >= 0 else 4   # pos-motion, +/- direction
         return 0, {"pos": int(round(ctrl.current_lift_hw())),
-                   "err_flag": 0, "mode": mode, "current": 0}
+                   "err_flag": 1 if ctrl.lift_locked else 0,
+                   "mode": mode, "current": 0}
 
     # ── motion ──
     def rm_movej(self, joint, v, r, connect, block):
@@ -687,7 +717,7 @@ class RoboticArm:
         if not (-100 <= speed <= 100):
             return 1
         # Open-loop jog: run toward the travel end at |speed|%.
-        target = 200 if speed > 0 else 0
+        target = self._ctrl.lift_hw_max if speed > 0 else 0
         return self._ctrl.set_lift_height(abs(speed), target, 0)
 
     def rm_set_arm_stop(self):

@@ -12,8 +12,9 @@ from dual_arm_common import (
     handle_cli,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
     ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
-    home_poles_full, parse_mode_arg, parse_no_hands_arg, report_run_modes,
-    restore_run_modes, strip_hands, run_chained, teardown,
+    home_poles_full, parse_mode_arg, parse_no_hands_arg,
+    parse_no_pole_arg, report_run_modes,
+    restore_run_modes, strip_hands, strip_poles, run_chained, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -28,20 +29,31 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    for k in _results:                 # reset: the emulated suite calls
+        _results[k] = 0                # main() more than once per process
     handle_cli(__doc__)
     forced = parse_mode_arg()
     no_hands = parse_no_hands_arg()
-    seq = strip_hands(CONCEPT_SEQUENCE) if no_hands else CONCEPT_SEQUENCE
+    no_pole = parse_no_pole_arg()
+    seq = CONCEPT_SEQUENCE
+    if no_hands:
+        seq = strip_hands(seq)
+    if no_pole:
+        seq = strip_poles(seq)
     print("=" * 68)
     print("C3  Chained dual-arm execution (left leads, right follows)")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}  "
           f"arm v={ARM_SPEED_PCT}%  lift v={LIFT_SPEED_PCT}%")
     print(f"    sequence: {seq}"
-          + ("   [--no-hands: hand steps stripped]" if no_hands else ""))
+          + ("   [--no-hands: hand steps stripped]" if no_hands else "")
+          + ("   [--no-pole: pole/sync-lift steps stripped]"
+             if no_pole else ""))
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
-    print("    poles pre-positioned to full length (0.29 m) before the sequence")
-    print("    BOTH ARMS AND BOTH POLES WILL MOVE"
+    print("    pole pre-positioning SKIPPED (--no-pole)" if no_pole else
+          "    poles pre-positioned to full length (0.29 m) before the sequence")
+    print(("    BOTH ARMS WILL MOVE (poles stay put)" if no_pole else
+           "    BOTH ARMS AND BOTH POLES WILL MOVE")
           + (" (VIRTUALLY — SIM forced)" if forced == 0 else ""))
     print("=" * 68)
 
@@ -62,9 +74,12 @@ def main() -> int:
                    "requested mode did not engage — aborting before motion")
             return 1
         report_run_modes(left, right)
-        countdown(5)
+        countdown()
 
-        if home_poles_full(monitor, left, right):
+        if no_pole:
+            result("PASS", "poles pre-positioned to full length",
+                   "SKIPPED — poles disabled (--no-pole)")
+        elif home_poles_full(monitor, left, right):
             result("PASS", "poles pre-positioned to full length")
         else:
             result("FAIL", "poles pre-positioned to full length")

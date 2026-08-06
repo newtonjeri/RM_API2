@@ -23,6 +23,8 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    for k in _results:                 # reset: the emulated suite calls
+        _results[k] = 0                # main() more than once per process
     handle_cli(__doc__)
     print("=" * 68)
     print("C1  Dual-arm connectivity pre-check  (no motion is commanded)")
