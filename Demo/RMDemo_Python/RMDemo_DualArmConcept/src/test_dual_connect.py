@@ -8,7 +8,7 @@ single-process topology the motion tests rely on.
 import sys
 
 from dual_arm_common import (
-    LEFT_IP, RIGHT_IP, ArrivalMonitor, connect_both, teardown,
+    LEFT_IP, LIFT_GEAR, RIGHT_IP, ArrivalMonitor, connect_both, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -65,10 +65,12 @@ def main() -> int:
                        f"ret={ret} active={active or errs}")
 
             ret, lift = arm.robot.rm_get_lift_state()
+            hw_max = LIFT_GEAR[arm.side]["hw_max"]
             if ret == 0 and lift.get("err_flag", 1) == 0 \
-                    and 0 <= lift.get("pos", -1) <= 200:   # hw range: 0.3 m * 2/3
+                    and 0 <= lift.get("pos", -1) <= hw_max:
                 result("PASS", f"{arm.side}: lift state",
-                       f"pos={lift.get('pos')} hw-mm")
+                       f"pos={lift.get('pos')} of {hw_max} "
+                       f"({LIFT_GEAR[arm.side]['name']})")
             else:
                 result("FAIL", f"{arm.side}: lift state", f"ret={ret} {lift}")
 

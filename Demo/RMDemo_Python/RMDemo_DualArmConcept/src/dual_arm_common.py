@@ -13,6 +13,8 @@ Step kinds:
   ("arm",  state)                 rm_movej to an SRDF arm state
   ("lift", state)                 rm_set_lift_height to an SRDF pole state
   ("hand", state)                 rm_set_hand_angle to an SRDF hand state
+  ("combo", (sub, sub, ...))      concurrent parts on ONE arm (e.g. arm
+        motion + hand motion dispatched together, all arrivals awaited)
   ("sync", (arm_state, lift_state))  ARM-POLE SYNCHRONIZATION: both devices
         dispatched back-to-back with the lift speed DURATION-MATCHED to the
         arm move (the butterfli_hw sync contract, command-level port:
@@ -92,8 +94,30 @@ STATES_RAD = {
 LIFT_M = {"minimum": 0.01, "quarter": 0.075, "half": 0.15, "full": 0.29}
 LIFT_MIN_M   = 0.01
 LIFT_MAX_M   = 0.29
-LIFT_M_TO_HW = 2000.0 / 3.0   # butterfli_hw kLiftCmdUnitsPerMetre
-HW_TO_PHYS   = 1.5            # hw mm -> physical mm
+
+# Per-side lift gearing. V1.7.4 switched the lift to TRUE millimetres
+# (1:1, travel 0-330 — confirmed physically 2026-08-06: commanding 193
+# under the old 2/3 assumption left the pole mid-rail). The right arm
+# keeps the V1.7.1 2/3 gearing (hw 0-200) until its upgrade — flip with
+# RM_RIGHT_LIFT_GEAR=1to1 after upgrading (RM_LEFT_LIFT_GEAR=2to3 exists
+# for rollback).
+_GEARS = {
+    "1to1": {"hw_per_m": 1000.0, "hw_to_phys": 1.0, "hw_max": 330},
+    "2to3": {"hw_per_m": 2000.0 / 3.0, "hw_to_phys": 1.5, "hw_max": 200},
+}
+
+
+def _lift_gear(side: str, default: str) -> dict:
+    v = os.environ.get(f"RM_{side.upper()}_LIFT_GEAR", default)
+    v = v.strip().lower().replace(":", "to")
+    if v not in _GEARS:
+        raise SystemExit(f"RM_{side.upper()}_LIFT_GEAR must be 1to1 or 2to3, "
+                         f"got {v!r}")
+    return dict(_GEARS[v], name=v)
+
+
+LIFT_GEAR = {"left": _lift_gear("left", "1to1"),
+             "right": _lift_gear("right", "2to3")}
 
 # ─── Hand states (SDK order [little,ring,middle,index,thumb_flex,thumb_rot],
 #     0-1000, 1000 = open; SRDF inspire_hand states via hand_rad_to_hw) ─────
@@ -119,10 +143,15 @@ def state_deg(side: str, name: str) -> list:
     return [math.degrees(q) for q in STATES_RAD[side][name]]
 
 
-def lift_hw_mm(metres: float) -> int:
+def lift_hw_mm(side: str, metres: float) -> int:
+    """SRDF metres -> the SIDE's controller lift unit (gearing differs!)."""
     assert LIFT_MIN_M <= metres <= LIFT_MAX_M, (
         f"lift target {metres} m outside safe range [{LIFT_MIN_M}, {LIFT_MAX_M}]")
-    return int(round(metres * LIFT_M_TO_HW))
+    gear = LIFT_GEAR[side]
+    hw = int(round(metres * gear["hw_per_m"]))
+    assert hw <= gear["hw_max"], (
+        f"{side}: {hw} exceeds controller ceiling {gear['hw_max']}")
+    return hw
 
 
 def est_arm_duration_s(current_deg, target_deg, v_pct: int) -> float:
@@ -274,7 +303,9 @@ class ArrivalMonitor:
 
     def expect(self, handle_id: int, device: int):
         with self._lock:
-            self._waiters[(handle_id, device)] = [threading.Event(), False]
+            # [event, success, arrival timestamp]
+            self._waiters[(handle_id, device)] = [threading.Event(), False,
+                                                  None]
 
     def _on_event(self, data):
         # Runs on the SDK receive thread: keep minimal, no SDK calls here.
@@ -286,6 +317,7 @@ class ArrivalMonitor:
             return
         waiter[1] = bool(data.trajectory_state)
         if data.trajectory_connect == 0:
+            waiter[2] = time.perf_counter()   # true arrival time
             waiter[0].set()
 
     def wait(self, handle_id: int, device: int, timeout: float):
@@ -295,6 +327,12 @@ class ArrivalMonitor:
             return False, False
         arrived = waiter[0].wait(timeout)
         return arrived, waiter[1]
+
+    def last_arrival(self, handle_id: int, device: int):
+        """True event-arrival timestamp (perf_counter), or None."""
+        with self._lock:
+            waiter = self._waiters.get((handle_id, device))
+        return waiter[2] if waiter else None
 
 
 class ConceptArm:
@@ -317,6 +355,11 @@ class ConceptArm:
             return [(DEV_HAND, target)]
         if kind == "sync":
             return [(DEV_JOINT, target[0]), (DEV_LIFT, target[1])]
+        if kind == "combo":
+            # Arbitrary concurrent parts, e.g. ("combo", (("arm", "ready"),
+            # ("hand", "release"))) — all dispatched back-to-back, all
+            # arrivals awaited.
+            return [p for sub in target for p in self.parts_for(sub)]
         raise ValueError(f"unknown step kind {kind}")
 
     def timeout_for(self, device: int) -> float:
@@ -330,7 +373,8 @@ class ConceptArm:
                                        ARM_SPEED_PCT, 0, 0, 0)
         if device == DEV_LIFT:
             return self.robot.rm_set_lift_height(
-                lift_speed or LIFT_SPEED_PCT, lift_hw_mm(LIFT_M[target]), 0)
+                lift_speed or LIFT_SPEED_PCT,
+                lift_hw_mm(self.side, LIFT_M[target]), 0)
         return self.robot.rm_set_hand_angle(HAND_STATES_HW[target], False, 2)
 
     def begin(self, monitor: ArrivalMonitor, step) -> dict:
@@ -351,7 +395,8 @@ class ConceptArm:
                     cur, state_deg(self.side, step[1][0]), ARM_SPEED_PCT)
                 lret, lst = self.robot.rm_get_lift_state()
                 pos_hw = lst.get("pos", 0) if lret == 0 else 0
-                dist_phys = abs(lift_hw_mm(LIFT_M[step[1][1]]) - pos_hw) * HW_TO_PHYS
+                dist_phys = abs(lift_hw_mm(self.side, LIFT_M[step[1][1]])
+                                - pos_hw) * LIFT_GEAR[self.side]["hw_to_phys"]
                 lift_speed = matched_lift_speed_pct(arm_dur, dist_phys)
                 beg["arm_dur_est_s"] = arm_dur
                 beg["lift_speed_pct"] = lift_speed
@@ -376,7 +421,11 @@ class ConceptArm:
                 continue
             arrived, success = monitor.wait(self.handle_id, device,
                                             self.timeout_for(device))
-            d["t_done"] = time.perf_counter()
+            # Prefer the TRUE event-arrival time: a device that finished
+            # while we were still waiting on another one keeps its real
+            # completion timestamp (concurrency metrics depend on this).
+            d["t_done"] = (monitor.last_arrival(self.handle_id, device)
+                           or time.perf_counter())
             if arrived and success:
                 d["event"] = True
                 d["ok"] = True
@@ -426,7 +475,8 @@ class ConceptArm:
                 ret, st = self.robot.rm_get_lift_state()
                 if ret != 0:
                     return False
-                return abs(st["pos"] - lift_hw_mm(LIFT_M[target])) <= LIFT_TOL_HW_MM
+                return abs(st["pos"] - lift_hw_mm(self.side, LIFT_M[target])) \
+                    <= LIFT_TOL_HW_MM
             # Hand: no getter exists in the SDK and handState is absent from
             # UDP on fw 1.7.2 — the arrival event is the only signal.
             return False
@@ -493,8 +543,11 @@ def home_poles_full(monitor: ArrivalMonitor, *arms) -> bool:
     failure halts all arms and returns False.
     """
     live = [a for a in arms if a is not None]
+    targets = ", ".join(
+        f"{a.side}={lift_hw_mm(a.side, LIFT_M['full'])} "
+        f"({LIFT_GEAR[a.side]['name']})" for a in live)
     print(f"  pre-positioning pole(s) to full_length "
-          f"({LIFT_M['full']} m = {lift_hw_mm(LIFT_M['full'])} hw-mm) ...")
+          f"({LIFT_M['full']} m -> {targets}) ...")
     begs = [(arm, arm.begin(monitor, ("lift", "full"))) for arm in live]
     ok = True
     for arm, beg in begs:

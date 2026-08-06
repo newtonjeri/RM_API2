@@ -119,13 +119,19 @@ def main() -> int:
     check("right rest J3 rad->deg", abs(rr[2] - (-26.0009)) < 0.01,
           f"{rr[2]:.4f}")
     check("right zero all 0", all(v == 0.0 for v in dac.state_deg("right", "zero")))
-    expected_hw = {"minimum": 7, "quarter": 50, "half": 100, "full": 193}
-    for name, hw in expected_hw.items():
-        check(f"lift {name} -> {hw} hw-mm",
-              dac.lift_hw_mm(dac.LIFT_M[name]) == hw)
+    right_hw = {"minimum": 7, "quarter": 50, "half": 100, "full": 193}
+    left_hw = {"minimum": 10, "quarter": 75, "half": 150, "full": 290}
+    for name, hw in right_hw.items():
+        check(f"lift {name} -> {hw} (right, 2to3)",
+              dac.lift_hw_mm("right", dac.LIFT_M[name]) == hw)
+    for name, hw in left_hw.items():
+        check(f"lift {name} -> {hw} (left, 1to1)",
+              dac.lift_hw_mm("left", dac.LIFT_M[name]) == hw)
+    check("left full 290 within controller ceiling 330",
+          left_hw["full"] <= dac.LIFT_GEAR["left"]["hw_max"])
     for bad in (0.0, 0.31, -0.1):
         try:
-            dac.lift_hw_mm(bad)
+            dac.lift_hw_mm("left", bad)
             check(f"lift range guard rejects {bad}", False)
         except AssertionError:
             check(f"lift range guard rejects {bad}", True)
@@ -256,6 +262,16 @@ def main() -> int:
     rep = dac.run_free(left, right, mon)
     check("free stops partner on failure", not rep["ok"] and right.robot.stopped)
 
+    # ── F1a. Combo step (concurrent arm + hand on one arm) ──────────────
+    print("\nF1a. Combo step kind")
+    mon = fresh_monitor()
+    left, right = make_pair(mon)
+    rec = dac.run_step(left, mon, ("combo", (("arm", "ready"),
+                                             ("hand", "release"))))
+    check("combo arm+hand: both devices arrive and step is ok",
+          rec["ok"] and rec["event"]
+          and set(rec["devices"]) == {dac.DEV_JOINT, dac.DEV_HAND})
+
     # ── F1b. Pole pre-positioning helper ────────────────────────────────
     print("\nF1b. Pole homing to full length")
     mon = fresh_monitor()
@@ -292,7 +308,7 @@ def main() -> int:
         "'port': dac.ROBOT_PORT, 'host': dac.HOST_IP, 'udp': dac.UDP_PORT, "
         "'c5host': c5.HOST_IP, 'c5udp': c5.UDP_PORT, "
         "'emul': rm_emulator.EMU_LEFT_IP, 'emur': rm_emulator.EMU_RIGHT_IP, "
-        "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS)}))"
+        "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS), 'r_full': dac.lift_hw_mm('right', 0.29), 'l_full': dac.lift_hw_mm('left', 0.29)}))"
     )
 
     def run_probe(extra_env):
@@ -330,6 +346,11 @@ def main() -> int:
         check("env overrides reach the emulator",
               ov["emul"] == "10.9.9.1" and ov["emur"] == "10.9.9.2"
               and ov["emuhosts"] == ["10.9.9.100"])
+        check("default gearing: left 1to1 (290), right 2to3 (193)",
+              cfg["l_full"] == 290 and cfg["r_full"] == 193)
+        gv = run_probe({"RM_RIGHT_LIFT_GEAR": "1to1"})
+        check("RM_RIGHT_LIFT_GEAR=1to1 flips right to 290 (post-upgrade)",
+              gv["r_full"] == 290)
     except Exception as exc:
         check("configuration probe subprocess", False, repr(exc))
 

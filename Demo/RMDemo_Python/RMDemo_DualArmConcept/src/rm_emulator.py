@@ -97,7 +97,12 @@ LIFT_SPEED_MAP = [             # speed% -> physical mm/s (LiftBenchmark)
     (10, 17.3), (20, 32.07), (30, 42.73),
     (50, 56.44), (70, 63.25), (100, 66.89),
 ]
-HW_TO_PHYS = 1.5               # hw mm -> physical mm (2/3 scale inverse)
+# Per-arm lift gearing (mirrors dual_arm_common: left 1:1 on V1.7.4,
+# right 2/3 on V1.7.1; same env overrides RM_LEFT/RIGHT_LIFT_GEAR).
+def _gear(side, default):
+    v = os.environ.get(f"RM_{side.upper()}_LIFT_GEAR", default)
+    v = v.strip().lower().replace(":", "to")
+    return {"1to1": (1.0, 330), "2to3": (1.5, 200)}.get(v, (1.5, 200))
 
 MIN_MOTION_S = 0.05
 DEV_JOINT, DEV_HAND, DEV_LIFT = 0, 2, 3
@@ -212,7 +217,10 @@ class EmuController:
         self.hand_force_set = 500
         self._hand_motion = None
         self.run_mode = 1                     # 1 = REAL, 0 = SIMULATION
-        self.collision_stage = 2 if ip == EMU_LEFT_IP else 0   # observed
+        self.collision_stage = 2 if ip == EMU_LEFT_IP else 3   # observed
+        side = "left" if ip == EMU_LEFT_IP else "right"
+        self.lift_hw_to_phys, self.lift_hw_max = _gear(
+            side, "1to1" if side == "left" else "2to3")
         self._lock = threading.RLock()
         self._arm_motion = None
         self._lift_motion = None
@@ -317,7 +325,7 @@ class EmuController:
             self._lift_motion = None
             return
         speed_pct, target, done = self._lift_queue.pop(0)
-        dist_phys = abs(target - self.lift_hw) * HW_TO_PHYS
+        dist_phys = abs(target - self.lift_hw) * self.lift_hw_to_phys
         dur = LIFT_START_LATENCY_S + dist_phys / _lift_speed_mm_s(speed_pct)
         motion = _Motion(self.lift_hw, target, _scaled(max(dur, MIN_MOTION_S)),
                          self._lift_done)
