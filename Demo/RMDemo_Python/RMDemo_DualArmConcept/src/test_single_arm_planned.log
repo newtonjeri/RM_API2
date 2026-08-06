@@ -599,3 +599,79 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 21:22:57
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.01 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.05 s   hand  1.25 s   hand-arm finish +1.21 s
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  2.13 s   hand  1.26 s   hand-arm finish -0.87 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X + half_grasp: arm 2.79 s, hand finish skew -2.06 s  (hand done DURING arm motion)
+  displacement: dx=+0.196 dy=-0.000 dz=-0.002 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.196 m (target +0.20))
+  movej ready + release      ok=True  arm  2.95 s   hand  1.13 s   hand-arm finish -1.81 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (3/4 phases finished during arm motion; finish skews +1.21s, -0.87s, -2.06s, -1.81s)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 21:23:19
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=right @ 192.168.1.103   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE RIGHT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> right=193 (2to3)) ...
+  [INFO] right: pole at full length (0.02 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.23 s   hand  1.26 s   hand-arm finish +1.04 s
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  2.14 s   hand  1.25 s   hand-arm finish -0.88 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.492 y=-0.102 z=+0.042  ->  target x=+0.692
+  movej_p +X + half_grasp: arm 2.78 s, hand finish skew -2.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.196 dy=+0.001 dz=-0.002 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.196 m (target +0.20))
+  movej ready + release      ok=True  arm  2.96 s   hand  1.13 s   hand-arm finish -1.81 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (3/4 phases finished during arm motion; finish skews +1.04s, -0.88s, -2.05s, -1.81s)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP

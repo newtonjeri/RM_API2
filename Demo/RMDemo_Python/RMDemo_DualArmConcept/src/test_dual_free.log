@@ -1,0 +1,35 @@
+
+========================================================================
+  Script : test_dual_free.py
+  Log    : test_dual_free.log
+  Started: 2026-08-06 21:33:49
+========================================================================
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: REAL
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 4/4 steps in 11.71 s
+  right: 4/4 steps in 11.70 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 4 PASS, 0 FAIL, 0 SKIP

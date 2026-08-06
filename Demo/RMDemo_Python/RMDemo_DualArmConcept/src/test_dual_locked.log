@@ -118,3 +118,287 @@ Environment overrides:
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:25:02
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: REAL
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.01 s, event=True)
+  [INFO] right: pole at full length (0.02 s, event=True)
+  [PASS] poles pre-positioned to full length
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 1 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_dual_locked.py", line 181, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_dual_locked.py", line 87, in main
+    report = run_locked(left, right, monitor, sequence=seq)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 848, in run_locked
+    rec_l = left.finish(monitor, beg_l)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 604, in finish
+    arrived, success = monitor.wait(self.handle_id, device,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 457, in wait
+    arrived = waiter[0].wait(timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 655, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 359, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:26:52
+========================================================================
+C2 — Parallel locked mode. BOTH ARMS AND BOTH POLES WILL MOVE.
+
+Every step of the concept sequence is dispatched to both arms back-to-back
+(non-blocking), then a barrier waits for BOTH arrivals before the next step.
+Reports dispatch skew and per-arm completion deltas at every step boundary.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:27:19
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: SIMULATION
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE (VIRTUALLY — SIM forced)
+====================================================================
+current c api version:  1.1.6
+  [FAIL] left: could not engage SIMULATION (ret=0 mode=1)
+  [FAIL] right: could not engage SIMULATION (ret=0 mode=1)
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+  [FAIL] run-mode selection  (requested mode did not engage — aborting before motion)
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:28:56
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: SIMULATION
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE (VIRTUALLY — SIM forced)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] right: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] right: run mode = SIMULATION
+  [WARN] right is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.01 s, event=True)
+  [INFO] right: pole at full length (0.00 s, event=True)
+  [PASS] poles pre-positioned to full length
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 1 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_dual_locked.py", line 181, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_dual_locked.py", line 87, in main
+    report = run_locked(left, right, monitor, sequence=seq)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 849, in run_locked
+    rec_r = right.finish(monitor, beg_r)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 604, in finish
+    arrived, success = monitor.wait(self.handle_id, device,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 457, in wait
+    arrived = waiter[0].wait(timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 655, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 359, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:30:26
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: SIMULATION
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put) (VIRTUALLY — SIM forced)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] right: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] right: run mode = SIMULATION
+  [WARN] right is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   6.32 ms   L   2.54 s   R   2.55 s   |d|  0.01 s   ok=True
+  ('arm', 'zero')          skew   6.33 ms   L   3.71 s   R   3.72 s   |d|  0.02 s   ok=True
+  ('arm', 'ready')         skew   6.28 ms   L   3.72 s   R   3.72 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   4.29 ms   L   2.12 s   R   2.13 s   |d|  0.01 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 6.33 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.01 s, max 0.02 s
+  [PASS] arm-pole sync finish  (SKIPPED — poles disabled (--no-pole))
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:31:05
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: REAL
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   4.34 ms   L   2.54 s   R   2.55 s   |d|  0.01 s   ok=True
+  ('arm', 'zero')          skew   4.20 ms   L   3.72 s   R   3.73 s   |d|  0.01 s   ok=True
+  ('arm', 'ready')         skew   4.26 ms   L   3.71 s   R   3.72 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   8.32 ms   L   2.12 s   R   2.13 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 8.32 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.01 s, max 0.01 s
+  [PASS] arm-pole sync finish  (SKIPPED — poles disabled (--no-pole))
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 21:32:35
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: REAL
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew  10.60 ms   L   2.13 s   R   2.13 s   |d|  0.01 s   ok=True
+  ('arm', 'zero')          skew   8.44 ms   L   3.75 s   R   3.72 s   |d|  0.03 s   ok=True
+  ('arm', 'ready')         skew   6.30 ms   L   3.72 s   R   3.71 s   |d|  0.01 s   ok=True
+  ('arm', 'rest')          skew  10.43 ms   L   2.13 s   R   2.14 s   |d|  0.01 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 10.60 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.01 s, max 0.03 s
+  [PASS] arm-pole sync finish  (SKIPPED — poles disabled (--no-pole))
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP

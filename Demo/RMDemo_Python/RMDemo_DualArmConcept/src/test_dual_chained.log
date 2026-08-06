@@ -1,0 +1,38 @@
+
+========================================================================
+  Script : test_dual_chained.py
+  Log    : test_dual_chained.log
+  Started: 2026-08-06 21:33:17
+========================================================================
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: REAL
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.1 ms, ok=True
+  step 1 ('arm', 'zero')        follower start after leader done, gate latency     0.1 ms, ok=True
+  step 2 ('arm', 'ready')       follower start after leader done, gate latency     0.1 ms, ok=True
+  step 3 ('arm', 'rest')        follower start after leader done, gate latency  1598.0 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [FAIL] follower gate latency  (max 1.60 s >= 1.0 s)
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 4 PASS, 1 FAIL, 0 SKIP
