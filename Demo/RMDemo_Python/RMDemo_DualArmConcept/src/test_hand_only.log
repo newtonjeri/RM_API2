@@ -103,3 +103,39 @@ current c api version:  1.1.6
   [PASS] end-port state restored
 
   Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_hand_only.py
+  Log    : test_hand_only.log
+  Started: 2026-08-06 20:40:38
+========================================================================
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=1)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (BLOCKED (-5 timeout) — end port almost certainly in MODBUS mode; matches the C6 hand failure)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [991, 994, 996, 995, 979, 976])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 994, 996, 995, 979, 976]  (max err 16)
+    grasp      reached in  0.9 s  ACT=[28, 29, 30, 29, 126, 934]  (max err 10)
+    half_grasp reached in  0.6 s  ACT=[519, 524, 521, 523, 126, 934]  (max err 10)
+    release    reached in  0.9 s  ACT=[993, 999, 995, 1000, 979, 975]  (max err 17)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([65526, 1, 65534, 65529, 65495, 65461] g (signed))
+
+  VERDICT: protocol path BLOCKED; modbus RTU path WORKS with real feedback.
+  => Adopt MODBUS for hand steps (as butterfli_hw does), or rm_close_modbus_mode(1) before protocol-path runs.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP

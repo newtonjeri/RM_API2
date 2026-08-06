@@ -375,3 +375,187 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 1 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:38:17
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE, AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] left: run mode restored to REAL
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:39:00
+========================================================================
+C6 — Single-arm planned-move benchmark WITH concurrent hand motion.
+THE SELECTED ARM, ITS POLE, AND ITS HAND WILL MOVE.
+
+Controls ONE arm purely through the controller's PLANNED move functions
+(no passthrough), with the Inspire hand commanded CONCURRENTLY with every
+arm motion (dispatched back-to-back, both arrivals awaited):
+
+    pole -> full_length
+    movej -> ready      + hand -> release
+    movej -> rest_pose  + hand -> grasp
+    movej_p +20 cm X    + hand -> half_grasp   (world/base frame)
+    movej -> ready      + hand -> release
+
+Verifies the Cartesian displacement from the controller's own pose
+feedback and reports per-phase arm/hand durations and the hand-vs-arm
+finish skew (negative = hand finished while the arm was still moving —
+the concurrency evidence).
+
+Arm selection: RM_ARM=left (default) or RM_ARM=right.
+Hand caveat (fw 1.7.x): rm_set_hand_angle is the hand PROTOCOL path —
+the end port must NOT be in modbus mode (rm_close_modbus_mode(1) first).
+Note: in SIM mode the lift and hand do NOT simulate (2026-08-06 logs) —
+this test is meaningful on REAL hardware.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:39:33
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hands DISABLED (--no-hands)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE, AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] left: run mode restored to REAL
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:41:00
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE, AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] left: run mode restored to REAL
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:41:25
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=right @ 192.168.1.103   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE RIGHT ARM, ITS POLE, AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> right=193 (2to3)) ...
+  [WARN] right: pole homing FAILED (ret=1, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] right: run mode restored to REAL
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-06 20:41:45
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=right @ 192.168.1.103   movej v=20%   X offset +20 cm (world frame)
+    hands DISABLED (--no-hands)
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE RIGHT ARM, ITS POLE, AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  starting in 5 ...
+  starting in 4 ...
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> right=193 (2to3)) ...
+  [WARN] right: pole homing FAILED (ret=1, event=False)
+  [FAIL] pole pre-positioned to full length
+  [INFO] right: run mode restored to REAL
+
+  Summary: 0 PASS, 1 FAIL, 0 SKIP
