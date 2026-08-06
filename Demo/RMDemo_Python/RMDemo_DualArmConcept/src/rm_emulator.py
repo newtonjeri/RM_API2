@@ -213,6 +213,7 @@ class EmuController:
         self.joints_deg = list(joints_deg)
         self.lift_hw = float(lift_hw_mm)
         self.hand_hw = [993, 993, 993, 993, 981, 992]   # SRDF 'release'
+        self.modbus_mode = False        # end-port RS485 in modbus mode
         self.hand_speed_set = 500
         self.hand_force_set = 500
         self._hand_motion = None
@@ -388,9 +389,16 @@ class EmuController:
         return list(self.joints_deg)
 
     # ── hand motion (Inspire RH56, protocol path rm_set_hand_angle) ──
-    def set_hand_angle(self, values, block: bool, timeout_s: int) -> int:
+    def set_hand_angle(self, values, block: bool, timeout_s: int,
+                       _modbus: bool = False) -> int:
         if len(values) != 6 or any(not (-1 <= int(v) <= 1000) for v in values):
             return 1
+        if self.modbus_mode and not _modbus:
+            # fw 1.7.x exclusivity (bench §3.8): while the end port is in
+            # modbus mode the hand PROTOCOL path is dead — blocking calls
+            # return -5, non-blocking sends are silently swallowed (ret 0,
+            # no motion, no arrival event) — the exact 2026-08-06 C6 failure.
+            return -5 if block else 0
         with self._lock:
             if self.reject_next_dispatch:
                 self.reject_next_dispatch = False
@@ -412,6 +420,7 @@ class EmuController:
                              [float(t) for t in target],
                              _scaled(dur), self._hand_done)
             motion.will_fail = self._consume_fail_flag()
+            motion.emit_event = not _modbus   # modbus writes: no device-2 event
             self._hand_motion = motion
         if block:
             if not motion.done.wait(_scaled(max(timeout_s, 1)) + 5.0):
@@ -431,7 +440,8 @@ class EmuController:
             else:
                 self.hand_hw = [int(round(t)) for t in m.target]
             m.done.set()
-        self._emit(DEV_HAND, ok=not m.will_fail)
+        if getattr(m, "emit_event", True):
+            self._emit(DEV_HAND, ok=not m.will_fail)
 
     def current_hand(self):
         with self._lock:
@@ -676,6 +686,72 @@ class RoboticArm:
     def rm_set_hand_angle(self, hand_angle, block=True, timeout=10):
         return self._ctrl.set_hand_angle(hand_angle, block, timeout)
 
+    # ── end-port modbus RTU (the butterfli_hw ALL-MODBUS hand path) ──
+    # Register map (butterfli_hw conversions.hpp): ANGLE_SET 1486,
+    # FORCE_SET 1498, SPEED_SET 1522, ANGLE_ACT 1546, FORCE_ACT 1582.
+    def rm_set_modbus_mode(self, port, baudrate, timeout):
+        if port != 1:
+            return 1
+        self._ctrl.modbus_mode = True
+        return 0
+
+    def rm_close_modbus_mode(self, port):
+        if port != 1:
+            return 1
+        self._ctrl.modbus_mode = False
+        return 0
+
+    @staticmethod
+    def _decode_hi_lo(data):
+        return [((data[2 * i] & 0xFF) << 8) | (data[2 * i + 1] & 0xFF)
+                for i in range(len(data) // 2)]
+
+    def rm_write_registers(self, write_params, data):
+        ctrl = self._ctrl
+        if not ctrl.modbus_mode or write_params.port != 1:
+            return 1
+        vals = self._decode_hi_lo(list(data))
+        if write_params.address == 1486 and len(vals) == 6:   # ANGLE_SET
+            return ctrl.set_hand_angle(vals, False, 2, _modbus=True)
+        if write_params.address == 1522 and vals:             # SPEED_SET
+            ctrl.hand_speed_set = max(1, min(1000, vals[0]))
+            return 0
+        if write_params.address == 1498 and vals:             # FORCE_SET
+            ctrl.hand_force_set = max(1, min(1000, vals[0]))
+            return 0
+        return 1
+
+    def rm_write_single_register(self, write_params, data):
+        ctrl = self._ctrl
+        if not ctrl.modbus_mode or write_params.port != 1:
+            return 1
+        base, off = write_params.address, None
+        if 1486 <= base <= 1496 and (base - 1486) % 2 == 0:
+            ch = (base - 1486) // 2
+            target = list(ctrl.current_hand())
+            target[ch] = int(data)
+            return ctrl.set_hand_angle(target, False, 2, _modbus=True)
+        if base == 1522:
+            ctrl.hand_speed_set = max(1, min(1000, int(data)))
+            return 0
+        return 1
+
+    def rm_read_multiple_holding_registers(self, read_params):
+        ctrl = self._ctrl
+        if not ctrl.modbus_mode or read_params.port != 1:
+            return 1, []
+        n = read_params.num
+        if read_params.address == 1546:                       # ANGLE_ACT
+            vals = ctrl.current_hand()[:n]
+        elif read_params.address == 1582:                     # FORCE_ACT
+            vals = [0] * n
+        else:
+            return 1, []
+        out = []
+        for v in vals:
+            out += [(int(v) >> 8) & 0xFF, int(v) & 0xFF]
+        return 0, out
+
     def rm_set_hand_speed(self, speed):
         if not (1 <= int(speed) <= 1000):
             return 1
@@ -830,6 +906,7 @@ def install():
         "rm_event_push_data_t": SimpleNamespace,
         "rm_realtime_arm_joint_state_t": SimpleNamespace,
         "rm_realtime_push_config_t": _KwargsStruct,
+        "rm_peripheral_read_write_params_t": _KwargsStruct,
         "rm_udp_custom_config_t": _KwargsStruct,
         "rm_get_arm_event_call_back": rm_get_arm_event_call_back,
         "rm_api_version": (lambda: "emu-1.1.6"),
