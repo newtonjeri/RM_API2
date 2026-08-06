@@ -1,0 +1,90 @@
+
+========================================================================
+  Script : test_sim_motion_visibility.py
+  Log    : test_sim_motion_visibility.log
+  Started: 2026-08-06 15:55:39
+========================================================================
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.1.239:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (13 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (210 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (7 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: SIMULATION (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_sim_motion_visibility.py
+  Log    : test_sim_motion_visibility.log
+  Started: 2026-08-06 15:57:09
+========================================================================
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.1.239:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  1.1.6
+  [INFO] original run mode: SIMULATION
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (11 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (208 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (7 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: SIMULATION (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_sim_motion_visibility.py
+  Log    : test_sim_motion_visibility.log
+  Started: 2026-08-06 15:57:39
+========================================================================
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.1.239:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  1.1.6
+  [INFO] original run mode: SIMULATION
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (10 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (210 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (7 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: SIMULATION (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
