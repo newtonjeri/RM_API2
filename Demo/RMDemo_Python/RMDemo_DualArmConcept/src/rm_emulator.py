@@ -212,6 +212,7 @@ class EmuController:
         self.hand_force_set = 500
         self._hand_motion = None
         self.run_mode = 1                     # 1 = REAL, 0 = SIMULATION
+        self.collision_stage = 2 if ip == EMU_LEFT_IP else 0   # observed
         self._lock = threading.RLock()
         self._arm_motion = None
         self._lift_motion = None
@@ -720,6 +721,41 @@ class RoboticArm:
             self._ctrl.stop_push()
         return 0
 
+    # ── version/capability getters (answers mirror the real V1.7.1 arms) ──
+    def rm_get_joint_software_version(self):
+        return 0, {"version": [54544] * 6 + [58640]}
+
+    def rm_get_sn(self):
+        return -2, ""                  # not supported on this firmware
+
+    def rm_algo_version(self):
+        return "1.6.0-emu"
+
+    def rm_get_collision_stage(self):
+        return 0, self._ctrl.collision_stage
+
+    def rm_get_collision_detection(self):
+        return 0, 0
+
+    def rm_get_avoid_singularity_mode(self):
+        return 0, 0
+
+    def rm_get_self_collision_enable(self):
+        return 0, False
+
+    def rm_get_self_endeffector_collision_enable(self):
+        return 0, False
+
+    def rm_get_electronic_fence_enable(self):
+        return 0, {"enable_state": False, "in_out_side": 0,
+                   "effective_region": 0}
+
+    def rm_get_collision_remove_enable(self):
+        return -2, None                # V1.7.4 feature, absent on V1.7.1
+
+    def rm_get_torque_data(self):
+        return -2, [], 0               # no joint torque sensors on RM75-6FB
+
     def rm_get_realtime_push(self):
         cfg = getattr(self._ctrl, "push_config", None) or {
             "cycle": 1, "enable": False, "port": 8089,
@@ -788,6 +824,7 @@ def install():
         "rm_realtime_push_config_t": _KwargsStruct,
         "rm_udp_custom_config_t": _KwargsStruct,
         "rm_get_arm_event_call_back": rm_get_arm_event_call_back,
+        "rm_api_version": (lambda: "emu-1.1.6"),
         "rm_realtime_arm_state_call_back": rm_realtime_arm_state_call_back,
     }
     for name, val in shared.items():        # real SDK star-imports the wrap
