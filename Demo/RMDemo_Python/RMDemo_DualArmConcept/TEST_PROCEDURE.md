@@ -63,13 +63,18 @@ First step doubles as homing from any start pose. Hand states come from the SRDF
 
 Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level: both devices are dispatched back-to-back, and the lift speed is **duration-matched** to the arm move — `v = distance / (arm_duration − 0.38 s start latency)`, `pct = ceil(v / 1.85)`, floored at 4 % — with ROUND-UP quantization (early finish is benign, the device waits; late is the failure mode). Per step the test reports dispatch start skew and joint-vs-lift finish skew, mirroring `bench_sync`'s `pa_start`/`pa_finish`.
 
-**Hand dispatch method (C7-validated 2026-08-06)**: both hand paths WORK on
-both arms — protocol (`rm_set_hand_angle`) and modbus RTU (ANGLE_SET/
-ANGLE_ACT). But **device-2 arrival events never reach the user event
-callback** (arm device-0 and lift device-3 events do), so all hand steps use
-**blocking `rm_set_hand_angle` in a worker thread**: concurrency with the arm
-is preserved, and ret 0 is an SDK-internal arrival confirmation. Modbus
-remains the fallback with true measured feedback (`test_hand_only.py`).
+**Hand dispatch method (hardware-validated 2026-08-06, butterfli_hw
+`acked_angle` semantics)**: both hand paths WORK on both arms (protocol and
+modbus RTU — C7). Two constraints shape the design: **device-2 arrival
+events never reach the user event callback** (arm/lift events do), and
+**blocking `rm_set_hand_angle` fails with −4 when an arm move is in flight**
+(it consumes the arm's arrival push — observed in C6). All hand steps
+therefore use the butterfli-proven **non-blocking send + duration-based
+completion**, with the dwell sized by the measured stroke law
+(0.115 s + 373·span/SPEED_SET, ×1.5 margin, capped by `RM_HAND_DWELL_S`;
+no-op sends dwell ~0.15 s). Feedback is echo — modbus + ANGLE_ACT
+(`test_hand_only.py`) remains the path with true measured feedback.
+**`--no-hands`** on any motion test strips all hand parts at runtime.
 
 **⚠ Hand/modbus exclusivity (fw 1.7.x)**: `rm_set_hand_angle` is the hand *protocol* path and is mutually exclusive with end-port modbus mode — it returns −5 and degrades the modbus session if the port is in modbus mode. Do **not** run these tests while the butterfli_hw ALL-MODBUS stack is attached; if the end port was left in modbus mode, call `rm_close_modbus_mode(1)` first.
 
@@ -106,7 +111,7 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `60/60 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
+Expected: `66/66 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -194,7 +199,7 @@ Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
 | PL1 | All dispatches accepted | every `rm_movej`/`rm_set_lift_height` ret 0 |
 | PL2 | Sequence completed | all 7 steps, barrier honored, both arms ok |
 | PL3 | Dispatch skew | max < 50 ms (baseline: single call ≈ 8 ms) |
-| PL4 | Arrivals confirmed | arm/lift via events; **hand via blocking-in-thread** (ret 0 = SDK-confirmed arrival — device-2 events are NOT delivered to the user callback on fw 1.7.1/1.7.4 + SDK 1.1.6, observed 2026-08-06) |
+| PL4 | Arrivals confirmed | arm/lift via events; **hand via acked_angle** (non-blocking + stroke-law dwell — device-2 events are not delivered to the user callback, and blocking fails with −4 under concurrent motion) |
 | PL5 | Arm–pole sync finish | pole never finishes > 0.5 s LATE vs the arm (early is benign) |
 
 On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)`), test fails.
@@ -256,7 +261,7 @@ delivers an arrival event (the hand has no position fallback).
 
 ## 5. Running the Full Suite
 
-Every motion test (C2/C3/C4/C6) accepts **`--mode SIM|REAL`**: the requested
+Every script accepts **`-h`/`--help`** (prints its documentation and the shared usage/env reference, exits without touching the arms) and **rejects unknown arguments with exit 2** — a silently ignored typo would otherwise start a motion run. Every motion test (C2/C3/C4/C6) additionally accepts **`--mode SIM|REAL`**: the requested
 mode is engaged on the arm(s) and VERIFIED by readback before any dispatch
 (refusal aborts the run before motion), and the pre-run mode is restored on
 exit. `--mode SIM` runs the full test virtually on the real controller (a
@@ -293,7 +298,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 60 | 0 | 0 | offline |
+| run_dry_run | 66 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
 | test_hand_only | 8 | 0 | 0 | HB2 verdict is the finding |
@@ -301,7 +306,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| **Total** | **104** | **0** | **0** | |
+| **Total** | **110** | **0** | **0** | |
 
 ---
 
