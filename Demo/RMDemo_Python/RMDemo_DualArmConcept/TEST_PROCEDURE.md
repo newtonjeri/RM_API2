@@ -63,6 +63,14 @@ First step doubles as homing from any start pose. Hand states come from the SRDF
 
 Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level: both devices are dispatched back-to-back, and the lift speed is **duration-matched** to the arm move — `v = distance / (arm_duration − 0.38 s start latency)`, `pct = ceil(v / 1.85)`, floored at 4 % — with ROUND-UP quantization (early finish is benign, the device waits; late is the failure mode). Per step the test reports dispatch start skew and joint-vs-lift finish skew, mirroring `bench_sync`'s `pa_start`/`pa_finish`.
 
+**Hand dispatch method (C7-validated 2026-08-06)**: both hand paths WORK on
+both arms — protocol (`rm_set_hand_angle`) and modbus RTU (ANGLE_SET/
+ANGLE_ACT). But **device-2 arrival events never reach the user event
+callback** (arm device-0 and lift device-3 events do), so all hand steps use
+**blocking `rm_set_hand_angle` in a worker thread**: concurrency with the arm
+is preserved, and ret 0 is an SDK-internal arrival confirmation. Modbus
+remains the fallback with true measured feedback (`test_hand_only.py`).
+
 **⚠ Hand/modbus exclusivity (fw 1.7.x)**: `rm_set_hand_angle` is the hand *protocol* path and is mutually exclusive with end-port modbus mode — it returns −5 and degrades the modbus session if the port is in modbus mode. Do **not** run these tests while the butterfli_hw ALL-MODBUS stack is attached; if the end port was left in modbus mode, call `rm_close_modbus_mode(1)` first.
 
 ---
@@ -186,7 +194,7 @@ Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
 | PL1 | All dispatches accepted | every `rm_movej`/`rm_set_lift_height` ret 0 |
 | PL2 | Sequence completed | all 7 steps, barrier honored, both arms ok |
 | PL3 | Dispatch skew | max < 50 ms (baseline: single call ≈ 8 ms) |
-| PL4 | Arrivals confirmed | event preferred; position fallback ⇒ WARN (hand has no fallback — event only) |
+| PL4 | Arrivals confirmed | arm/lift via events; **hand via blocking-in-thread** (ret 0 = SDK-confirmed arrival — device-2 events are NOT delivered to the user callback on fw 1.7.1/1.7.4 + SDK 1.1.6, observed 2026-08-06) |
 | PL5 | Arm–pole sync finish | pole never finishes > 0.5 s LATE vs the arm (early is benign) |
 
 On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)`), test fails.
