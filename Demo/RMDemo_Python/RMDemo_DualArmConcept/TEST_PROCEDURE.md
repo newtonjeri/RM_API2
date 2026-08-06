@@ -26,7 +26,9 @@ Example: `RM_LEFT_IP=192.168.2.10 RM_RIGHT_IP=192.168.2.11 RM_HOST_IP=192.168.2.
 |---|---|
 | Lift stroke (physical) | 0–0.3 m |
 | Lift safe range (SRDF states) | 0.01–0.29 m → 7–193 hw-mm |
-| Lift unit mapping | hw mm = metres × 2000/3 (butterfli_hw `conversions.hpp`) |
+| Lift gearing — LEFT (V1.7.4) | **1:1, true mm, travel 0–330** (physically confirmed 2026-08-06: commanding 193 under the old 2/3 assumption left the pole mid-rail). `full_length` 0.29 m → **290** | env `RM_LEFT_LIFT_GEAR` (`1to1`/`2to3`) |
+| Lift gearing — RIGHT (V1.7.1) | 2:3 geared, hw 0–200 (`hw = m × 2000/3`). `full_length` 0.29 m → **193**. **Flip to `1to1` via `RM_RIGHT_LIFT_GEAR` after its upgrade** | env `RM_RIGHT_LIFT_GEAR` |
+| Controller-side lift ceiling | Left (V1.7.4): Min 0 / Max **330** true mm — `full_length` command 290 stays inside it. Right (V1.7.1): hw max 200. `lift_hw_mm()` hard-asserts the per-side ceiling. Motor params observed on left: 1250 rpm / 5000 rpm/s / RR 0.005 / joint ID 7 — the V1.7.1-measured speed map (1.85 phys mm/s per %) and start latencies should be revalidated on the upgraded arm before trusting sync-finish numbers. |
 | Arm speed used | 20 % (`rm_movej` v) |
 | Lift speed used | 50 % standalone; **duration-matched** on sync steps (see §1.5) |
 | Hand | Inspire RH56DFX-2L on each arm, protocol path `rm_set_hand_angle`, values 0–1000 (1000 = open), SDK order [little, ring, middle, index, thumb_flex, thumb_rot] |
@@ -46,12 +48,12 @@ Values stored in **radians verbatim** from the SRDF; converted to degrees at dis
 | `zero_pose` | all 0.0 | all 0.0 except **J7 = 3.1416** |
 | `ready` | 0, −1.885, 0, 1.798, 0, 1.379, 0 | 0, −1.885, 0, 1.798, 0, 1.379, **3.1416** |
 | `rest_pose` | 0, −1.431, −0.4538, 1.7103, 0.1047, 1.0821, 1.2043 | 0, −1.431, **+0.4538**, 1.7103, **−0.1047**, 1.0821, 1.9373 |
-| Lift `half_length` | 0.15 m → 100 hw-mm | same |
-| Lift `full_length` | 0.29 m → 193 hw-mm | same |
+| Lift `half_length` | 0.15 m → **100** (2:3) | left: **150** (1:1) |
+| Lift `full_length` | 0.29 m → **193** (2:3) | left: **290** (1:1) |
 
 ### 1.4 Concept sequence (both arms, per run)
 
-**Every motion run first pre-positions the pole(s) to `full_length` (0.29 m = 193 hw-mm)** — a deterministic start state with maximum clearance — dispatched concurrently after the countdown and arrival-verified; a failed homing aborts the run with all arms halted. Then:
+**Every motion run first pre-positions the pole(s) to `full_length` (0.29 m — left 290 @ 1:1, right 193 @ 2:3)** — a deterministic start state with maximum clearance — dispatched concurrently after the countdown and arrival-verified; a failed homing aborts the run with all arms halted. Then:
 
 `arm→ready` → `hand→release` → `sync(arm→zero + pole→half)` → `hand→grasp` → `sync(arm→ready + pole→full)` → `hand→half_grasp` → `arm→rest`
 
@@ -94,7 +96,7 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `52/52 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
+Expected: `60/60 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -171,22 +173,29 @@ On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)
 | CH3 | Ordering invariant | follower dispatch(k) ≥ leader done(k), all k |
 | CH4 | Follower gate latency | max < 1.0 s from gate-open to dispatch |
 
-### C6 — `test_single_arm_planned.py` (**moves one arm** — arm only)
+### C6 — `test_single_arm_planned.py` (**moves one arm, its pole, and its hand**)
 
 **Purpose**: single-arm control through the controller's PLANNED functions
-only (no passthrough): `ready` → `rest_pose` via `rm_movej`, **+20 cm X in
-the world/base frame via `rm_movej_p`** (joint-space planning to a pose
-target), back to `ready` via `rm_movej`. Verifies the Cartesian
-displacement from the controller's own pose feedback and reports per-move
-durations. Arm selection: `RM_ARM=left` (default) or `RM_ARM=right`.
+only (no passthrough), with the Inspire hand commanded **CONCURRENTLY with
+every arm motion** (dispatched back-to-back via the `combo` step kind, both
+arrivals awaited): `ready`+`release` → `rest_pose`+`grasp` → **+20 cm X via
+`rm_movej_p`**+`half_grasp` → `ready`+`release`. Verifies the Cartesian
+displacement from the controller's own pose feedback and reports per-phase
+arm/hand durations plus the **hand-vs-arm finish skew** (negative = hand
+finished during arm motion — measured from true event-arrival timestamps).
+Arm selection: `RM_ARM=left` (default) or `RM_ARM=right`. The hand caveat
+of §1.5 applies (end port must not be in modbus mode); in SIM mode the
+lift and hand do not simulate, so this test is meaningful on REAL.
 
 | ID | Check | Pass condition |
 |---|---|---|
-| SA1 | movej to ready | event arrival, ok |
-| SA2 | movej to rest_pose | event arrival, ok |
-| SA3 | Cartesian displacement | `dx = +0.20 ± 0.02 m`, `|dy|,|dz| ≤ 0.03 m` (movej_p ret 1 ⇒ IK/unreachable, fails cleanly with no motion) |
-| SA4 | movej back to ready | event arrival, ok |
-| SA5 | Planned pipeline | movej ×3 + movej_p ×1, no passthrough used |
+| SA0 | Pole pre-positioned | full_length reached (per-side gearing) |
+| SA1 | movej ready + hand release | both arrivals, ok |
+| SA2 | movej rest_pose + hand grasp | both arrivals, ok |
+| SA3 | movej_p +X + half_grasp | `dx = +0.20 ± 0.02 m`, `|dy|,|dz| ≤ 0.03 m`, hand ok (movej_p ret 1 ⇒ IK/unreachable, fails cleanly) |
+| SA4 | movej back to ready + release | both arrivals, ok |
+| SA5 | Planned pipeline | movej ×3 + movej_p ×1 + hand ×4, no passthrough |
+| SA6 | Hand concurrency | every phase yields both arrivals; skews reported |
 
 All motion tests now print each arm's **run mode** before the countdown and
 WARN loudly on SIMULATION (dispatches succeed and events fire in sim, but
@@ -245,14 +254,14 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 52 | 0 | 0 | offline |
+| run_dry_run | 60 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
 | test_dual_locked | 6 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
-| test_single_arm_planned | 6 | 0 | 0 | one arm + its pole |
-| **Total** | **87** | **0** | **0** | |
+| test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
+| **Total** | **96** | **0** | **0** | |
 
 ---
 

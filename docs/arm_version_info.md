@@ -39,22 +39,24 @@ Dual-arm setup (Butterfli robot). Both arms queried live over the API on **2026-
 <!-- END AUTO-VERSIONS -->
 ## 2. Newer controller releases and their features (Gen-3)
 
-Current release line per RealMan release notes (last updated 2026-04-29). Both arms are **4 releases behind**.
+Current release line per RealMan release notes (last updated 2026-04-29).
+
+> **⚠ MISMATCHED FIRMWARE (as of 2026-08-06):** the **left arm is on V1.7.4** (one release behind latest), the **right arm remains on V1.7.1** (four behind). The two planners differ (plan V1.7.4 vs V1.7.1), so per-arm planning/timing behavior may diverge in dual-arm runs — bring the right arm to the same version. Also: **V1.7.4 pairs with end interface board V2.0.0** — the API cannot read the end-board version, so verify it on the left arm's pendant (Configuration → Version Information); a V1.9.9 end board under V1.7.4 risks end-port/hand misbehavior.
 
 | Version | Date | Key features | Required pairings |
 |---|---|---|---|
-| V1.7.1 *(installed)* | 2025-06-10 | Manual load identification; singularity-avoidance enable switch; static-state collision-detection mode | End board V1.9.9; joints Vd5.1.0 / Ve5.1.0 |
+| V1.7.1 *(installed — RIGHT arm)* | 2025-06-10 | Manual load identification; singularity-avoidance enable switch; static-state collision-detection mode | End board V1.9.9; joints Vd5.1.0 / Ve5.1.0 |
 | V1.7.2 | 2025-06-17 | Load identification default/manual modes | End board V1.9.9; API2 v1.1.1 |
 | V1.7.3 | 2025-11-04 | **Cartesian velocity passthrough** (`rm_movev_canfd`); **7-axis singularity avoidance** (RM75-relevant); end-device register R/W; **UDP speed-reporting fix** | End board V1.9.9; API2 v1.1.3; ROS1 v2.6.0; ROS2 v1.6.0 |
-| V1.7.4 | 2025-12-12 | Manual collision-release mode; current-loop drag near joint limits; user-configurable singularity protection | **End board V2.0.0** (separate `.bin` flash); API2 v1.1.4 |
+| V1.7.4 *(installed — LEFT arm)* | 2025-12-12 | Manual collision-release mode; current-loop drag near joint limits; user-configurable singularity protection | **End board V2.0.0** (separate `.bin` flash); API2 v1.1.4 |
 | **V1.7.5** *(latest)* | 2026-04-29 | Force-control teach safety check; soft-start current monitoring; new model support; **one-key upgrade** (controller + joints + end board in one pass, single restart) | API2 v1.1.5; joints Vd5.1.0 / Ve5.1.0 |
 
-### What staying on V1.7.1 costs
+### What the RIGHT arm still lacks on V1.7.1 (the left arm now has all but the last)
 
-- **No controller-side singularity protection for a 7-axis arm** during Cartesian-linear moves (7-axis support arrived in V1.7.3).
-- **UDP joint-velocity reporting carries a known bug** fixed in V1.7.3 — treat pushed `joint_speed` values with caution.
-- No Cartesian velocity passthrough interface (`rm_movev_canfd` / `rm_set_movev_canfd_init`).
-- No manual collision-release mode, configurable singularity protection (V1.7.4), or force-control teach safety checks (V1.7.5).
+- **No controller-side singularity protection for a 7-axis arm** during Cartesian-linear moves (7-axis support arrived in V1.7.3 — now active-capable on the left arm; note the switch is currently OFF on both).
+- **UDP joint-velocity reporting carries a known bug** fixed in V1.7.3 — treat the right arm's pushed `joint_speed` with caution; the left arm's is fixed.
+- No Cartesian velocity passthrough (`rm_movev_canfd`) — now available on the left arm.
+- No manual collision-release mode or configurable singularity protection (V1.7.4 — present on the left arm). Force-control teach safety checks remain V1.7.5-only on both.
 
 Not affected by any firmware upgrade (Gen-3 hardware ceiling): `rm_movel_offset`, latched Gen-4 e-stop, named trajectory-file playback, flowchart APIs, `rm_run_tool_action`.
 
@@ -64,7 +66,7 @@ Not affected by any firmware upgrade (Gen-3 hardware ceiling): `rm_movel_offset`
 - Upgrade is performed through the **web teach pendant** (browse to the arm's IP): Configuration → Robotic Arm Config → Version Information → Select File → Start Upgrade (~4–5 min) → wait for continuous beeping → restart → **Ctrl+F5** to clear the cached UI.
 - Targeting ≥ V1.7.4 additionally requires flashing the end interface board to V2.0.0 (`.bin` upload); V1.7.5's one-key upgrade folds this into a single pass.
 - Undocumented (confirm with support before upgrading): whether saved programs/configs survive, and whether downgrades are possible. Back up online-programming projects, tool/work frames, payload and network settings first.
-- Upgrade both arms to the **same version** to keep the dual-arm setup consistent, and align the client SDK to the paired API2 version afterwards.
+- Upgrade both arms to the **same version** to keep the dual-arm setup consistent, and align the client SDK to the paired API2 version afterwards. **Current action item (2026-08-06): bring the RIGHT arm to V1.7.4 to match the left** (the package is evidently in hand), or take both to V1.7.5 in one pass; then re-run `docs/update_arm_version_info.py`.
 
 ### Sources
 
