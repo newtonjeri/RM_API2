@@ -383,7 +383,7 @@ Logs append across runs with a timestamped banner per run (same `log_utils` as R
 | One arm stops mid-run | Partner-stop triggered by the other arm's failure | Read the per-step table above the summary for the failing side |
 | Lift never arrives, arm steps fine | Lift command queued behind previous lift motion | Controller queues rather than preempts (see LiftBenchmark report §5.3) — ensure lift idle before run |
 | Run mode WARN = SIMULATION | Arm left in sim mode | `rm_set_arm_run_mode(1)` from GUI/API if real motion intended — sim runs also double as an event-in-sim probe |
-| Pole homing FAILED ret=1, `set_state: false` (seen BOTH arms 2026-08-06 20:38) | Controller in an arm-state error: e-stop chain, latched system/joint error, or lift driver error — NOT a parameter/script problem (identical commands physically worked minutes earlier) | Read the auto-printed `[DIAG]` dump, then `RM_ARM=<side> python3 test_pole_only.py --mode REAL` (add `--clear-errors` to recover); ladder: e-stop → clear errors → Web GUI lift panel → power cycle |
+| Pole homing FAILED ret=1, `set_state: false` on BOTH arms while getters and the hand still work | **Emergency stop pressed** (confirmed cause of the 2026-08-06 20:38 incident — one e-stop chain covers both arms; end-port power survives, so the hand keeps working). Other arm-state errors (latched system/joint error, lift driver error) show the same ret=1 | Release/reset the e-stop, rerun. If it persists: read the auto-printed `[DIAG]` dump, then `RM_ARM=<side> python3 test_pole_only.py --mode REAL` (add `--clear-errors` to recover); ladder: e-stop → clear errors → Web GUI lift panel → power cycle |
 
 ---
 

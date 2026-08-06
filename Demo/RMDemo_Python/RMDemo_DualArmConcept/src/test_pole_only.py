@@ -4,6 +4,9 @@ Built for the 2026-08-06 20:38 incident: BOTH controllers suddenly rejected
 every lift command (rm_set_lift_height / rm_set_lift_speed -> ret=1,
 "[...] set_state: false") that had physically worked minutes earlier with
 identical parameters — i.e. an ARM-STATE error, not a script problem.
+CONFIRMED CAUSE (2026-08-06): the platform's EMERGENCY STOP was pressed —
+one e-stop chain covers both arms, and end-port power survives it (hand
+modbus kept working). This signature = check the e-stop first.
 
 Reads first, moves second:
 
