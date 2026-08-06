@@ -64,6 +64,8 @@ _state_cb = rm_realtime_arm_state_callback_ptr(_on_state)   # keep alive
 
 
 def main() -> int:
+    for k in _results:                 # reset: the emulated suite calls
+        _results[k] = 0                # main() more than once per process
     handle_cli(__doc__)
     print("=" * 68)
     print("C5  Simulation-mode motion visibility probe (no physical motion)")

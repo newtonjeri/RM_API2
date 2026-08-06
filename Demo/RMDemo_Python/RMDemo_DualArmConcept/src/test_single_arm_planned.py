@@ -32,8 +32,8 @@ from dual_arm_common import (
     ARM_SPEED_PCT, ARM_TIMEOUT_S, DEV_HAND, DEV_JOINT, HAND_STATES_HW,
     HAND_TIMEOUT_S, LEFT_IP, RIGHT_IP, ROBOT_PORT, ArrivalMonitor,
     ConceptArm, apply_run_mode, countdown, home_poles_full, mode_label,
-    parse_mode_arg, parse_no_hands_arg, report_run_modes,
-    restore_run_modes, run_step,
+    parse_mode_arg, parse_no_hands_arg, parse_no_pole_arg,
+    report_run_modes, restore_run_modes, run_step,
     teardown,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
@@ -80,9 +80,12 @@ def _phase_report(label: str, rec: dict):
 
 
 def main() -> int:
+    for k in _results:                 # reset: the emulated suite calls
+        _results[k] = 0                # main() more than once per process
     handle_cli(__doc__)
     forced = parse_mode_arg()
     no_hands = parse_no_hands_arg()
+    no_pole = parse_no_pole_arg()
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
     print("=" * 68)
     print("C6  Single-arm planned moves + CONCURRENT hand motion")
@@ -93,8 +96,15 @@ def main() -> int:
           "non-blocking + duration dwell, butterfli_hw semantics)")
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
-    print("    pole pre-positioned to full length (0.29 m) first")
-    print(f"    THE {ARM_SIDE.upper()} ARM, ITS POLE, AND ITS HAND WILL MOVE"
+    print("    pole pre-positioning SKIPPED (--no-pole)" if no_pole else
+          "    pole pre-positioned to full length (0.29 m) first")
+    moving = [f"THE {ARM_SIDE.upper()} ARM"]
+    if not no_pole:
+        moving.append("ITS POLE")
+    if not no_hands:
+        moving.append("ITS HAND")
+    print(f"    {', '.join(moving[:-1])}{' AND ' if len(moving) > 1 else ''}"
+          f"{moving[-1]} WILL MOVE"
           + (" (VIRTUALLY — SIM forced; lift/hand do NOT simulate)"
              if forced == 0 else ""))
     print("=" * 68)
@@ -118,9 +128,12 @@ def main() -> int:
                    "requested mode did not engage — aborting before motion")
             return 1
         report_run_modes(arm)
-        countdown(5)
+        countdown()
 
-        if home_poles_full(monitor, arm):
+        if no_pole:
+            result("PASS", "pole pre-positioned to full length",
+                   "SKIPPED — pole disabled (--no-pole)")
+        elif home_poles_full(monitor, arm):
             result("PASS", "pole pre-positioned to full length")
         else:
             result("FAIL", "pole pre-positioned to full length")

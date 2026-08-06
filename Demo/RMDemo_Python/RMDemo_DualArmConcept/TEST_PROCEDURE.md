@@ -75,6 +75,10 @@ completion**, with the dwell sized by the measured stroke law
 no-op sends dwell ~0.15 s). Feedback is echo — modbus + ANGLE_ACT
 (`test_hand_only.py`) remains the path with true measured feedback.
 **`--no-hands`** on any motion test strips all hand parts at runtime.
+**`--no-pole`** skips pole pre-positioning and strips all lift parts —
+sync steps keep their arm half and run as plain `movej` moves (on C8,
+the pole test, it is equivalent to `--diagnose-only`; on C7,
+`--no-hands` means nothing to test and all checks SKIP).
 
 **⚠ Hand/modbus exclusivity (fw 1.7.x)**: `rm_set_hand_angle` is the hand *protocol* path and is mutually exclusive with end-port modbus mode — it returns −5 and degrades the modbus session if the port is in modbus mode. Do **not** run these tests while the butterfli_hw ALL-MODBUS stack is attached; if the end port was left in modbus mode, call `rm_close_modbus_mode(1)` first.
 
@@ -114,10 +118,12 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `68/68 passed`, then every suite entry `exit 0 (OK)` — including
-the **C8 locked-pole drill**, which injects the 2026-08-06 lift-rejection
-fault on the emulated left arm, requires C8 to FAIL with the diagnosis,
-then requires a `--clear-errors` run to recover and go green. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
+Expected: `70/70 passed`, then every suite entry `exit 0 (OK)` — including
+the **C2 arm-only drill** (`--no-hands --no-pole` must strip hand and lift
+parts cleanly, sync steps running as plain arm moves) and the **C8
+locked-pole drill**, which injects the 2026-08-06 lift-rejection fault on
+the emulated left arm, requires C8 to FAIL with the diagnosis, then
+requires a `--clear-errors` run to recover and go green. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -229,7 +235,7 @@ Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
 
 **Purpose**: parallel locked semantics — per step, dispatch both arms back-to-back non-blocking, then barrier on **both** arrivals before the next step. Measures dispatch skew and per-arm completion delta at every boundary.
 **Duration**: ~1–2 min at 20 %/50 % speeds.
-**Steps**: connect → register monitor → 5 s countdown → `run_locked` over the sequence → report.
+**Steps**: connect → register monitor → 3 s countdown → `run_locked` over the sequence → report.
 
 | ID | Check | Pass condition |
 |---|---|---|
@@ -327,7 +333,7 @@ python3 test_dual_free.py     # motion — independent semantics
 
 Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C2 is the most conservative motion mode (step barriers bound divergence), C3 and C4 progressively relax coupling. Total hardware runtime ≈ 6–10 min. Hand steps require the end port NOT in modbus mode (§1.5).
 
-**Before any motion run**: clear space around both arms, both poles free to travel 0.01–0.29 m, e-stop within reach. Each motion test prints a banner and a 5-second countdown before the first dispatch.
+**Before any motion run**: clear space around both arms, both poles free to travel 0.01–0.29 m, e-stop within reach. Each motion test prints a banner and a 3-second countdown before the first dispatch.
 
 ---
 
@@ -335,7 +341,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 68 | 0 | 0 | offline |
+| run_dry_run | 70 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_pole_only | 7+1 SKIP | 0 | 1 | D5 SKIPs without `--clear-errors` |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
@@ -344,7 +350,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| **Total** | **119** | **0** | **1** | |
+| **Total** | **121** | **0** | **1** | |
 
 ---
 

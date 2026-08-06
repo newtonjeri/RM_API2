@@ -75,7 +75,8 @@ def main() -> int:
     for k in _results:                 # reset: the emulated suite calls
         _results[k] = 0                # main() more than once per process
     handle_cli(__doc__, extra_flags=("--diagnose-only", "--clear-errors"))
-    diag_only = "--diagnose-only" in sys.argv
+    # --no-pole on the pole test = read-only, same as --diagnose-only.
+    diag_only = "--diagnose-only" in sys.argv or "--no-pole" in sys.argv
     clear_errs = "--clear-errors" in sys.argv
     forced = parse_mode_arg()
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
@@ -86,7 +87,7 @@ def main() -> int:
           f"{LIFT_GEAR[ARM_SIDE]['name']} (hw max {hw_max})")
     print("    ONLY THE POLE MOVES — arm and hand stay still"
           if not diag_only else
-          "    READ-ONLY (--diagnose-only): nothing moves at all")
+          "    READ-ONLY (--diagnose-only/--no-pole): nothing moves at all")
     if clear_errs:
         print("    --clear-errors: rm_clear_system_err will run before D6")
     print(f"    mode: {mode_label(forced)}"
@@ -212,7 +213,7 @@ def main() -> int:
             result("SKIP", "home to full length", "no lift position")
             return 1
 
-        countdown(3)
+        countdown()
 
         # ── D6: acceptance probe — zero-distance, event-verified ──
         print(f"  D6 acceptance probe: command CURRENT position "

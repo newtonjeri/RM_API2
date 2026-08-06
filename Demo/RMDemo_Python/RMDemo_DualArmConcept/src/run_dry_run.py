@@ -286,6 +286,18 @@ def main() -> int:
               ("sync", ("ready", "full")), ("arm", "rest")]
           and dac.strip_hands([("combo", (("arm", "a"), ("hand", "h")))])
           == [("arm", "a")])
+    check("--no-pole strips lift parts, sync keeps its arm half",
+          dac.strip_poles(dac.CONCEPT_SEQUENCE) == [
+              ("arm", "ready"), ("hand", "release"), ("arm", "zero"),
+              ("hand", "grasp"), ("arm", "ready"), ("hand", "half_grasp"),
+              ("arm", "rest")]
+          and dac.strip_poles([("lift", "full"),
+                               ("combo", (("arm", "a"), ("lift", "l")))])
+          == [("arm", "a")])
+    check("--no-hands + --no-pole leaves arm-only choreography",
+          dac.strip_poles(dac.strip_hands(dac.CONCEPT_SEQUENCE)) == [
+              ("arm", "ready"), ("arm", "zero"),
+              ("arm", "ready"), ("arm", "rest")])
 
     # ── F1b. Pole pre-positioning helper ────────────────────────────────
     print("\nF1b. Pole homing to full length")
@@ -310,7 +322,7 @@ def main() -> int:
         except SystemExit as e:
             check(name, e.code == code, f"exit {e.code}")
     try:
-        dac.handle_cli("doc", ["--mode", "SIM", "--no-hands"])
+        dac.handle_cli("doc", ["--mode", "SIM", "--no-hands", "--no-pole"])
         check("valid flags pass through", True)
     except SystemExit:
         check("valid flags pass through", False)

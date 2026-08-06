@@ -127,7 +127,17 @@ def _drive_state(robot, name: str) -> bool:
 
 
 def main() -> int:
+    for k in _results:                 # reset: the emulated suite calls
+        _results[k] = 0                # main() more than once per process
     handle_cli(__doc__)
+    if "--no-hands" in sys.argv:
+        # C7 IS the hand test — with hands disabled there is nothing to do.
+        print("  [INFO] --no-hands: C7 is the hand-alone test — nothing "
+              "to run (all checks SKIP)")
+        _results["SKIP"] += N_CHECKS
+        print(f"\n  Summary: {_results['PASS']} PASS, "
+              f"{_results['FAIL']} FAIL, {_results['SKIP']} SKIP")
+        return 0
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
     keep_modbus = os.environ.get("RM_KEEP_MODBUS") == "1"
     print("=" * 68)

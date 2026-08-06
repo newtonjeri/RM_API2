@@ -45,6 +45,17 @@ SUITE = [
 ]
 
 
+def _flag_drill() -> int:
+    """Arm-only C2 run: --no-hands --no-pole must strip hand and lift
+    parts cleanly (sync steps run as plain arm moves) and pass."""
+    argv0 = list(sys.argv)
+    sys.argv = [argv0[0], "--no-hands", "--no-pole"]
+    try:
+        return test_dual_locked.main()
+    finally:
+        sys.argv = argv0
+
+
 def _locked_pole_drill() -> int:
     """Reproduce the 2026-08-06 20:38 lift-rejection state on the emulated
     LEFT arm, expect C8 to FAIL with the diagnosis, then expect a
@@ -81,6 +92,10 @@ def main() -> int:
     for name, mod in SUITE:
         print(f"\n{'#' * 68}\n# {name}  ({mod.__name__})\n{'#' * 68}")
         codes[name] = mod.main()
+
+    print(f"\n{'#' * 68}\n# C2 arm-only drill  (--no-hands --no-pole)\n"
+          f"{'#' * 68}")
+    codes["C2 arm-only drill"] = _flag_drill()
 
     print(f"\n{'#' * 68}\n# C8 locked-pole drill  (fault injection)\n"
           f"{'#' * 68}")

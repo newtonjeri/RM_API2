@@ -2828,3 +2828,457 @@ G. Endpoint configuration (env overrides)
 ====================================================================
 Dry run: 68/68 passed
 ====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-06 18:42:00
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 7 (right, 2to3)
+  [PASS] lift quarter -> 50 (right, 2to3)
+  [PASS] lift half -> 100 (right, 2to3)
+  [PASS] lift full -> 193 (right, 2to3)
+  [PASS] lift minimum -> 10 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 290 (left, 1to1)
+  [PASS] left full 290 within controller ceiling 330
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 16%
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.51 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 shares the common config
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: left 1to1 (290), right 2to3 (193)
+  [PASS] RM_RIGHT_LIFT_GEAR=1to1 flips right to 290 (post-upgrade)
+
+====================================================================
+Dry run: 70/70 passed
+====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-06 18:44:44
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 7 (right, 2to3)
+  [PASS] lift quarter -> 50 (right, 2to3)
+  [PASS] lift half -> 100 (right, 2to3)
+  [PASS] lift full -> 193 (right, 2to3)
+  [PASS] lift minimum -> 10 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 290 (left, 1to1)
+  [PASS] left full 290 within controller ceiling 330
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 16%
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.84 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 shares the common config
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: left 1to1 (290), right 2to3 (193)
+  [PASS] RM_RIGHT_LIFT_GEAR=1to1 flips right to 290 (post-upgrade)
+
+====================================================================
+Dry run: 70/70 passed
+====================================================================

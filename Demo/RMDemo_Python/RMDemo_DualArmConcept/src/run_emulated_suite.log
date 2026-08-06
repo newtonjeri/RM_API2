@@ -5735,3 +5735,748 @@ Emulated suite summary
   C6 single-arm exit 0  (OK)
   C8 locked drill exit 0  (OK)
 ====================================================================
+
+========================================================================
+  Script : run_emulated_suite.py
+  Log    : run_emulated_suite.log
+  Started: 2026-08-06 18:43:19
+========================================================================
+====================================================================
+EMULATED dual-arm concept suite  (time scale x10)
+Arms are emulated in-process — nothing physical moves.
+====================================================================
+
+####################################################################
+# C1 connect  (test_dual_connect)
+####################################################################
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  emu-1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=100 of 330 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=100 of 200 (2to3))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 pole diag  (test_pole_only)
+####################################################################
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=3)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=100 hw-mm  current=0 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (100 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 90: ret=0 arrived=True success=True (0.06 s)
+    back to 100: ret=0 arrived=True success=True (0.06 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.38 s, event=True)
+  [PASS] home to full length  (0.29 m -> 290 hw-mm)
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+####################################################################
+# C5 sim probe  (test_sim_motion_visibility)
+####################################################################
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.1.239:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (84 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (559 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (1 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: REAL (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C7 hand only  (test_hand_only)
+####################################################################
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=5)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [993, 993, 993, 993, 981, 992])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+    grasp      reached in  0.3 s  ACT=[33, 33, 33, 33, 133, 944]  (max err 0)
+    half_grasp reached in  0.3 s  ACT=[516, 516, 516, 516, 133, 944]  (max err 0)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([0, 0, 0, 0, 0, 0] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 locked  (test_dual_locked)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.29 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.00 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('hand', 'release')      skew   0.35 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew   3.21 ms   L   0.39 s   R   0.38 s   |d|  0.00 s   ok=True
+  ('hand', 'grasp')        skew   0.26 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew   2.91 ms   L   0.38 s   R   0.37 s   |d|  0.00 s   ok=True
+  ('hand', 'half_grasp')   skew   0.16 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   0.78 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 3.21 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.00 s, max 0.00 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 3.00 s, matched lift 28%, start skew    1.2 ms, finish skew   +84.0 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 3.00 s, matched lift 28%, start skew    0.8 ms, finish skew   +82.4 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 3.00 s, matched lift 29%, start skew    0.9 ms, finish skew   +74.8 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 3.00 s, matched lift 29%, start skew    0.8 ms, finish skew   +73.5 ms
+  [PASS] arm-pole sync finish  (worst pole lateness +84 ms)
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C3 chained  (test_dual_chained)
+####################################################################
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.5 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency    92.0 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency     2.1 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency   284.5 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency     9.9 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency   283.4 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency   192.2 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [PASS] follower gate latency  (max 284.5 ms)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C4 free  (test_dual_free)
+####################################################################
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 7/7 steps in 1.45 s
+  right: 7/7 steps in 1.45 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+
+  Summary: 4 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C6 single-arm  (test_single_arm_planned)
+####################################################################
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=-0.058 y=+0.101 z=+0.488  ->  target x=+0.142
+  movej_p +X + half_grasp: arm 0.15 s, hand finish skew -0.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  0.21 s   hand  0.10 s   hand-arm finish -0.11 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -0.09s, -0.09s, -0.05s, -0.11s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 locked-pole drill  (fault injection)
+####################################################################
+
+-- drill A: pole locked, C8 must FAIL with the diagnosis --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=13)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [FAIL] controller/joint errors  (sys=['4103'] joints=[] — latched errors block motion; rerun with --clear-errors)
+  [FAIL] lift state  (pos=290 hw-mm  current=0 mA  mode=0  err_flag=1 — LIFT DRIVER ERROR latched (stall/overcurrent?); try --clear-errors, then power cycle)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (290 hw-mm) — no physical motion
+    hold-position: REJECTED ret=1
+  [FAIL] lift acceptance probe  (the 20:38 signature — controller rejects/ignores lift commands)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: ON
+  [DIAG]   controller err: 4103  <-- likely cause: clear via --clear-errors / Web GUI
+  [DIAG]   joint err flags: clean   brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [DIAG]   lift state: pos=290 hw-mm  current=0 mA  mode=0  err_flag=1  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [SKIP] small stroke probe  (acceptance probe failed)
+  [SKIP] home to full length  (earlier probe failed)
+
+  Summary: 2 PASS, 3 FAIL, 3 SKIP
+
+-- drill B: C8 --clear-errors must recover and pass --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    --clear-errors: rm_clear_system_err will run before D6
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=14)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (latched: sys=['4103'] joints=[] — clearing next)
+  [PASS] lift state  (pos=290 hw-mm  current=0 mA  mode=0  err_flag=1 — driver error latched, clearing next)
+  [PASS] rm_clear_system_err  (ret=0)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (290 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 280: ret=0 arrived=True success=True (0.06 s)
+    back to 290: ret=0 arrived=True success=True (0.06 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] home to full length  (0.29 m -> 290 hw-mm)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: locked exit 1 (want nonzero), recover exit 0 (want 0) -> OK
+
+====================================================================
+Emulated suite summary
+  C1 connect   exit 0  (OK)
+  C8 pole diag exit 0  (OK)
+  C5 sim probe exit 0  (OK)
+  C7 hand only exit 0  (OK)
+  C2 locked    exit 0  (OK)
+  C3 chained   exit 0  (OK)
+  C4 free      exit 0  (OK)
+  C6 single-arm exit 0  (OK)
+  C8 locked drill exit 0  (OK)
+====================================================================
+
+========================================================================
+  Script : run_emulated_suite.py
+  Log    : run_emulated_suite.log
+  Started: 2026-08-06 18:44:45
+========================================================================
+====================================================================
+EMULATED dual-arm concept suite  (time scale x10)
+Arms are emulated in-process — nothing physical moves.
+====================================================================
+
+####################################################################
+# C1 connect  (test_dual_connect)
+####################################################################
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  emu-1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=100 of 330 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=100 of 200 (2to3))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 pole diag  (test_pole_only)
+####################################################################
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=3)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=100 hw-mm  current=0 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (100 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 90: ret=0 arrived=True success=True (0.06 s)
+    back to 100: ret=0 arrived=True success=True (0.06 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.38 s, event=True)
+  [PASS] home to full length  (0.29 m -> 290 hw-mm)
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+####################################################################
+# C5 sim probe  (test_sim_motion_visibility)
+####################################################################
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.1.239:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (86 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (552 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (1 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: REAL (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C7 hand only  (test_hand_only)
+####################################################################
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=5)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [993, 993, 993, 993, 981, 992])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+    grasp      reached in  0.3 s  ACT=[33, 33, 33, 33, 133, 944]  (max err 0)
+    half_grasp reached in  0.3 s  ACT=[516, 516, 516, 516, 133, 944]  (max err 0)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([0, 0, 0, 0, 0, 0] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 locked  (test_dual_locked)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.29 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   0.98 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('hand', 'release')      skew   0.19 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew   3.00 ms   L   0.38 s   R   0.38 s   |d|  0.00 s   ok=True
+  ('hand', 'grasp')        skew   0.26 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew   4.35 ms   L   0.38 s   R   0.37 s   |d|  0.00 s   ok=True
+  ('hand', 'half_grasp')   skew   0.30 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   0.92 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 4.35 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.00 s, max 0.00 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 3.00 s, matched lift 28%, start skew    0.9 ms, finish skew   +83.6 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 3.00 s, matched lift 28%, start skew    0.9 ms, finish skew   +82.4 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 3.00 s, matched lift 29%, start skew    0.9 ms, finish skew   +75.0 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 3.00 s, matched lift 29%, start skew    0.9 ms, finish skew   +73.7 ms
+  [PASS] arm-pole sync finish  (worst pole lateness +84 ms)
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C3 chained  (test_dual_chained)
+####################################################################
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.2 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency    91.4 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency     1.4 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency   283.5 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency     8.7 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency   282.0 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency   190.5 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [PASS] follower gate latency  (max 283.5 ms)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C4 free  (test_dual_free)
+####################################################################
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1), right=193 (2to3)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 7/7 steps in 1.46 s
+  right: 7/7 steps in 1.45 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+
+  Summary: 4 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C6 single-arm  (test_single_arm_planned)
+####################################################################
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=-0.058 y=+0.101 z=+0.488  ->  target x=+0.142
+  movej_p +X + half_grasp: arm 0.15 s, hand finish skew -0.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  0.21 s   hand  0.10 s   hand-arm finish -0.11 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -0.09s, -0.09s, -0.05s, -0.11s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 arm-only drill  (--no-hands --no-pole)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.15 ms   L   0.01 s   R   0.19 s   |d|  0.19 s   ok=True
+  ('arm', 'zero')          skew   1.12 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'ready')         skew   1.36 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   1.10 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 1.36 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.05 s, max 0.19 s
+  [PASS] arm-pole sync finish  (SKIPPED — poles disabled (--no-pole))
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 locked-pole drill  (fault injection)
+####################################################################
+
+-- drill A: pole locked, C8 must FAIL with the diagnosis --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=15)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [FAIL] controller/joint errors  (sys=['4103'] joints=[] — latched errors block motion; rerun with --clear-errors)
+  [FAIL] lift state  (pos=290 hw-mm  current=0 mA  mode=0  err_flag=1 — LIFT DRIVER ERROR latched (stall/overcurrent?); try --clear-errors, then power cycle)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (290 hw-mm) — no physical motion
+    hold-position: REJECTED ret=1
+  [FAIL] lift acceptance probe  (the 20:38 signature — controller rejects/ignores lift commands)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: ON
+  [DIAG]   controller err: 4103  <-- likely cause: clear via --clear-errors / Web GUI
+  [DIAG]   joint err flags: clean   brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [DIAG]   lift state: pos=290 hw-mm  current=0 mA  mode=0  err_flag=1  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [SKIP] small stroke probe  (acceptance probe failed)
+  [SKIP] home to full length  (earlier probe failed)
+
+  Summary: 2 PASS, 3 FAIL, 3 SKIP
+
+-- drill B: C8 --clear-errors must recover and pass --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 330)
+    ONLY THE POLE MOVES — arm and hand stay still
+    --clear-errors: rm_clear_system_err will run before D6
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=16)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (latched: sys=['4103'] joints=[] — clearing next)
+  [PASS] lift state  (pos=290 hw-mm  current=0 mA  mode=0  err_flag=1 — driver error latched, clearing next)
+  [PASS] rm_clear_system_err  (ret=0)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (290 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 280: ret=0 arrived=True success=True (0.06 s)
+    back to 290: ret=0 arrived=True success=True (0.06 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] home to full length  (0.29 m -> 290 hw-mm)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: locked exit 1 (want nonzero), recover exit 0 (want 0) -> OK
+
+====================================================================
+Emulated suite summary
+  C1 connect   exit 0  (OK)
+  C8 pole diag exit 0  (OK)
+  C5 sim probe exit 0  (OK)
+  C7 hand only exit 0  (OK)
+  C2 locked    exit 0  (OK)
+  C3 chained   exit 0  (OK)
+  C4 free      exit 0  (OK)
+  C6 single-arm exit 0  (OK)
+  C2 arm-only drill exit 0  (OK)
+  C8 locked drill exit 0  (OK)
+====================================================================

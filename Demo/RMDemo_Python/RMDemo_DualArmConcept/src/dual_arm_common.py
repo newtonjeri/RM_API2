@@ -223,10 +223,13 @@ def parse_mode_arg(argv=None):
 
 
 USAGE = """\
-Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
   --mode SIM|REAL   engage and VERIFY the run mode before any motion
                     (restored on exit); without it the test runs as-found
   --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
   -h, --help        show the script's documentation and exit (no motion)
 C8 pole diagnostic (test_pole_only.py) only:
   --diagnose-only   read state and report; NO pole motion at all
@@ -263,7 +266,8 @@ def handle_cli(doc: str, argv=None, extra_flags=()):
         if a == "--mode":
             skip = True
             continue
-        if a.startswith("--mode=") or a == "--no-hands" or a in extra_flags:
+        if a.startswith("--mode=") or a in ("--no-hands", "--no-pole") \
+                or a in extra_flags:
             continue
         print(f"unknown argument: {a!r}")
         print()
@@ -285,6 +289,35 @@ def strip_hands(sequence):
             continue
         if kind == "combo":
             subs = tuple(s for s in target if s[0] != "hand")
+            if not subs:
+                continue
+            out.append(subs[0] if len(subs) == 1 else ("combo", subs))
+        else:
+            out.append((kind, target))
+    return out
+
+
+def parse_no_pole_arg(argv=None) -> bool:
+    """--no-pole skips pole pre-positioning and strips lift parts."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    return "--no-pole" in args
+
+
+def strip_poles(sequence):
+    """Remove lift steps/parts from a sequence (for --no-pole runs).
+
+    Sync steps keep their arm half: ("sync", (arm, lift)) -> ("arm", arm),
+    so the arm choreography is unchanged while the pole stays put."""
+    out = []
+    for kind, target in sequence:
+        if kind == "lift":
+            continue
+        if kind == "sync":
+            out.append(("arm", target[0]))
+            continue
+        if kind == "combo":
+            subs = tuple(("arm", s[1][0]) if s[0] == "sync" else s
+                         for s in target if s[0] != "lift")
             if not subs:
                 continue
             out.append(subs[0] if len(subs) == 1 else ("combo", subs))
@@ -372,7 +405,7 @@ def report_run_modes(*arms) -> bool:
     return all_real
 
 
-def countdown(seconds: int = 5):
+def countdown(seconds: int = 3):
     for s in range(seconds, 0, -1):
         print(f"  starting in {s} ...")
         time.sleep(1.0)
