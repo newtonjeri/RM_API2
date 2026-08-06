@@ -2,7 +2,7 @@
 
 An in-process emulator of the RealMan RM_API2 Python SDK surface, modeled on
 the actual Butterfli hardware: **two RM75-6FB arms, Gen-3 controllers,
-V1.7.1 firmware, pole lifts** (left `192.168.1.10`, right `192.168.1.11`).
+V1.7.1 firmware, pole lifts** (left `192.168.1.10`, right `192.168.1.103`).
 It lets the concept tests — and any simple test written against the same SDK
 subset — run end-to-end with zero hardware and zero network.
 
@@ -90,8 +90,8 @@ ctrl.drop_next_event = True        # arrival event lost -> exercises the
                                    #   position-verify fallback path
 ctrl.command_latency_s = 0.05      # inflate per-command latency
 
-rm_emulator.emu_power_off("192.168.1.11")   # connect refused (socket err)
-rm_emulator.emu_power_on("192.168.1.11")
+rm_emulator.emu_power_off("192.168.1.103")   # connect refused (socket err)
+rm_emulator.emu_power_on("192.168.1.103")
 ```
 
 Verified effects on the mode runners: rejection stops the run and halts the

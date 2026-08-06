@@ -15,7 +15,7 @@ All endpoints are **environment-overridable** (defaults below are the network-ve
 | Item | Default | Override |
 |---|---|---|
 | Left arm IP | 192.168.1.10 | `RM_LEFT_IP` |
-| Right arm IP | 192.168.1.11 | `RM_RIGHT_IP` |
+| Right arm IP | 192.168.1.103 (re-addressed 2026-08-05; was .11) | `RM_RIGHT_IP` |
 | TCP port | 8080 | `RM_ROBOT_PORT` |
 | Host IP (UDP push target, C5) | 192.168.1.235 | `RM_HOST_IP` |
 | UDP push port (C5) | 8095 | `RM_UDP_PORT` |
@@ -92,7 +92,7 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `40/40 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop.
+Expected: `46/46 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -205,13 +205,13 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 40 | 0 | 0 | offline |
+| run_dry_run | 46 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
 | test_dual_locked | 5 | 0 | 0 | incl. PL5 sync-finish; WARN if event fallback used |
 | test_dual_chained | 4 | 0 | 0 | |
 | test_dual_free | 3 | 0 | 0 | |
-| **Total** | **66** | **0** | **0** | |
+| **Total** | **72** | **0** | **0** | |
 
 ---
 

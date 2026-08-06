@@ -49,7 +49,7 @@ from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e, rm_event_callback_ptr
 #   RM_HOST_IP                 THIS host's IP on the arm LAN (UDP push target)
 #   RM_UDP_PORT                UDP push port used by the sim probe
 LEFT_IP    = os.environ.get("RM_LEFT_IP", "192.168.1.10")
-RIGHT_IP   = os.environ.get("RM_RIGHT_IP", "192.168.1.11")
+RIGHT_IP   = os.environ.get("RM_RIGHT_IP", "192.168.1.103")
 ROBOT_PORT = int(os.environ.get("RM_ROBOT_PORT", "8080"))
 HOST_IP    = os.environ.get("RM_HOST_IP", "192.168.1.235")
 UDP_PORT   = int(os.environ.get("RM_UDP_PORT", "8095"))

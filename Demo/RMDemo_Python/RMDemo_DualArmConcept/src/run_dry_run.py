@@ -256,6 +256,61 @@ def main() -> int:
     rep = dac.run_free(left, right, mon)
     check("free stops partner on failure", not rep["ok"] and right.robot.stopped)
 
+    # ── G. Endpoint configuration plumbing ──────────────────────────────
+    print("\nG. Endpoint configuration (env overrides)")
+    import json
+    import os
+    import pathlib
+    import subprocess
+
+    probe = (
+        "import json, dual_arm_common as dac, rm_emulator, "
+        "test_sim_motion_visibility as c5; "
+        "print(json.dumps({'left': dac.LEFT_IP, 'right': dac.RIGHT_IP, "
+        "'port': dac.ROBOT_PORT, 'host': dac.HOST_IP, 'udp': dac.UDP_PORT, "
+        "'c5host': c5.HOST_IP, 'c5udp': c5.UDP_PORT, "
+        "'emul': rm_emulator.EMU_LEFT_IP, 'emur': rm_emulator.EMU_RIGHT_IP, "
+        "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS)}))"
+    )
+
+    def run_probe(extra_env):
+        # Fresh interpreter: env is read at import time, so overrides must
+        # be probed in a subprocess with a controlled environment.
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith("RM_")}
+        env.update(extra_env)
+        out = subprocess.run(
+            [sys.executable, "-c", probe], env=env, capture_output=True,
+            text=True, cwd=str(pathlib.Path(__file__).resolve().parent))
+        return json.loads(out.stdout.strip().splitlines()[-1])
+
+    try:
+        cfg = run_probe({})
+        check("defaults apply when env unset",
+              cfg["left"] == "192.168.1.10" and cfg["right"] == "192.168.1.103"
+              and cfg["port"] == 8080 and cfg["host"] == "192.168.1.235"
+              and cfg["udp"] == 8095)
+        check("C5 shares the common config",
+              cfg["c5host"] == cfg["host"] and cfg["c5udp"] == cfg["udp"])
+        check("emulator defaults match the tests",
+              cfg["emul"] == cfg["left"] and cfg["emur"] == cfg["right"]
+              and cfg["emuhosts"] == [cfg["host"]])
+
+        ov = run_probe({"RM_LEFT_IP": "10.9.9.1", "RM_RIGHT_IP": "10.9.9.2",
+                        "RM_ROBOT_PORT": "9080", "RM_HOST_IP": "10.9.9.100",
+                        "RM_UDP_PORT": "9002"})
+        check("env overrides reach dual_arm_common",
+              ov["left"] == "10.9.9.1" and ov["right"] == "10.9.9.2"
+              and ov["port"] == 9080 and ov["host"] == "10.9.9.100"
+              and ov["udp"] == 9002)
+        check("env overrides reach C5",
+              ov["c5host"] == "10.9.9.100" and ov["c5udp"] == 9002)
+        check("env overrides reach the emulator",
+              ov["emul"] == "10.9.9.1" and ov["emur"] == "10.9.9.2"
+              and ov["emuhosts"] == ["10.9.9.100"])
+    except Exception as exc:
+        check("configuration probe subprocess", False, repr(exc))
+
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)
     print(f"Dry run: {n - f}/{n} passed")

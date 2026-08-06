@@ -1,7 +1,7 @@
 """In-process emulator of the RealMan RM_API2 Python SDK surface.
 
 Emulates the dual RM75-6FB / Gen-3 / V1.7.1 setup (left 192.168.1.10,
-right 192.168.1.11, pole lifts) closely enough to run the concept tests —
+right 192.168.1.103, pole lifts) closely enough to run the concept tests —
 and other simple tests — without hardware:
 
   - connection lifecycle, per-handle demux, distinct handle ids
@@ -65,7 +65,7 @@ _time_scale = float(os.environ.get("RM_EMU_TIME_SCALE", "1.0"))
 # Emulated arm addresses follow the same env vars as the tests, so an
 # address change stays consistent across emulated and real runs.
 EMU_LEFT_IP = os.environ.get("RM_LEFT_IP", "192.168.1.10")
-EMU_RIGHT_IP = os.environ.get("RM_RIGHT_IP", "192.168.1.11")
+EMU_RIGHT_IP = os.environ.get("RM_RIGHT_IP", "192.168.1.103")
 
 # IPs that count as "this host" for the UDP push. A push configured to any
 # other target is accepted (ret 0, like the real controller, which cannot
