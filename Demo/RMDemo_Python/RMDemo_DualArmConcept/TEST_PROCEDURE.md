@@ -17,7 +17,7 @@ All endpoints are **environment-overridable** (defaults below are the network-ve
 | Left arm IP | 192.168.1.10 | `RM_LEFT_IP` |
 | Right arm IP | 192.168.1.103 (re-addressed 2026-08-05; was .11) | `RM_RIGHT_IP` |
 | TCP port | 8080 | `RM_ROBOT_PORT` |
-| Host IP (UDP push target, C5) | 192.168.1.235 | `RM_HOST_IP` |
+| Host IP (UDP push target, C5) | 192.168.1.239 (lab laptop; robot main host is .235) | `RM_HOST_IP` |
 | UDP push port (C5) | 8095 | `RM_UDP_PORT` |
 
 Example: `RM_LEFT_IP=192.168.2.10 RM_RIGHT_IP=192.168.2.11 RM_HOST_IP=192.168.2.50 python3 test_dual_connect.py`. The emulator honours the same variables, so emulated runs stay consistent with any addressing.
@@ -107,7 +107,7 @@ Expected: `46/46 passed`, then all four suite entries `exit 0 (OK)`. It checks: 
 | ID | Check | Pass condition |
 |---|---|---|
 | DC1/DC2 | Robot info (L/R) | ret 0, RM_75, 7-DOF |
-| DC3/DC4 | Arm state clean (L/R) | ret 0, `err_len` 0 |
+| DC3/DC4 | Arm state clean (L/R) | ret 0, no NONZERO error codes (fw pads `err_len=1`, code `'0'` on a clean arm — observed 2026-08-06) |
 | DC5/DC6 | Lift state (L/R) | ret 0, `err_flag` 0, pos ∈ [0, 200] hw-mm |
 | DC7 | Handles distinct | left id ≠ right id |
 | DC8 | Event callback registered | no exception |

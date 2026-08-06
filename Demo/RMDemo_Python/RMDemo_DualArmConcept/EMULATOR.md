@@ -56,6 +56,7 @@ it plants emulated `rm_robot_interface` / `rm_ctypes_wrap` modules in
 | Push persistence | push survives `rm_delete_robot_arm` (controller state); only disable or `rm_destroy` stops it | controller-side config semantics |
 | Single-thread mode | `RoboticArm(RM_SINGLE_MODE_E)` prints a warning and events are never delivered | real SDK @attention |
 | Getter latency | `rm_get_current_arm_state`/`rm_get_lift_state` cost one command latency | TCP round trip |
+| Clean-arm err shape | `err_len=1`, `err=['0']` (padded no-error entry) | observed on both real arms, 2026-08-06 |
 
 **Not emulated** (extend when needed): Cartesian moves (`rm_movel`,
 `rm_movej_p`), pose in arm state (zeros), force-sensor data (zeros in push

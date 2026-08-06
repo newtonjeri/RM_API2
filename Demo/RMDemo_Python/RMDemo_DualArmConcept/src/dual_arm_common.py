@@ -51,10 +51,8 @@ from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e, rm_event_callback_ptr
 LEFT_IP    = os.environ.get("RM_LEFT_IP", "192.168.1.10")
 RIGHT_IP   = os.environ.get("RM_RIGHT_IP", "192.168.1.103")
 ROBOT_PORT = int(os.environ.get("RM_ROBOT_PORT", "8080"))
-# 192.168.1.239
-# HOST_IP    = os.environ.get("RM_HOST_IP", "192.168.1.239")
-
-# HOST_IP    = os.environ.get("RM_HOST_IP", "192.168.1.235")
+HOST_IP    = os.environ.get("RM_HOST_IP", "192.168.1.239")  # lab laptop
+# (the robot's main onboard host is 192.168.1.235 — butterfli_hw xacro)
 UDP_PORT   = int(os.environ.get("RM_UDP_PORT", "8095"))
 
 ARM_SPEED_PCT  = 20           # movej speed percentage, conservative

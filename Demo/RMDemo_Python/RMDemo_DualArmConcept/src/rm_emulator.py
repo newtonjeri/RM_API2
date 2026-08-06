@@ -72,7 +72,7 @@ EMU_RIGHT_IP = os.environ.get("RM_RIGHT_IP", "192.168.1.103")
 # know your host's address) but frames are NEVER delivered — reproducing
 # the real-hardware wrong-IP trap. Override with emu_set_host_ips() or the
 # RM_HOST_IP env var.
-EMU_HOST_IPS = {os.environ.get("RM_HOST_IP", "192.168.1.235")}
+EMU_HOST_IPS = {os.environ.get("RM_HOST_IP", "192.168.1.239")}
 
 
 def emu_set_host_ips(*ips):
@@ -535,9 +535,11 @@ class RoboticArm:
     def rm_get_current_arm_state(self):
         time.sleep(_scaled(self._ctrl.command_latency_s))
         joints = self._ctrl.current_joints()
+        # Real V1.7.1 pads a clean arm as err_len=1 with code '0'
+        # (observed on both arms, 2026-08-06).
         return 0, {"joint": joints,
                    "pose": [0.0] * 6,
-                   "err": {"err_len": 0, "err": []}}
+                   "err": {"err_len": 1, "err": ["0"]}}
 
     def rm_get_joint_degree(self):
         return 0, self._ctrl.current_joints()

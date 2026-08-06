@@ -46,11 +46,23 @@ def main() -> int:
 
             ret, st = arm.robot.rm_get_current_arm_state()
             errs = st.get("err", {}) if ret == 0 else {}
-            err_len = errs.get("err_len", 0) if isinstance(errs, dict) else 0
-            if ret == 0 and err_len == 0:
-                result("PASS", f"{arm.side}: arm state clean")
+            codes = errs.get("err", []) if isinstance(errs, dict) else []
+
+            def _nonzero(code):
+                try:
+                    return int(str(code), 0) != 0
+                except (TypeError, ValueError):
+                    return True      # unparseable -> treat as an error
+
+            active = [c for c in codes if _nonzero(c)]
+            # Real V1.7.1 fw pads a clean arm as err_len=1, err=['0']
+            # (observed 2026-08-06) — only nonzero codes are actual errors.
+            if ret == 0 and not active:
+                result("PASS", f"{arm.side}: arm state clean",
+                       f"err codes {codes or '[]'}")
             else:
-                result("FAIL", f"{arm.side}: arm state", f"ret={ret} err={errs}")
+                result("FAIL", f"{arm.side}: arm state",
+                       f"ret={ret} active={active or errs}")
 
             ret, lift = arm.robot.rm_get_lift_state()
             if ret == 0 and lift.get("err_flag", 1) == 0 \

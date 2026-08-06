@@ -288,7 +288,7 @@ def main() -> int:
         cfg = run_probe({})
         check("defaults apply when env unset",
               cfg["left"] == "192.168.1.10" and cfg["right"] == "192.168.1.103"
-              and cfg["port"] == 8080 and cfg["host"] == "192.168.1.235"
+              and cfg["port"] == 8080 and cfg["host"] == "192.168.1.239"
               and cfg["udp"] == 8095)
         check("C5 shares the common config",
               cfg["c5host"] == cfg["host"] and cfg["c5udp"] == cfg["udp"])
