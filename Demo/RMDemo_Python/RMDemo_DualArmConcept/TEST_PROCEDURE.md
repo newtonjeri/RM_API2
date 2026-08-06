@@ -78,6 +78,8 @@ src/
 ├── run_dry_run.py         offline logic verification with mock robots (run first)
 ├── run_emulated_suite.py  full C1–C4 suite against the emulator (no hardware)
 ├── test_dual_connect.py   C1 — connectivity + state pre-check (NO MOTION)
+├── test_hand_only.py      C7 — hand-alone: protocol probe + modbus RTU
+│                          with measured ANGLE_ACT feedback (HAND ONLY)
 ├── test_sim_motion_visibility.py  C5 — sim-mode motion visibility probe
 │                          (NO PHYSICAL MOTION — moves only the simulated arm)
 ├── test_dual_locked.py    C2 — parallel locked mode        (MOVES BOTH ARMS)
@@ -144,6 +146,34 @@ if UDP or TCP sweeps, the sim-rehearsal record-and-FCL-verify pipeline is
 viable; if only events fire, it is not. Note: under the emulator sim mode
 behaves identically to real (documented limitation), so C5 answers YES
 trivially there — the hardware run is the authoritative answer.
+
+### C7 — `test_hand_only.py` (**only the hand moves** — no arm, no pole)
+
+**Purpose**: determine which hand-control path works and exercise it with
+REAL measured feedback. Phase P probes the PROTOCOL path (one blocking
+`rm_set_hand_angle`): ret 0 = end port free, arrival events usable by
+C2/C6; **ret −5 = end port in MODBUS mode (the butterfli_hw ALL-MODBUS
+state) — the exact C6 hand-failure signature**. Phase M then opens modbus
+RTU (`rm_set_modbus_mode(1, 115200)`), writes SPEED_SET, drives
+release→grasp→half_grasp→release via ANGLE_SET register writes and
+verifies each with polled **ANGLE_ACT** reads — the only genuine measured
+hand feedback on fw 1.7.x. Probe order is safety-critical (protocol first;
+a failed protocol call DURING a modbus session degrades the session). On
+exit the port is restored to protocol mode unless `RM_KEEP_MODBUS=1`.
+Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
+1522, ANGLE_ACT 1546, FORCE_ACT 1582; device `RM_HAND_MODBUS_DEVICE`
+(default 1). `RM_ARM=left|right` selects the hand.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| HB1 | Connected | handle valid |
+| HB2 | Protocol probe | verdict resolved (WORKS / BLOCKED −5 / other) |
+| HB3 | Modbus session | `rm_set_modbus_mode` ret 0 |
+| HB4 | ANGLE_ACT readable | 6 measured values |
+| HB5 | SPEED_SET written | ret 0 |
+| HB6 | Command + feedback | all 4 states verified via ANGLE_ACT (stopped-short-on-obstacle counts as grasp success) |
+| HB7 | FORCE_ACT readable | informational |
+| HB8 | Port state | restored (or kept per `RM_KEEP_MODBUS=1`) |
 
 ### C2 — `test_dual_locked.py` (**moves both arms and both poles**)
 
@@ -239,6 +269,7 @@ python3 run_dry_run.py           # offline, must pass 33/33 first
 python3 run_emulated_suite.py    # offline, full suite on the emulator
 python3 test_dual_connect.py     # no motion — validates topology
 python3 test_sim_motion_visibility.py  # no physical motion — sim-mode probe
+python3 test_hand_only.py        # hand only — resolves the hand-path question
 python3 test_dual_locked.py   # motion — barrier semantics
 python3 test_dual_chained.py  # motion — pipeline semantics
 python3 test_dual_free.py     # motion — independent semantics
@@ -257,11 +288,12 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | run_dry_run | 60 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
+| test_hand_only | 8 | 0 | 0 | HB2 verdict is the finding |
 | test_dual_locked | 6 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| **Total** | **96** | **0** | **0** | |
+| **Total** | **104** | **0** | **0** | |
 
 ---
 
@@ -272,6 +304,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | run_dry_run.py | `src/run_dry_run.log` |
 | run_emulated_suite.py | `src/run_emulated_suite.log` |
 | test_dual_connect.py | `src/test_dual_connect.log` |
+| test_hand_only.py | `src/test_hand_only.log` |
 | test_sim_motion_visibility.py | `src/test_sim_motion_visibility.log` |
 | test_dual_locked.py | `src/test_dual_locked.log` |
 | test_dual_chained.py | `src/test_dual_chained.log` |
