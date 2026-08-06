@@ -13,6 +13,8 @@ Set RM_EMU_TIME_SCALE=1 for real-time motion durations.
 import os
 import sys
 
+import os
+os.environ.setdefault("RM_HAND_DWELL_S", "0.1")
 import rm_emulator
 
 _SCALE = float(os.environ.get("RM_EMU_TIME_SCALE", "10"))
@@ -42,6 +44,8 @@ SUITE = [
 
 
 def main() -> int:
+    import dual_arm_common as _dac
+    _dac.handle_cli(__doc__)
     print("=" * 68)
     print(f"EMULATED dual-arm concept suite  (time scale x{_SCALE:g})")
     print("Arms are emulated in-process — nothing physical moves.")

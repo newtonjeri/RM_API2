@@ -9,9 +9,11 @@ arbitrary free-running tasks is future work, not this test.
 import sys
 
 from dual_arm_common import (
+    handle_cli,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
     ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
-    home_poles_full, parse_mode_arg, report_run_modes, restore_run_modes, run_free, teardown,
+    home_poles_full, parse_mode_arg, parse_no_hands_arg, report_run_modes,
+    restore_run_modes, strip_hands, run_free, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -25,12 +27,16 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    handle_cli(__doc__)
     forced = parse_mode_arg()
+    no_hands = parse_no_hands_arg()
+    seq = strip_hands(CONCEPT_SEQUENCE) if no_hands else CONCEPT_SEQUENCE
     print("=" * 68)
     print("C4  Free-running dual-arm execution (no cross-arm gates)")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}  "
           f"arm v={ARM_SPEED_PCT}%  lift v={LIFT_SPEED_PCT}%")
-    print(f"    sequence: {CONCEPT_SEQUENCE}")
+    print(f"    sequence: {seq}"
+          + ("   [--no-hands: hand steps stripped]" if no_hands else ""))
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
     print("    poles pre-positioned to full length (0.29 m) before the sequence")
@@ -63,9 +69,9 @@ def main() -> int:
             result("FAIL", "poles pre-positioned to full length")
             return 1
 
-        report = run_free(left, right, monitor)
+        report = run_free(left, right, monitor, sequence=seq)
 
-        n = len(CONCEPT_SEQUENCE)
+        n = len(seq)
         bad_ret = fallbacks = 0
         print("\n  per-arm timelines:")
         print("  " + "─" * 60)

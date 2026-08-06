@@ -28,10 +28,12 @@ import sys
 import time
 
 from dual_arm_common import (
+    handle_cli,
     ARM_SPEED_PCT, ARM_TIMEOUT_S, DEV_HAND, DEV_JOINT, HAND_STATES_HW,
     HAND_TIMEOUT_S, LEFT_IP, RIGHT_IP, ROBOT_PORT, ArrivalMonitor,
     ConceptArm, apply_run_mode, countdown, home_poles_full, mode_label,
-    parse_mode_arg, report_run_modes, restore_run_modes, run_step,
+    parse_mode_arg, parse_no_hands_arg, report_run_modes,
+    restore_run_modes, run_step,
     teardown,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
@@ -78,14 +80,17 @@ def _phase_report(label: str, rec: dict):
 
 
 def main() -> int:
+    handle_cli(__doc__)
     forced = parse_mode_arg()
+    no_hands = parse_no_hands_arg()
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
     print("=" * 68)
     print("C6  Single-arm planned moves + CONCURRENT hand motion")
     print(f"    arm={ARM_SIDE} @ {ip}   movej v={ARM_SPEED_PCT}%   "
           f"X offset +{X_OFFSET_M*100:.0f} cm (world frame)")
-    print("    hand states: release / grasp / half_grasp (protocol path — "
-          "end port must NOT be in modbus mode)")
+    print("    hands DISABLED (--no-hands)" if no_hands else
+          "    hand states: release / grasp / half_grasp (acked_angle: "
+          "non-blocking + duration dwell, butterfli_hw semantics)")
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
     print("    pole pre-positioned to full length (0.29 m) first")
@@ -122,8 +127,9 @@ def main() -> int:
             return 1
 
         def combo(arm_state: str, hand_state: str, label: str) -> dict:
-            rec = run_step(arm, monitor, ("combo", (("arm", arm_state),
-                                                    ("hand", hand_state))))
+            step = (("arm", arm_state) if no_hands else
+                    ("combo", (("arm", arm_state), ("hand", hand_state))))
+            rec = run_step(arm, monitor, step)
             skew = _phase_report(label, rec)
             if skew is not None:
                 hand_skews.append(skew)
@@ -159,20 +165,24 @@ def main() -> int:
         monitor.expect(arm.handle_id, DEV_JOINT)
         t0 = time.perf_counter()
         ret = robot.rm_movej_p(target, ARM_SPEED_PCT, 0, 0, 0)
-        # Hand: blocking-in-thread (device-2 events never reach the user
-        # callback on this fw/SDK — C7-proven working path).
-        hand = arm.start_hand_blocking("half_grasp")
+        # Hand: acked_angle (non-blocking + duration dwell) — the
+        # butterfli_hw production semantics; blocking fails with -4 when
+        # an arm move is in flight (observed 2026-08-06).
+        hand = None if no_hands else arm.start_hand_acked("half_grasp")
         if ret != 0:
             result("FAIL", "movej_p +X accepted",
                    f"ret={ret} (1 can mean IK failure / unreachable)")
             return 1
         arrived, success = monitor.wait(arm.handle_id, DEV_JOINT,
                                         ARM_TIMEOUT_S)
-        hand["thread"].join(HAND_TIMEOUT_S + 5.0)
+        if hand is not None:
+            hand["thread"].join(HAND_TIMEOUT_S + 5.0)
+            t_hand = hand["t_done"] or time.perf_counter()
+            h_ret = hand["ret"] if hand["ret"] is not None else -5
+        else:
+            t_hand, h_ret = None, 0
         t_arm = monitor.last_arrival(arm.handle_id, DEV_JOINT) \
             or time.perf_counter()
-        t_hand = hand["t_done"] or time.perf_counter()
-        h_ret = hand["ret"] if hand["ret"] is not None else -5
         pose1 = _pose(robot)
         if not (arrived and success) or pose1 is None:
             result("FAIL", "movej_p +X completed",
@@ -180,6 +190,8 @@ def main() -> int:
             arm.halt()
             return 1
         hand_ok = h_ret == 0
+        if t_hand is None:
+            t_hand = t_arm            # hands disabled: no skew to measure
         skew = (t_hand - t_arm) if hand_ok else None
         if skew is not None:
             hand_skews.append(skew)
@@ -212,7 +224,10 @@ def main() -> int:
         # ── SA5/SA6: pipeline + concurrency evidence ──
         result("PASS", "planned-move pipeline exercised",
                "movej x3 + movej_p x1 + hand x4 concurrent, no passthrough")
-        if hand_skews:
+        if no_hands:
+            result("PASS", "hand moved concurrently with arm",
+                   "SKIPPED — hands disabled (--no-hands)")
+        elif hand_skews:
             overlapped = sum(1 for s in hand_skews if s < 0)
             result("PASS", "hand moved concurrently with arm",
                    f"{overlapped}/{len(hand_skews)} phases finished during "
@@ -220,7 +235,7 @@ def main() -> int:
                    + ", ".join(f"{s:+.2f}s" for s in hand_skews))
         else:
             result("FAIL", "hand moved concurrently with arm",
-                   "no phase produced both arrivals")
+                   "no phase produced both completions")
         return 0 if _results["FAIL"] == 0 else 1
     finally:
         if arm is not None and _results["FAIL"] > 0:

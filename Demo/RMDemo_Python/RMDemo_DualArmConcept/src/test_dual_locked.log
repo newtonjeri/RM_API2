@@ -60,3 +60,61 @@ current c api version:  1.1.6
   [FAIL] arm-pole sync finish  (no sync steps measured)
 
   Summary: 3 PASS, 2 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 18:03:10
+========================================================================
+C2 — Parallel locked mode. BOTH ARMS AND BOTH POLES WILL MOVE.
+
+Every step of the concept sequence is dispatched to both arms back-to-back
+(non-blocking), then a barrier waits for BOTH arrivals before the next step.
+Reports dispatch skew and per-arm completion deltas at every step boundary.Exception ignored in: Exception ignored in sys.unraisablehook
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 18:03:10
+========================================================================
+C2 — Parallel locked mode. BOTH ARMS AND BOTH POLES WILL MOVE.
+
+Every step of the concept sequence is dispatched to both arms back-to-back
+(non-blocking), then a barrier waits for BOTH arrivals before the next step.
+Reports dispatch skew and per-arm completion deltas at every step boundary.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-06 18:03:11
+========================================================================
+unknown argument: '--oops'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

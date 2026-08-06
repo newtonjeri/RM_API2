@@ -8,9 +8,11 @@ Reports dispatch skew and per-arm completion deltas at every step boundary.
 import sys
 
 from dual_arm_common import (
+    handle_cli,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
     ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
-    home_poles_full, parse_mode_arg, report_run_modes, restore_run_modes, run_locked, teardown,
+    home_poles_full, parse_mode_arg, parse_no_hands_arg, report_run_modes,
+    restore_run_modes, strip_hands, run_locked, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -25,12 +27,16 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    handle_cli(__doc__)
     forced = parse_mode_arg()
+    no_hands = parse_no_hands_arg()
+    seq = strip_hands(CONCEPT_SEQUENCE) if no_hands else CONCEPT_SEQUENCE
     print("=" * 68)
     print("C2  Parallel locked dual-arm execution")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}  "
           f"arm v={ARM_SPEED_PCT}%  lift v={LIFT_SPEED_PCT}%")
-    print(f"    sequence: {CONCEPT_SEQUENCE}")
+    print(f"    sequence: {seq}"
+          + ("   [--no-hands: hand steps stripped]" if no_hands else ""))
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
     print("    poles pre-positioned to full length (0.29 m) before the sequence")
@@ -63,7 +69,7 @@ def main() -> int:
             result("FAIL", "poles pre-positioned to full length")
             return 1
 
-        report = run_locked(left, right, monitor)
+        report = run_locked(left, right, monitor, sequence=seq)
 
         print("\n  step results:")
         print("  " + "─" * 60)
@@ -76,7 +82,8 @@ def main() -> int:
             fallbacks += l["verified"] + r["verified"]
             no_event += sum(1 for rec in (l, r)
                             for d in rec.get("devices", {}).values()
-                            if d["ret"] == 0 and not d["event"])
+                            if d["ret"] == 0 and not d["event"]
+                            and not d.get("acked"))
             if l["t_done"] and r["t_done"]:
                 dl = l["t_done"] - l["t_dispatch"]
                 dr = r["t_done"] - r["t_dispatch"]
@@ -93,11 +100,11 @@ def main() -> int:
         else:
             result("FAIL", "all dispatches accepted", f"{bad_ret} rejected")
 
-        if report["ok"] and len(report["steps"]) == len(CONCEPT_SEQUENCE):
+        if report["ok"] and len(report["steps"]) == len(seq):
             result("PASS", "sequence completed with barrier per step")
         else:
             result("FAIL", "sequence completed",
-                   f"{len(report['steps'])}/{len(CONCEPT_SEQUENCE)} steps, "
+                   f"{len(report['steps'])}/{len(seq)} steps, "
                    f"ok={report['ok']}")
 
         max_skew = max(skews) if skews else float("inf")

@@ -15,6 +15,8 @@ import time
 from log_utils import setup_log as _setup_log
 _log_path = _setup_log(__file__)
 
+import os as _os
+_os.environ.setdefault("RM_HAND_DWELL_S", "0.05")
 import dual_arm_common as dac
 
 _checks = {"run": 0, "fail": 0}
@@ -107,6 +109,7 @@ def make_pair(monitor, **kw_left):
 
 
 def main() -> int:
+    dac.handle_cli(__doc__)
     print("=" * 68)
     print("Dual-arm concept — offline dry run (no hardware, no motion)")
     print("=" * 68)
@@ -217,8 +220,10 @@ def main() -> int:
     dur = time.perf_counter() - t0
     check("locked completes ok", rep["ok"])
     check("locked ran all steps", len(rep["steps"]) == len(seq))
-    check("locked arrivals via event",
-          all(e["left"]["event"] and e["right"]["event"] for e in rep["steps"]))
+    check("locked arrivals confirmed (events / acked hand)",
+          all(d["event"] or d.get("acked")
+              for e in rep["steps"] for rec in (e["left"], e["right"])
+              for d in rec["devices"].values()))
     max_skew = max(e["skew_ms"] for e in rep["steps"])
     check("locked dispatch skew < 20 ms (mock)", max_skew < 20.0,
           f"max {max_skew:.2f} ms")
@@ -271,9 +276,16 @@ def main() -> int:
     left, right = make_pair(mon)
     rec = dac.run_step(left, mon, ("combo", (("arm", "ready"),
                                              ("hand", "release"))))
-    check("combo arm+hand: both devices arrive and step is ok",
-          rec["ok"] and rec["event"]
+    check("combo arm+hand: joint event + hand acked, step ok",
+          rec["ok"] and rec["devices"][dac.DEV_JOINT]["event"]
+          and rec["devices"][dac.DEV_HAND]["acked"]
           and set(rec["devices"]) == {dac.DEV_JOINT, dac.DEV_HAND})
+    check("--no-hands strips hand parts",
+          dac.strip_hands(dac.CONCEPT_SEQUENCE) == [
+              ("arm", "ready"), ("sync", ("zero", "half")),
+              ("sync", ("ready", "full")), ("arm", "rest")]
+          and dac.strip_hands([("combo", (("arm", "a"), ("hand", "h")))])
+          == [("arm", "a")])
 
     # ── F1b. Pole pre-positioning helper ────────────────────────────────
     print("\nF1b. Pole homing to full length")
@@ -285,6 +297,23 @@ def main() -> int:
     left, right = make_pair(mon, fail_at=1)   # left's homing dispatch rejected
     check("pole homing failure halts the arms",
           not dac.home_poles_full(mon, left, right) and left.robot.stopped)
+
+    # ── F1c. CLI guard (-h/--help and unknown-arg rejection) ────────────
+    print("\nF1c. CLI guard")
+    for flags, code, name in ((["-h"], 0, "-h exits 0 with docs"),
+                              (["--help"], 0, "--help exits 0 with docs"),
+                              (["--typo"], 2, "unknown flag exits 2"),
+                              (["SIM"], 2, "stray positional exits 2")):
+        try:
+            dac.handle_cli("doc", flags)
+            check(name, False)
+        except SystemExit as e:
+            check(name, e.code == code, f"exit {e.code}")
+    try:
+        dac.handle_cli("doc", ["--mode", "SIM", "--no-hands"])
+        check("valid flags pass through", True)
+    except SystemExit:
+        check("valid flags pass through", False)
 
     # ── F2. --mode argument parser ──────────────────────────────────────
     print("\nF2. --mode SIM|REAL parser")

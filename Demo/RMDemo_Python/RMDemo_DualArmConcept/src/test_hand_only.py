@@ -34,6 +34,7 @@ import sys
 import time
 
 from dual_arm_common import (
+    handle_cli,
     HAND_STATES_HW, LEFT_IP, RIGHT_IP, ROBOT_PORT,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
@@ -126,6 +127,7 @@ def _drive_state(robot, name: str) -> bool:
 
 
 def main() -> int:
+    handle_cli(__doc__)
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
     keep_modbus = os.environ.get("RM_KEEP_MODBUS") == "1"
     print("=" * 68)

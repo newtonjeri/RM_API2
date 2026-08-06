@@ -9,9 +9,11 @@ it is not a synchronized copy.
 import sys
 
 from dual_arm_common import (
+    handle_cli,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
     ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
-    home_poles_full, parse_mode_arg, report_run_modes, restore_run_modes, run_chained, teardown,
+    home_poles_full, parse_mode_arg, parse_no_hands_arg, report_run_modes,
+    restore_run_modes, strip_hands, run_chained, teardown,
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
@@ -26,12 +28,16 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    handle_cli(__doc__)
     forced = parse_mode_arg()
+    no_hands = parse_no_hands_arg()
+    seq = strip_hands(CONCEPT_SEQUENCE) if no_hands else CONCEPT_SEQUENCE
     print("=" * 68)
     print("C3  Chained dual-arm execution (left leads, right follows)")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}  "
           f"arm v={ARM_SPEED_PCT}%  lift v={LIFT_SPEED_PCT}%")
-    print(f"    sequence: {CONCEPT_SEQUENCE}")
+    print(f"    sequence: {seq}"
+          + ("   [--no-hands: hand steps stripped]" if no_hands else ""))
     print(f"    mode: {mode_label(forced)}"
           + ("" if forced is not None else "  (select with --mode SIM|REAL)"))
     print("    poles pre-positioned to full length (0.29 m) before the sequence")
@@ -64,14 +70,14 @@ def main() -> int:
             result("FAIL", "poles pre-positioned to full length")
             return 1
 
-        report = run_chained(left, right, monitor)
+        report = run_chained(left, right, monitor, sequence=seq)
 
-        n = len(CONCEPT_SEQUENCE)
+        n = len(seq)
         print("\n  chain results:")
         print("  " + "─" * 60)
         ordering_ok = True
         gate_lat, bad_ret, fallbacks = [], 0, 0
-        for k, step in enumerate(CONCEPT_SEQUENCE):
+        for k, step in enumerate(seq):
             lead, foll = report["leader"][k], report["follower"][k]
             if lead is None or foll is None:
                 print(f"  step {k} {str(step):22s} INCOMPLETE")

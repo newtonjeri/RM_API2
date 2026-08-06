@@ -63,6 +63,23 @@ LIFT_SPEED_PCT = 50           # measured ~56.4 phys mm/s (LiftBenchmark map)
 ARM_TIMEOUT_S  = 40.0
 LIFT_TIMEOUT_S = 25.0
 HAND_TIMEOUT_S = 10.0         # full stroke ~0.8 s + generous margin
+# Duration-based hand completion (butterfli_hw acked_angle semantics:
+# hold_until_duration), sized by the MEASURED stroke law rather than a
+# fixed worst case: stroke_s = 0.115 latency + 373*span/SPEED_SET ms
+# (bench §3.7), x1.5 margin, capped by RM_HAND_DWELL_S. A no-op send
+# (span <= 10 counts) dwells only briefly.
+HAND_DWELL_S = float(os.environ.get("RM_HAND_DWELL_S", "1.5"))
+HAND_STROKE_K = 373.0
+HAND_SPEED_SET_DEFAULT = 500.0
+HAND_CMD_LATENCY_S = 0.115
+
+
+def hand_dwell_s(span_counts: float) -> float:
+    if span_counts <= 10:
+        return min(0.15, HAND_DWELL_S)
+    stroke = HAND_CMD_LATENCY_S + HAND_STROKE_K * span_counts \
+        / HAND_SPEED_SET_DEFAULT / 1000.0
+    return min(max(0.3, stroke * 1.5), HAND_DWELL_S)
 ARM_TOL_DEG    = 2.0          # fallback arrival tolerance per joint
 LIFT_TOL_HW_MM = 10           # fallback arrival tolerance, hardware mm
 
@@ -71,7 +88,9 @@ DEV_HAND  = 2
 DEV_LIFT  = 3
 
 # Arm-pole sync model (butterfli_hw conversions.hpp, bench-measured):
-LIFT_START_LATENCY_S   = 0.38     # kLiftStartLatencyS (up, worst case)
+LIFT_START_LATENCY_S   = 0.38     # worst case (unknown direction)
+LIFT_LATENCY_UP_S      = 0.33     # bench_sync direction-aware latencies
+LIFT_LATENCY_DOWN_S    = 0.23
 LIFT_MM_S_PER_PCT      = 1.85     # kLiftCruiseMpsPerPct * 1000
 LIFT_MIN_MATCH_PCT     = 4        # lowered floor (TODO item 1, 2026-07-25)
 ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
@@ -160,16 +179,22 @@ def est_arm_duration_s(current_deg, target_deg, v_pct: int) -> float:
     return max(delta / (ARM_MAX_DEG_S * v_pct / 100.0), 0.05)
 
 
-def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float) -> int:
+def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float,
+                           ascending=None) -> int:
     """Duration-match the lift to the arm move (butterfli_hw sync contract).
 
     Speed such that start latency + cruise time == the arm's duration,
     quantized ROUND-UP (early finish is benign — the device waits; late is
-    the failure mode; bench_sync 2026-07-25).
+    the failure mode; bench_sync 2026-07-25). Start latency is
+    direction-aware when the direction is known (bench-measured up 0.33 s
+    / down 0.23 s; 0.38 worst case otherwise).
     """
     if dist_phys_mm <= 0.0:
         return LIFT_MIN_MATCH_PCT
-    cruise_s = max(arm_duration_s - LIFT_START_LATENCY_S, 0.05)
+    latency = (LIFT_LATENCY_UP_S if ascending is True
+               else LIFT_LATENCY_DOWN_S if ascending is False
+               else LIFT_START_LATENCY_S)
+    cruise_s = max(arm_duration_s - latency, 0.05)
     pct = math.ceil(dist_phys_mm / cruise_s / LIFT_MM_S_PER_PCT - 1e-9)
     return max(LIFT_MIN_MATCH_PCT, min(100, pct))
 
@@ -195,6 +220,71 @@ def parse_mode_arg(argv=None):
             return 1
         raise SystemExit(f"usage: --mode SIM|REAL  (got {val!r})")
     return None
+
+
+USAGE = """\
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+"""
+
+
+def handle_cli(doc: str, argv=None):
+    """-h/--help prints the script docs and exits BEFORE anything runs;
+    any unknown argument is rejected (exit 2) rather than silently
+    ignored — an ignored typo would otherwise move the robot."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if "-h" in args or "--help" in args:
+        print((doc or "").strip())
+        print()
+        print(USAGE)
+        raise SystemExit(0)
+    skip = False
+    for a in args:
+        if skip:
+            skip = False
+            continue
+        if a == "--mode":
+            skip = True
+            continue
+        if a.startswith("--mode=") or a == "--no-hands":
+            continue
+        print(f"unknown argument: {a!r}")
+        print()
+        print(USAGE)
+        raise SystemExit(2)
+
+
+def parse_no_hands_arg(argv=None) -> bool:
+    """--no-hands strips every hand part from the run."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    return "--no-hands" in args
+
+
+def strip_hands(sequence):
+    """Remove hand steps/parts from a sequence (for --no-hands runs)."""
+    out = []
+    for kind, target in sequence:
+        if kind == "hand":
+            continue
+        if kind == "combo":
+            subs = tuple(s for s in target if s[0] != "hand")
+            if not subs:
+                continue
+            out.append(subs[0] if len(subs) == 1 else ("combo", subs))
+        else:
+            out.append((kind, target))
+    return out
 
 
 def mode_label(mode) -> str:
@@ -342,6 +432,7 @@ class ConceptArm:
         self.side = side
         self.robot = robot
         self.handle_id = handle.id
+        self._last_hand = None      # last commanded hand state (echo model)
 
     # ── step introspection ──
     def parts_for(self, step):
@@ -377,23 +468,31 @@ class ConceptArm:
                 lift_hw_mm(self.side, LIFT_M[target]), 0)
         raise ValueError("hand parts use start_hand_blocking()")
 
-    def start_hand_blocking(self, target) -> dict:
-        """Run rm_set_hand_angle BLOCKING in a worker thread.
+    def start_hand_acked(self, target) -> dict:
+        """butterfli_hw acked_angle semantics: NON-BLOCKING send +
+        duration-based completion (hold_until_duration).
 
-        Device-2 arrival events are NOT delivered to the user event
-        callback on fw V1.7.1/V1.7.4 + SDK 1.1.6 (observed 2026-08-06:
-        arm/lift events fire, hand events never do, while the blocking
-        variant confirms arrival on the SDK's internal receive path — C7
-        proved it works on both arms). So the hand runs its proven
-        blocking call concurrently via a thread instead of waiting for an
-        event that never comes.
+        Hard-won findings behind this (2026-08-06):
+        - device-2 arrival events are NEVER delivered to the user event
+          callback on fw V1.7.1/V1.7.4 + SDK 1.1.6 (arm/lift events fire).
+        - BLOCKING rm_set_hand_angle works only in isolation (C7): with a
+          concurrent arm move in flight it consumes the ARM's arrival push
+          and fails instantly with -4 (arrival-device mismatch).
+        butterfli_hw's proven production path is exactly this: fire
+        non-blocking, wait the stroke duration, feedback is echo.
         """
+        vals = HAND_STATES_HW[target]
+        span = (960.0 if self._last_hand is None else
+                max(abs(a - b) for a, b in zip(vals, self._last_hand)))
+        dwell = hand_dwell_s(span)
         holder = {"ret": None, "t_dispatch": time.perf_counter(),
-                  "t_done": None}
+                  "t_done": None, "dwell_s": dwell}
 
         def work():
-            holder["ret"] = self.robot.rm_set_hand_angle(
-                HAND_STATES_HW[target], True, int(HAND_TIMEOUT_S))
+            holder["ret"] = self.robot.rm_set_hand_angle(vals, False, 2)
+            if holder["ret"] == 0:
+                self._last_hand = list(vals)
+                time.sleep(dwell)
             holder["t_done"] = time.perf_counter()
 
         t = threading.Thread(target=work, daemon=True)
@@ -419,9 +518,11 @@ class ConceptArm:
                     cur, state_deg(self.side, step[1][0]), ARM_SPEED_PCT)
                 lret, lst = self.robot.rm_get_lift_state()
                 pos_hw = lst.get("pos", 0) if lret == 0 else 0
-                dist_phys = abs(lift_hw_mm(self.side, LIFT_M[step[1][1]])
-                                - pos_hw) * LIFT_GEAR[self.side]["hw_to_phys"]
-                lift_speed = matched_lift_speed_pct(arm_dur, dist_phys)
+                target_hw = lift_hw_mm(self.side, LIFT_M[step[1][1]])
+                dist_phys = abs(target_hw - pos_hw) \
+                    * LIFT_GEAR[self.side]["hw_to_phys"]
+                lift_speed = matched_lift_speed_pct(
+                    arm_dur, dist_phys, ascending=target_hw > pos_hw)
                 beg["arm_dur_est_s"] = arm_dur
                 beg["lift_speed_pct"] = lift_speed
             except Exception:
@@ -432,12 +533,12 @@ class ConceptArm:
                 monitor.expect(self.handle_id, device)
         for device, target in parts:
             if device == DEV_HAND:
-                holder = self.start_hand_blocking(target)
+                holder = self.start_hand_acked(target)
                 beg["devices"][device] = {"target": target, "ret": 0,
                                           "t_dispatch": holder["t_dispatch"],
                                           "t_done": None, "event": False,
-                                          "verified": False, "ok": False,
-                                          "_hand": holder}
+                                          "acked": False, "verified": False,
+                                          "ok": False, "_hand": holder}
                 continue
             t0 = time.perf_counter()
             ret = self._dispatch_device(device, target, lift_speed)
@@ -452,12 +553,12 @@ class ConceptArm:
         for device, d in beg["devices"].items():
             if device == DEV_HAND:
                 holder = d.pop("_hand")
-                holder["thread"].join(self.timeout_for(device) + 5.0)
+                holder["thread"].join(HAND_DWELL_S + 5.0)
                 d["ret"] = holder["ret"] if holder["ret"] is not None else -5
                 d["t_done"] = holder["t_done"] or time.perf_counter()
-                # ret 0 IS an SDK-confirmed arrival (device==2 checked
-                # internally) — count it as an event for PL4 purposes.
-                d["event"] = d["ok"] = (d["ret"] == 0)
+                # acked_angle: completion is duration-based, feedback is
+                # echo (no events, no position readback on this fw).
+                d["acked"] = d["ok"] = (d["ret"] == 0)
                 continue
             if d["ret"] != 0:
                 continue

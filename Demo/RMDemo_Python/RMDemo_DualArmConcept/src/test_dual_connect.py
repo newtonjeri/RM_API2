@@ -8,6 +8,7 @@ single-process topology the motion tests rely on.
 import sys
 
 from dual_arm_common import (
+    handle_cli,
     LEFT_IP, LIFT_GEAR, RIGHT_IP, ArrivalMonitor, connect_both, teardown,
 )
 
@@ -22,6 +23,7 @@ def result(tag: str, name: str, detail: str = ""):
 
 
 def main() -> int:
+    handle_cli(__doc__)
     print("=" * 68)
     print("C1  Dual-arm connectivity pre-check  (no motion is commanded)")
     print(f"    left={LEFT_IP}  right={RIGHT_IP}")

@@ -19,6 +19,7 @@ import threading
 import time
 
 from dual_arm_common import (
+    handle_cli,
     ARM_TIMEOUT_S, DEV_JOINT, HOST_IP, LEFT_IP, ROBOT_PORT, UDP_PORT,
     ArrivalMonitor,
 )
@@ -63,6 +64,7 @@ _state_cb = rm_realtime_arm_state_callback_ptr(_on_state)   # keep alive
 
 
 def main() -> int:
+    handle_cli(__doc__)
     print("=" * 68)
     print("C5  Simulation-mode motion visibility probe (no physical motion)")
     print(f"    arm={LEFT_IP}  UDP -> {HOST_IP}:{UDP_PORT}  "

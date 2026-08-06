@@ -427,6 +427,16 @@ class EmuController:
             motion.emit_event = False
             self._hand_motion = motion
         if block:
+            # OBSERVED (2026-08-06, C6 ret=-4 in 0.00 s): a blocking hand
+            # call with an arm/lift motion in flight consumes THAT device's
+            # arrival push and fails instantly with -4. The hand keeps
+            # moving physically.
+            with self._lock:
+                other_busy = (
+                    (self._arm_motion and not self._arm_motion.done.is_set())
+                    or self._lift_motion is not None)
+            if other_busy:
+                return -4
             if not motion.done.wait(_scaled(max(timeout_s, 1)) + 5.0):
                 return -5
             if motion.will_fail:
