@@ -1,0 +1,129 @@
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-06 18:31:03
+========================================================================
+C8 — Pole-only diagnostic. ONLY THE SELECTED POLE MOVES (no arm, no hand).
+
+Built for the 2026-08-06 20:38 incident: BOTH controllers suddenly rejected
+every lift command (rm_set_lift_height / rm_set_lift_speed -> ret=1,
+"[...] set_state: false") that had physically worked minutes earlier with
+identical parameters — i.e. an ARM-STATE error, not a script problem.
+
+Reads first, moves second:
+
+  D1  connect
+  D2  arm power state          (OFF -> e-stop pressed / arm powered down)
+  D3  controller + joint errors (latched system error blocks motion)
+  D4  raw lift state            (pos / current / mode / driver err_flag)
+  D5  optional --clear-errors   (rm_clear_system_err — clears latched
+      system errors; does NOT move anything)
+  D6  ACCEPTANCE probe: command the pole to its CURRENT position
+      (zero-distance, no physical motion) and await the arrival event —
+      the pure "will the controller take lift commands?" test
+  D7  small stroke: 10 hw-mm away and back, arrival-event verified
+  D8  home to full length (the pre-run state every motion test needs)
+
+On a healthy arm all eight PASS.  In the rejection state D6 FAILs and the
+state dump names the blocking condition.  Recovery ladder: release/reset
+the physical e-stop -> --clear-errors -> Web GUI lift panel -> power cycle.
+
+Flags: --diagnose-only (skip D6-D8, purely read-only), --clear-errors,
+--mode SIM|REAL (note: the lift does NOT execute in SIM — run REAL).
+Arm selection: RM_ARM=left (default) or RM_ARM=right.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-06 18:31:03
+========================================================================
+unknown argument: '--oops'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-06 18:31:03
+========================================================================
+C8 — Pole-only diagnostic. ONLY THE SELECTED POLE MOVES (no arm, no hand).
+
+Built for the 2026-08-06 20:38 incident: BOTH controllers suddenly rejected
+every lift command (rm_set_lift_height / rm_set_lift_speed -> ret=1,
+"[...] set_state: false") that had physically worked minutes earlier with
+identical parameters — i.e. an ARM-STATE error, not a script problem.
+
+Reads first, moves second:
+
+  D1  connect
+  D2  arm power state          (OFF -> e-stop pressed / arm powered down)
+  D3  controller + joint errors (latched system error blocks motion)
+  D4  raw lift state            (pos / current / mode / driver err_flag)
+  D5  optional --clear-errors   (rm_clear_system_err — clears latched
+      system errors; does NOT move anything)
+  D6  ACCEPTANCE probe: command the pole to its CURRENT position
+      (zero-distance, no physical motion) and await the arrival event —
+      the pure "will the controller take lift commands?" test
+  D7  small stroke: 10 hw-mm away and back, arrival-event verified
+  D8  home to full length (the pre-run state every motion test needs)
+
+On a healthy arm all eight PASS.  In the rejection state D6 FAILs and the
+state dump names the blocking condition.  Recovery ladder: release/reset
+the physical e-stop -> --clear-errors -> Web GUI lift panel -> power cycle.
+
+Flags: --diagnose-only (skip D6-D8, purely read-only), --clear-errors,
+--mode SIM|REAL (note: the lift does NOT execute in SIM — run REAL).
+Arm selection: RM_ARM=left (default) or RM_ARM=right.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

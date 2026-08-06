@@ -91,6 +91,9 @@ src/
 ├── run_dry_run.py         offline logic verification with mock robots (run first)
 ├── run_emulated_suite.py  full C1–C4 suite against the emulator (no hardware)
 ├── test_dual_connect.py   C1 — connectivity + state pre-check (NO MOTION)
+├── test_pole_only.py      C8 — pole diagnostic: state dump + lift acceptance
+│                          probe + recovery (POLE ONLY; read-only with
+│                          --diagnose-only)
 ├── test_hand_only.py      C7 — hand-alone: protocol probe + modbus RTU
 │                          with measured ANGLE_ACT feedback (HAND ONLY)
 ├── test_sim_motion_visibility.py  C5 — sim-mode motion visibility probe
@@ -111,7 +114,10 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `66/66 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
+Expected: `68/68 passed`, then every suite entry `exit 0 (OK)` — including
+the **C8 locked-pole drill**, which injects the 2026-08-06 lift-rejection
+fault on the emulated left arm, requires C8 to FAIL with the diagnosis,
+then requires a `--clear-errors` run to recover and go green. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop, and the endpoint-configuration plumbing (defaults, and `RM_*` env overrides reaching `dual_arm_common`, C5, and the emulator — probed in clean-environment subprocesses).
 
 ---
 
@@ -159,6 +165,37 @@ if UDP or TCP sweeps, the sim-rehearsal record-and-FCL-verify pipeline is
 viable; if only events fire, it is not. Note: under the emulator sim mode
 behaves identically to real (documented limitation), so C5 answers YES
 trivially there — the hardware run is the authoritative answer.
+
+### C8 — `test_pole_only.py` (**only the pole moves** — no arm, no hand; read-only with `--diagnose-only`)
+
+**Purpose**: diagnose and recover the **lift-rejection state** first seen
+2026-08-06 20:38 — both controllers suddenly rejected every
+`rm_set_lift_height` / `rm_set_lift_speed` with ret=1
+(`[rm_set_lift_height] set_state: false`) although the identical commands
+had physically worked minutes earlier (left 290 @ 20:15, right 193 @
+19:59). ret=1 means "controller returned false: parameter error **or
+arm-state error**" — with proven-good parameters, that is an arm-state
+error. The test reads first (power, controller/joint errors, raw lift
+state) and moves second (zero-distance acceptance probe → 10 hw-mm stroke
+→ home to full length), so the check that FAILs names the blocking
+condition. `RM_ARM=left|right` selects the pole; the lift does **not**
+execute in SIM — run `--mode REAL`.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| D1 | Connected | handle valid |
+| D2 | Arm power | ON (OFF ⇒ e-stop chain / power the arm on) |
+| D3 | Controller/joint errors | clean (latched codes FAIL unless `--clear-errors` is clearing them) |
+| D4 | Lift state | readable; driver `err_flag` 0 (else stall/overcurrent latched) |
+| D5 | `rm_clear_system_err` | ret 0 (SKIP unless `--clear-errors`) |
+| D6 | Acceptance probe | command CURRENT pos (no motion) → ret 0 + arrival event |
+| D7 | Small stroke | 10 hw-mm away and back, both events |
+| D8 | Home to full length | the standard pre-run state reached |
+
+On D6 failure the `[DIAG]` state dump prints automatically (also printed
+by every motion test when pole homing is rejected with ret=1). Recovery
+ladder: release/reset the physical e-stop → `--clear-errors` → Web GUI
+lift panel → power cycle.
 
 ### C7 — `test_hand_only.py` (**only the hand moves** — no arm, no pole)
 
@@ -298,15 +335,16 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 66 | 0 | 0 | offline |
+| run_dry_run | 68 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
+| test_pole_only | 7+1 SKIP | 0 | 1 | D5 SKIPs without `--clear-errors` |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
 | test_hand_only | 8 | 0 | 0 | HB2 verdict is the finding |
 | test_dual_locked | 6 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| **Total** | **110** | **0** | **0** | |
+| **Total** | **119** | **0** | **1** | |
 
 ---
 
@@ -317,6 +355,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | run_dry_run.py | `src/run_dry_run.log` |
 | run_emulated_suite.py | `src/run_emulated_suite.log` |
 | test_dual_connect.py | `src/test_dual_connect.log` |
+| test_pole_only.py | `src/test_pole_only.log` |
 | test_hand_only.py | `src/test_hand_only.log` |
 | test_sim_motion_visibility.py | `src/test_sim_motion_visibility.log` |
 | test_dual_locked.py | `src/test_dual_locked.log` |
@@ -338,6 +377,7 @@ Logs append across runs with a timestamped banner per run (same `log_utils` as R
 | One arm stops mid-run | Partner-stop triggered by the other arm's failure | Read the per-step table above the summary for the failing side |
 | Lift never arrives, arm steps fine | Lift command queued behind previous lift motion | Controller queues rather than preempts (see LiftBenchmark report §5.3) — ensure lift idle before run |
 | Run mode WARN = SIMULATION | Arm left in sim mode | `rm_set_arm_run_mode(1)` from GUI/API if real motion intended — sim runs also double as an event-in-sim probe |
+| Pole homing FAILED ret=1, `set_state: false` (seen BOTH arms 2026-08-06 20:38) | Controller in an arm-state error: e-stop chain, latched system/joint error, or lift driver error — NOT a parameter/script problem (identical commands physically worked minutes earlier) | Read the auto-printed `[DIAG]` dump, then `RM_ARM=<side> python3 test_pole_only.py --mode REAL` (add `--clear-errors` to recover); ladder: e-stop → clear errors → Web GUI lift panel → power cycle |
 
 ---
 

@@ -228,6 +228,9 @@ Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [-h|--help]
                     (restored on exit); without it the test runs as-found
   --no-hands        strip all hand steps/parts from the run
   -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
 
 Environment overrides:
   RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
@@ -239,10 +242,13 @@ Environment overrides:
 """
 
 
-def handle_cli(doc: str, argv=None):
+def handle_cli(doc: str, argv=None, extra_flags=()):
     """-h/--help prints the script docs and exits BEFORE anything runs;
     any unknown argument is rejected (exit 2) rather than silently
-    ignored — an ignored typo would otherwise move the robot."""
+    ignored — an ignored typo would otherwise move the robot.
+
+    extra_flags: additional exact flags this script accepts (e.g. the C8
+    pole diagnostic's --diagnose-only / --clear-errors)."""
     args = list(sys.argv[1:] if argv is None else argv)
     if "-h" in args or "--help" in args:
         print((doc or "").strip())
@@ -257,7 +263,7 @@ def handle_cli(doc: str, argv=None):
         if a == "--mode":
             skip = True
             continue
-        if a.startswith("--mode=") or a == "--no-hands":
+        if a.startswith("--mode=") or a == "--no-hands" or a in extra_flags:
             continue
         print(f"unknown argument: {a!r}")
         print()
@@ -678,6 +684,77 @@ def stop_all(*arms):
             arm.halt()
 
 
+def diagnose_lift_rejection(arm: "ConceptArm"):
+    """Print everything the controller will tell us about WHY it rejects
+    lift commands (ret=1 = "controller returned false: parameter error or
+    arm-state error").  First seen 2026-08-06 20:38: BOTH controllers
+    rejected proven-good rm_set_lift_height/rm_set_lift_speed commands.
+    Every getter is optional — print what is readable, skip what is not.
+    """
+    r = arm.robot
+    print(f"  [DIAG] {arm.side}: lift command REJECTED by the controller "
+          "(set_state false) — state dump:")
+    try:
+        ret, power = r.rm_get_arm_power_state()
+        if ret != 0:
+            detail = f"unreadable ret={ret}"
+        elif power == 1:
+            detail = "ON"
+        else:
+            detail = ("OFF  <-- likely cause: e-stop pressed / arm "
+                      "powered down")
+        print(f"  [DIAG]   arm power: {detail}")
+    except Exception as exc:
+        print(f"  [DIAG]   arm power: getter unavailable ({exc!r})")
+    try:
+        ret, st = r.rm_get_current_arm_state()
+        if ret != 0:
+            detail = f"unreadable ret={ret}"
+        else:
+            err = (st or {}).get("err")
+            codes = []
+            if isinstance(err, dict):
+                codes = [c for c in err.get("err", [])
+                         if str(c) not in ("0", "")]
+            detail = ("none" if not codes else ", ".join(map(str, codes))
+                      + "  <-- likely cause: clear via --clear-errors / "
+                      "Web GUI")
+        print(f"  [DIAG]   controller err: {detail}")
+    except Exception as exc:
+        print(f"  [DIAG]   controller err: getter unavailable ({exc!r})")
+    try:
+        jd = r.rm_get_joint_err_flag()
+        if jd.get("return_code") == 0:
+            flags = jd.get("err_flag", [])
+            brakes = jd.get("brake_state", [])
+            bad = [(i + 1, f) for i, f in enumerate(flags) if f]
+            print(f"  [DIAG]   joint err flags: "
+                  + (f"{bad}  <-- joint errors latched" if bad else "clean")
+                  + f"   brake_state={brakes}")
+        else:
+            print(f"  [DIAG]   joint err flags: unreadable "
+                  f"ret={jd.get('return_code')}")
+    except Exception as exc:
+        print(f"  [DIAG]   joint err flags: getter unavailable ({exc!r})")
+    try:
+        ret, lst = r.rm_get_lift_state()
+        if ret == 0:
+            ef = lst.get("err_flag", 0)
+            print(f"  [DIAG]   lift state: pos={lst.get('pos')} hw-mm  "
+                  f"current={lst.get('current')} mA  mode={lst.get('mode')}"
+                  f"  err_flag={ef}"
+                  + ("  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)"
+                     if ef else ""))
+        else:
+            print(f"  [DIAG]   lift state: unreadable ret={ret}")
+    except Exception as exc:
+        print(f"  [DIAG]   lift state: getter unavailable ({exc!r})")
+    print("  [DIAG] recovery ladder: (1) release/reset the physical e-stop,"
+          " (2) clear errors (RM_ARM=%s python3 test_pole_only.py "
+          "--clear-errors), (3) check the Web GUI lift panel moves the pole,"
+          " (4) power-cycle the arm." % arm.side)
+
+
 def home_poles_full(monitor: ArrivalMonitor, *arms) -> bool:
     """Pre-position every pole to full_length (0.29 m) before a run.
 
@@ -702,6 +779,10 @@ def home_poles_full(monitor: ArrivalMonitor, *arms) -> bool:
         else:
             print(f"  [WARN] {arm.side}: pole homing FAILED "
                   f"(ret={rec['ret']}, event={rec['event']})")
+            if rec["ret"] == 1:
+                # Controller actively rejected the command (observed on
+                # BOTH arms 2026-08-06 20:38) — dump why, if it will say.
+                diagnose_lift_rejection(arm)
             ok = False
     if not ok:
         stop_all(*live)

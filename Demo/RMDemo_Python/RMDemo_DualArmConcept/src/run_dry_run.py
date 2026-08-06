@@ -314,6 +314,17 @@ def main() -> int:
         check("valid flags pass through", True)
     except SystemExit:
         check("valid flags pass through", False)
+    try:
+        dac.handle_cli("doc", ["--diagnose-only", "--clear-errors"],
+                       extra_flags=("--diagnose-only", "--clear-errors"))
+        check("registered extra flags pass through (C8)", True)
+    except SystemExit:
+        check("registered extra flags pass through (C8)", False)
+    try:
+        dac.handle_cli("doc", ["--diagnose-only"])
+        check("unregistered extra flag still exits 2", False)
+    except SystemExit as e:
+        check("unregistered extra flag still exits 2", e.code == 2)
 
     # ── F2. --mode argument parser ──────────────────────────────────────
     print("\nF2. --mode SIM|REAL parser")
