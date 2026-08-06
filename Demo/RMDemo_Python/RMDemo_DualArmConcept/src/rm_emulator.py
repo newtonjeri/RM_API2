@@ -62,11 +62,17 @@ HAND_CMD_LATENCY_S = 0.115     # measured hand command latency
 
 _time_scale = float(os.environ.get("RM_EMU_TIME_SCALE", "1.0"))
 
+# Emulated arm addresses follow the same env vars as the tests, so an
+# address change stays consistent across emulated and real runs.
+EMU_LEFT_IP = os.environ.get("RM_LEFT_IP", "192.168.1.10")
+EMU_RIGHT_IP = os.environ.get("RM_RIGHT_IP", "192.168.1.11")
+
 # IPs that count as "this host" for the UDP push. A push configured to any
 # other target is accepted (ret 0, like the real controller, which cannot
 # know your host's address) but frames are NEVER delivered — reproducing
-# the real-hardware wrong-IP trap. Override with emu_set_host_ips().
-EMU_HOST_IPS = {"192.168.1.235"}
+# the real-hardware wrong-IP trap. Override with emu_set_host_ips() or the
+# RM_HOST_IP env var.
+EMU_HOST_IPS = {os.environ.get("RM_HOST_IP", "192.168.1.235")}
 
 
 def emu_set_host_ips(*ips):
@@ -439,8 +445,8 @@ LIFT_TIMEOUT_GUESS_S = 30.0
 # Left arm parked at its SRDF zero (J7 = 180 deg), right at zero, lifts half.
 def _default_specs():
     return {
-        "192.168.1.10": ([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 180.0], 100.0),
-        "192.168.1.11": ([0.0] * 7, 100.0),
+        EMU_LEFT_IP: ([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 180.0], 100.0),
+        EMU_RIGHT_IP: ([0.0] * 7, 100.0),
     }
 
 

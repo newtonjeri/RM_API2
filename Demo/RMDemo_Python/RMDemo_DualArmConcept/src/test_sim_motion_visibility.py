@@ -13,12 +13,14 @@ A small J7 delta (+5 deg at v=10) is used regardless, the joint is returned
 to its start value, and the original run mode is restored in `finally`.
 """
 
+import os
 import sys
 import threading
 import time
 
 from dual_arm_common import (
-    ARM_TIMEOUT_S, DEV_JOINT, LEFT_IP, ROBOT_PORT, ArrivalMonitor,
+    ARM_TIMEOUT_S, DEV_JOINT, HOST_IP, LEFT_IP, ROBOT_PORT, UDP_PORT,
+    ArrivalMonitor,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import (
@@ -26,8 +28,7 @@ from Robotic_Arm.rm_ctypes_wrap import (
     rm_realtime_push_config_t, rm_udp_custom_config_t,
 )
 
-HOST_IP = "192.168.1.235"    # this host on the arm LAN (butterfli_hw xacro)
-UDP_PORT = 8095              # distinct from the stack's 8089/8090
+# HOST_IP / UDP_PORT come from dual_arm_common (env: RM_HOST_IP / RM_UDP_PORT)
 UDP_WATCHDOG_S = 2.0         # frames must arrive within this window
 # A silent UDP stream is a FAIL-TO-RUN by default: a wrong HOST_IP is
 # accepted by the controller (ret 0) and simply delivers nothing, which
@@ -105,7 +106,6 @@ def main() -> int:
         print(f"  [INFO] rm_set_realtime_push ret={ret}")
 
         # ── UDP watchdog: no frames == fail-to-run (default) ──
-        import os
         deadline = time.perf_counter() + UDP_WATCHDOG_S
         while time.perf_counter() < deadline:
             with _udp_lock:
@@ -130,8 +130,8 @@ def main() -> int:
                   "into the void when it is wrong — the run cannot produce "
                   "a valid verdict.")
             print("          Fix: set HOST_IP to THIS machine's IP on the "
-                  "arm LAN (`ip addr` / 192.168.1.x), check the port is "
-                  "free and not firewalled; or export RM_ALLOW_NO_UDP=1 "
+                  "arm LAN> (`ip addr`), check RM_UDP_PORT is free and "
+                  "not firewalled; or export RM_ALLOW_NO_UDP=1 "
                   "to probe events/polling only.")
             return 1
 

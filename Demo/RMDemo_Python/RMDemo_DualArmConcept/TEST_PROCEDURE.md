@@ -10,11 +10,20 @@
 
 ### 1.1 Hardware
 
+All endpoints are **environment-overridable** (defaults below are the network-verified butterfli setup) — no code edits needed when addresses change:
+
+| Item | Default | Override |
+|---|---|---|
+| Left arm IP | 192.168.1.10 | `RM_LEFT_IP` |
+| Right arm IP | 192.168.1.11 | `RM_RIGHT_IP` |
+| TCP port | 8080 | `RM_ROBOT_PORT` |
+| Host IP (UDP push target, C5) | 192.168.1.235 | `RM_HOST_IP` |
+| UDP push port (C5) | 8095 | `RM_UDP_PORT` |
+
+Example: `RM_LEFT_IP=192.168.2.10 RM_RIGHT_IP=192.168.2.11 RM_HOST_IP=192.168.2.50 python3 test_dual_connect.py`. The emulator honours the same variables, so emulated runs stay consistent with any addressing.
+
 | Item | Value |
 |---|---|
-| Left arm IP (network-verified) | 192.168.1.10 |
-| Right arm IP | 192.168.1.11 |
-| TCP port | 8080 |
 | Lift stroke (physical) | 0–0.3 m |
 | Lift safe range (SRDF states) | 0.01–0.29 m → 7–193 hw-mm |
 | Lift unit mapping | hw mm = metres × 2000/3 (butterfli_hw `conversions.hpp`) |

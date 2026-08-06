@@ -50,7 +50,7 @@ it plants emulated `rm_robot_interface` / `rm_ctypes_wrap` modules in
 | UDP push (subset) | periodic frames: `joint_status.joint_position/joint_speed`, `liftState.height/pos`, `arm_current_status` (0 idle / 2 moving), `errCode`, `arm_ip` | rm_define push struct (partial) |
 | Two-handle process | one global event callback, demux by `handle_id`; distinct ids; second `RoboticArm()` skips init | SDK global-callback design |
 | Inspire hand | `rm_set_hand_angle` (6 values 0–1000, −1 = hold), stroke time = 115 ms latency + 373 × span / SPEED_SET ms, device-2 arrival event, `rm_set_hand_speed/force` stored | butterfli_hw bench §3.7/§3.8 stroke law + measured latency |
-| **UDP wrong-IP trap** | push to an IP not in `EMU_HOST_IPS` (default `{"192.168.1.235"}`): ret 0, clear `[emu]` log, **no frames delivered** — exactly like real hardware; override with `emu_set_host_ips(...)` | controller accepts any target IP; silent void push observed in the field |
+| **UDP wrong-IP trap** | push to an IP not in `EMU_HOST_IPS` (default `{RM_HOST_IP or "192.168.1.235"}`): ret 0, clear `[emu]` log, **no frames delivered** — exactly like real hardware; override with `emu_set_host_ips(...)` or `RM_HOST_IP` | controller accepts any target IP; silent void push observed in the field |
 | Push field gating | `joint_speed`/`liftState` populate only when enabled in `custom_config`; `handState` always zeros | bench_udp_fields (fw 1.7.2: handState absent) |
 | Joint limits | `rm_movej` rejects targets beyond RM75 limits (±177.6/±130/±177.6/±135/±177.6/±128/±360°) with ret 1 | RM75 URDF limits |
 | Push persistence | push survives `rm_delete_robot_arm` (controller state); only disable or `rm_destroy` stops it | controller-side config semantics |
@@ -98,6 +98,14 @@ Verified effects on the mode runners: rejection stops the run and halts the
 partner; a dropped event is recovered by the measured-position fallback
 (`event=False, verified=True`, WARN); a failed motion fails the step (the
 arm genuinely isn't at the target, so the fallback correctly refuses it).
+
+## Configurable addressing
+
+The emulated arms live at `RM_LEFT_IP` / `RM_RIGHT_IP` (defaults
+192.168.1.10/.11) and the emulated "this host" for UDP delivery follows
+`RM_HOST_IP` — the same environment variables the tests read, so changing
+the robot's addressing keeps emulated and real runs consistent with zero
+code edits.
 
 ## Initial conditions
 
