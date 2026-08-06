@@ -1,0 +1,242 @@
+# Dual-Arm Concept Test Procedure (Concept #1)
+
+**Hardware**: 2 × RealMan RM75-6FB (Gen-3 controllers, V1.7.1) + 2 × pole lifts, Butterfli dual-arm setup
+**API**: RM_API2 Python SDK 1.1.6 (repo `Python/` package, no vendored copy)
+**Scope**: Concept validation of dual-arm execution semantics — **parallel locked**, **chained**, and **free** — plus the **arm–pole synchronization feature** (duration-matched concurrent arm+lift motion, the butterfli_hw `bench_sync` contract at command level) and **Inspire dexterous hand** steps. Uses the SRDF `rest_pose`/`ready`/`zero_pose` arm states, `pole_*` lift states, and `inspire_hand_*` hand states, executed with controller-planned moves (`rm_movej`, `rm_set_lift_height`, `rm_set_hand_angle`), arrival-event completion (devices 0/2/3), and per-process event demuxing across two handles.
+
+---
+
+## 1. Prerequisites
+
+### 1.1 Hardware
+
+| Item | Value |
+|---|---|
+| Left arm IP (network-verified) | 192.168.1.10 |
+| Right arm IP | 192.168.1.11 |
+| TCP port | 8080 |
+| Lift stroke (physical) | 0–0.3 m |
+| Lift safe range (SRDF states) | 0.01–0.29 m → 7–193 hw-mm |
+| Lift unit mapping | hw mm = metres × 2000/3 (butterfli_hw `conversions.hpp`) |
+| Arm speed used | 20 % (`rm_movej` v) |
+| Lift speed used | 50 % standalone; **duration-matched** on sync steps (see §1.5) |
+| Hand | Inspire RH56DFX-2L on each arm, protocol path `rm_set_hand_angle`, values 0–1000 (1000 = open), SDK order [little, ring, middle, index, thumb_flex, thumb_rot] |
+
+### 1.2 Software
+
+- Python 3, this repo checked out; scripts run from `src/` (`cd src && python3 <script>.py`).
+- SDK imported from `RM_API2/Python` via `parents[4]` — no per-demo vendored SDK.
+- Thread mode: `RM_TRIPLE_MODE_E` (required for arrival-event callbacks). One `rm_init` per process; the second `RoboticArm()` is constructed with no mode to skip re-init.
+
+### 1.3 Joint states (provenance: `butterfli_moveit_config/config/butterfli_alix.srdf`)
+
+Values stored in **radians verbatim** from the SRDF; converted to degrees at dispatch (plain rad→deg — butterfli_hw confirms no sign flips or offsets between URDF and controller conventions).
+
+| State | Right arm (rad) | Left arm (rad) |
+|---|---|---|
+| `zero_pose` | all 0.0 | all 0.0 except **J7 = 3.1416** |
+| `ready` | 0, −1.885, 0, 1.798, 0, 1.379, 0 | 0, −1.885, 0, 1.798, 0, 1.379, **3.1416** |
+| `rest_pose` | 0, −1.431, −0.4538, 1.7103, 0.1047, 1.0821, 1.2043 | 0, −1.431, **+0.4538**, 1.7103, **−0.1047**, 1.0821, 1.9373 |
+| Lift `half_length` | 0.15 m → 100 hw-mm | same |
+| Lift `full_length` | 0.29 m → 193 hw-mm | same |
+
+### 1.4 Concept sequence (both arms, per run)
+
+`arm→ready` → `hand→release` → `sync(arm→zero + pole→half)` → `hand→grasp` → `sync(arm→ready + pole→full)` → `hand→half_grasp` → `arm→rest`
+
+First step doubles as homing from any start pose. Hand states come from the SRDF `inspire_hand_*` groups via butterfli_hw's `hand_rad_to_hw` (cross-checked against the bench §3.8 ANGLE_SET echo: grasp = `33/33/33/33/133/944`). The sequence is collision-free by construction; collision gating for arbitrary free-running tasks is future work.
+
+### 1.5 Arm–pole synchronization (the feature under test)
+
+Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level: both devices are dispatched back-to-back, and the lift speed is **duration-matched** to the arm move — `v = distance / (arm_duration − 0.38 s start latency)`, `pct = ceil(v / 1.85)`, floored at 4 % — with ROUND-UP quantization (early finish is benign, the device waits; late is the failure mode). Per step the test reports dispatch start skew and joint-vs-lift finish skew, mirroring `bench_sync`'s `pa_start`/`pa_finish`.
+
+**⚠ Hand/modbus exclusivity (fw 1.7.x)**: `rm_set_hand_angle` is the hand *protocol* path and is mutually exclusive with end-port modbus mode — it returns −5 and degrades the modbus session if the port is in modbus mode. Do **not** run these tests while the butterfli_hw ALL-MODBUS stack is attached; if the end port was left in modbus mode, call `rm_close_modbus_mode(1)` first.
+
+---
+
+## 2. File Structure
+
+```
+src/
+├── log_utils.py           stdout/stderr tee logger (same as RMDemo_LiftBenchmark)
+├── dual_arm_common.py     constants, SRDF states, conversions, ArrivalMonitor,
+│                          ConceptArm, connect/teardown, run_locked/chained/free
+├── rm_emulator.py         in-process SDK emulator of both arms (see EMULATOR.md)
+├── run_dry_run.py         offline logic verification with mock robots (run first)
+├── run_emulated_suite.py  full C1–C4 suite against the emulator (no hardware)
+├── test_dual_connect.py   C1 — connectivity + state pre-check (NO MOTION)
+├── test_sim_motion_visibility.py  C5 — sim-mode motion visibility probe
+│                          (NO PHYSICAL MOTION — moves only the simulated arm)
+├── test_dual_locked.py    C2 — parallel locked mode        (MOVES BOTH ARMS)
+├── test_dual_chained.py   C3 — chained mode, left leads    (MOVES BOTH ARMS)
+└── test_dual_free.py      C4 — free-running mode           (MOVES BOTH ARMS)
+```
+
+---
+
+## 3. Running the Offline Verification (No Hardware)
+
+```bash
+cd src
+python3 run_dry_run.py          # logic checks with instant mocks
+python3 run_emulated_suite.py   # the four test scripts, unmodified, against
+                                # the emulator (see EMULATOR.md), ~40 s
+```
+
+Expected: `40/40 passed`, then all four suite entries `exit 0 (OK)`. It checks: rad→deg values against the SRDF, lift m→hw-mm mapping and range guard, sequence integrity, `ArrivalMonitor` demux (wrong handle ignored, `trajectory_connect=1` non-completion, failure reporting), locked-mode barrier invariant and partner-stop, chained ordering + pipelining, free-mode completion + partner-stop.
+
+---
+
+## 4. Individual Test Cases
+
+### C1 — `test_dual_connect.py` (run first; **no motion**)
+
+**Purpose**: validate the two-handle single-process topology before any motion.
+**Duration**: ~5 s.
+**Steps**: connect both arms → per arm: robot info, arm error state, lift state, run mode → distinct handle IDs → register the process-global event callback.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| DC1/DC2 | Robot info (L/R) | ret 0, RM_75, 7-DOF |
+| DC3/DC4 | Arm state clean (L/R) | ret 0, `err_len` 0 |
+| DC5/DC6 | Lift state (L/R) | ret 0, `err_flag` 0, pos ∈ [0, 200] hw-mm |
+| DC7 | Handles distinct | left id ≠ right id |
+| DC8 | Event callback registered | no exception |
+| DC9 | Completion | no motion commanded |
+
+SKIP: all 9 checks skip (exit 0) if either arm is unreachable.
+
+### C5 — `test_sim_motion_visibility.py` (**no physical motion** — sim-mode probe)
+
+**Purpose**: answers the open question — with the arm in SIMULATION mode (the
+Web GUI sim toggle), is the simulated motion programmatically accessible?
+The controller provably runs its planner in sim mode (fence/self-collision
+are sim-only, the pendant animates the 3D model), but no doc states whether
+the UDP push, arrival events, or TCP polling carry the simulated states.
+**Steps**: engage sim mode and VERIFY by readback (aborts before any
+dispatch otherwise) → configure UDP push to this host → dispatch J7 +5° at
+v=10 → record UDP frames, TCP polls, and the arrival event → print the
+three-channel VERDICT → return J7 → restore the original run mode.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| SM1 | Sim mode engaged | readback confirms mode 0 before any motion |
+| SM2 | UDP push delivering | ≥1 frame within 2 s — **silent UDP = FAIL-TO-RUN by default** (wrong HOST_IP is accepted by the controller and delivers nothing; override with `RM_ALLOW_NO_UDP=1`) |
+| SM3 | Probe dispatched | movej accepted in sim mode |
+| SM4 | Definitive verdict | all three channels answered YES/NO |
+| SM5 | Cleanup | J7 returned, original run mode restored |
+
+The verdict itself (YES/NO per channel) is the *finding*, not a pass/fail:
+if UDP or TCP sweeps, the sim-rehearsal record-and-FCL-verify pipeline is
+viable; if only events fire, it is not. Note: under the emulator sim mode
+behaves identically to real (documented limitation), so C5 answers YES
+trivially there — the hardware run is the authoritative answer.
+
+### C2 — `test_dual_locked.py` (**moves both arms and both poles**)
+
+**Purpose**: parallel locked semantics — per step, dispatch both arms back-to-back non-blocking, then barrier on **both** arrivals before the next step. Measures dispatch skew and per-arm completion delta at every boundary.
+**Duration**: ~1–2 min at 20 %/50 % speeds.
+**Steps**: connect → register monitor → 5 s countdown → `run_locked` over the sequence → report.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| PL1 | All dispatches accepted | every `rm_movej`/`rm_set_lift_height` ret 0 |
+| PL2 | Sequence completed | all 7 steps, barrier honored, both arms ok |
+| PL3 | Dispatch skew | max < 50 ms (baseline: single call ≈ 8 ms) |
+| PL4 | Arrivals confirmed | event preferred; position fallback ⇒ WARN (hand has no fallback — event only) |
+| PL5 | Arm–pole sync finish | pole never finishes > 0.5 s LATE vs the arm (early is benign) |
+
+On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)`), test fails.
+
+### C3 — `test_dual_chained.py` (**moves both arms and both poles**)
+
+**Purpose**: chained semantics — left leads; right dispatches step k only after left completes step k. Leader advances freely (pipelined: follower k overlaps leader k+1). The follower performs the *following* task; it is not a synchronized copy.
+**Duration**: ~2–3 min.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| CH1 | All dispatches accepted | ret 0 everywhere |
+| CH2 | Both chains completed | all 7 leader + 7 follower steps ok |
+| CH3 | Ordering invariant | follower dispatch(k) ≥ leader done(k), all k |
+| CH4 | Follower gate latency | max < 1.0 s from gate-open to dispatch |
+
+### C4 — `test_dual_free.py` (**moves both arms and both poles**)
+
+**Purpose**: free execution — both arms run the sequence independently, no cross-arm gates. Valid only because this sequence is collision-free by construction.
+**Duration**: ~1–2 min.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| FR1 | All dispatches accepted | ret 0 everywhere |
+| FR2 | Independent completion | both arms finish all 7 steps |
+| FR3 | Concurrent free run | execution-window overlap ≥ 50 % of the shorter run |
+
+---
+
+## 5. Running the Full Suite
+
+```bash
+cd src
+python3 run_dry_run.py           # offline, must pass 33/33 first
+python3 run_emulated_suite.py    # offline, full suite on the emulator
+python3 test_dual_connect.py     # no motion — validates topology
+python3 test_sim_motion_visibility.py  # no physical motion — sim-mode probe
+python3 test_dual_locked.py   # motion — barrier semantics
+python3 test_dual_chained.py  # motion — pipeline semantics
+python3 test_dual_free.py     # motion — independent semantics
+```
+
+Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C2 is the most conservative motion mode (step barriers bound divergence), C3 and C4 progressively relax coupling. Total hardware runtime ≈ 6–10 min. Hand steps require the end port NOT in modbus mode (§1.5).
+
+**Before any motion run**: clear space around both arms, both poles free to travel 0.01–0.29 m, e-stop within reach. Each motion test prints a banner and a 5-second countdown before the first dispatch.
+
+---
+
+## 6. Expected Summary Results
+
+| Test | PASS | FAIL | SKIP | Notes |
+|---|---|---|---|---|
+| run_dry_run | 40 | 0 | 0 | offline |
+| test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
+| test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
+| test_dual_locked | 5 | 0 | 0 | incl. PL5 sync-finish; WARN if event fallback used |
+| test_dual_chained | 4 | 0 | 0 | |
+| test_dual_free | 3 | 0 | 0 | |
+| **Total** | **66** | **0** | **0** | |
+
+---
+
+## 7. Log Files
+
+| Script | Log file |
+|---|---|
+| run_dry_run.py | `src/run_dry_run.log` |
+| run_emulated_suite.py | `src/run_emulated_suite.log` |
+| test_dual_connect.py | `src/test_dual_connect.log` |
+| test_sim_motion_visibility.py | `src/test_sim_motion_visibility.log` |
+| test_dual_locked.py | `src/test_dual_locked.log` |
+| test_dual_chained.py | `src/test_dual_chained.log` |
+| test_dual_free.py | `src/test_dual_free.log` |
+
+Logs append across runs with a timestamped banner per run (same `log_utils` as RMDemo_LiftBenchmark).
+
+---
+
+## 8. Troubleshooting
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `socket connect err` + all SKIP | Arm(s) powered off or network down | Power arms, `ping 192.168.1.10 / .11` |
+| Arrival always via position fallback (WARN) | Event push not reaching host (thread mode, or firmware) | Confirm `RM_TRIPLE_MODE_E`; check DC8; note firmware V1.7.1 |
+| PL3 dispatch skew ≥ 50 ms | Host load, TCP latency spike | Re-run; check `mean_lat_us` in LiftBenchmark baseline |
+| One arm stops mid-run | Partner-stop triggered by the other arm's failure | Read the per-step table above the summary for the failing side |
+| Lift never arrives, arm steps fine | Lift command queued behind previous lift motion | Controller queues rather than preempts (see LiftBenchmark report §5.3) — ensure lift idle before run |
+| Run mode WARN = SIMULATION | Arm left in sim mode | `rm_set_arm_run_mode(1)` from GUI/API if real motion intended — sim runs also double as an event-in-sim probe |
+
+---
+
+## Concept roadmap
+
+- **Concept #1 (this)**: dual-arm operation — locked / chained / free semantics over rest/ready/zero + pole strokes.
+- **Concept #2 (next)**: cleaning test program for the hinge area (right arm), reusing the same dispatch/arrival machinery with task-specific poses.
+- **Future**: collision gating for arbitrary free-running task pairs (this concept's sequence is collision-free by construction).
