@@ -125,16 +125,18 @@ def main() -> int:
     check("right rest J3 rad->deg", abs(rr[2] - (-26.0009)) < 0.01,
           f"{rr[2]:.4f}")
     check("right zero all 0", all(v == 0.0 for v in dac.state_deg("right", "zero")))
-    right_hw = {"minimum": 7, "quarter": 50, "half": 100, "full": 193}
-    left_hw = {"minimum": 10, "quarter": 75, "half": 150, "full": 290}
+    # Both poles: 1:1 true mm, controller travel 315 mm (2026-08-07)
+    right_hw = {"minimum": 5, "quarter": 75, "half": 150, "full": 300}
+    left_hw = {"minimum": 5, "quarter": 75, "half": 150, "full": 300}
     for name, hw in right_hw.items():
-        check(f"lift {name} -> {hw} (right, 2to3)",
+        check(f"lift {name} -> {hw} (right, 1to1)",
               dac.lift_hw_mm("right", dac.LIFT_M[name]) == hw)
     for name, hw in left_hw.items():
         check(f"lift {name} -> {hw} (left, 1to1)",
               dac.lift_hw_mm("left", dac.LIFT_M[name]) == hw)
-    check("left full 290 within controller ceiling 330",
-          left_hw["full"] <= dac.LIFT_GEAR["left"]["hw_max"])
+    check("full 300 leaves headroom under the 315 mm ceiling",
+          left_hw["full"] < dac.LIFT_GEAR["left"]["hw_max"] == 315
+          and right_hw["full"] < dac.LIFT_GEAR["right"]["hw_max"])
     for bad in (0.0, 0.31, -0.1):
         try:
             dac.lift_hw_mm("left", bad)
@@ -176,16 +178,29 @@ def main() -> int:
     # OUTLAST the arm move (a pole completing mid-trajectory faults the
     # moving joints), so quantization rounds DOWN and targets
     # arm_duration * SYNC_POLE_OUTLAST.
-    check("matched lift speed: 105 phys mm over 4 s arm move -> 10%",
-          dac.matched_lift_speed_pct(4.0, 105.0) == 10)
+    check("matched lift speed: 105 phys mm over 4 s arm move -> 19%",
+          dac.matched_lift_speed_pct(4.0, 105.0) == 19)
     _pct = dac.matched_lift_speed_pct(4.0, 105.0)
-    _pole_s = dac.LIFT_START_LATENCY_S + 105.0 / (_pct * dac.LIFT_MM_S_PER_PCT)
+    _pole_s = dac.lift_travel_time_s(105.0, _pct)
     check("matched pole is predicted to finish AFTER the arm",
           _pole_s > 4.0, f"pole {_pole_s:.2f} s vs arm 4.00 s")
-    check("a bigger outlast factor makes the pole slower, never faster",
-          dac.matched_lift_speed_pct(4.0, 105.0)
-          <= math.ceil(105.0 / (4.0 - dac.LIFT_START_LATENCY_S)
-                       / dac.LIFT_MM_S_PER_PCT))
+    check("matched speed is the SLOWEST that still fits the target",
+          dac.lift_travel_time_s(105.0, _pct) <= 4.0 * dac.SYNC_POLE_OUTLAST
+          < dac.lift_travel_time_s(105.0, _pct - 1))
+
+    # Trapezoidal model vs the 2026-08-07 arm-idle hardware measurements
+    for dist, pct, asc, meas, tol in ((140.0, 50, True, 3.47, 0.15),
+                                      (10.0, 50, False, 0.75, 0.25)):
+        pred = dac.lift_travel_time_s(dist, pct, asc)
+        check(f"pole model: {dist:.0f} mm @ {pct}% ~ {meas} s measured",
+              abs(pred - meas) / meas <= tol, f"predicts {pred:.2f} s")
+    # Acceleration-limited regime: once the stroke is too short to reach
+    # the commanded speed, commanding faster changes nothing (bench §3.5).
+    check("short strokes are acceleration-limited (commanding faster is a no-op)",
+          abs(dac.lift_travel_time_s(20.0, 80)
+              - dac.lift_travel_time_s(20.0, 100)) < 1e-9)
+    check("long strokes DO respond to speed",
+          dac.lift_travel_time_s(280.0, 100) < dac.lift_travel_time_s(280.0, 40))
     check("matched lift speed floors at 4%",
           dac.matched_lift_speed_pct(30.0, 1.0) == 4)
     check("matched lift speed caps at 100%",
@@ -359,9 +374,9 @@ def main() -> int:
         # The right-arm upgrade: detection must flip it without any edit.
         dac.LIFT_GEAR["right"] = dict(dac._GEARS["2to3"], name="2to3")
         dac.apply_detected_lift_gear("right", _VerRobot("V1.7.4"))
-        check("upgraded right arm auto-switches to 1to1 (full -> 290)",
+        check("upgraded right arm auto-switches to 1to1 (full -> 300)",
               dac.LIFT_GEAR["right"]["name"] == "1to1"
-              and dac.lift_hw_mm("right", dac.LIFT_M["full"]) == 290)
+              and dac.lift_hw_mm("right", dac.LIFT_M["full"]) == 300)
         # An unreadable version must NOT silently change the assumption.
         dac.LIFT_GEAR["right"] = dict(dac._GEARS["2to3"], name="2to3")
         dac.apply_detected_lift_gear("right", _VerRobot(None))
@@ -487,7 +502,7 @@ def main() -> int:
         "'port': dac.ROBOT_PORT, 'host': dac.HOST_IP, 'udp': dac.UDP_PORT, "
         "'c5host': c5.HOST_IP, 'c5udp': c5.UDP_PORT, "
         "'emul': rm_emulator.EMU_LEFT_IP, 'emur': rm_emulator.EMU_RIGHT_IP, "
-        "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS), 'r_full': dac.lift_hw_mm('right', 0.29), 'l_full': dac.lift_hw_mm('left', 0.29)}))"
+        "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS), 'r_full': dac.lift_hw_mm('right', 0.30), 'l_full': dac.lift_hw_mm('left', 0.30)}))"
     )
 
     def run_probe(extra_env):
@@ -525,11 +540,11 @@ def main() -> int:
         check("env overrides reach the emulator",
               ov["emul"] == "10.9.9.1" and ov["emur"] == "10.9.9.2"
               and ov["emuhosts"] == ["10.9.9.100"])
-        check("default gearing: left 1to1 (290), right 2to3 (193)",
-              cfg["l_full"] == 290 and cfg["r_full"] == 193)
-        gv = run_probe({"RM_RIGHT_LIFT_GEAR": "1to1"})
-        check("RM_RIGHT_LIFT_GEAR=1to1 flips right to 290 (post-upgrade)",
-              gv["r_full"] == 290)
+        check("default gearing: both 1to1, full -> 300",
+              cfg["l_full"] == 300 and cfg["r_full"] == 300)
+        gv = run_probe({"RM_RIGHT_LIFT_GEAR": "2to3"})
+        check("RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller",
+              gv["r_full"] == 200)
     except Exception as exc:
         check("configuration probe subprocess", False, repr(exc))
 

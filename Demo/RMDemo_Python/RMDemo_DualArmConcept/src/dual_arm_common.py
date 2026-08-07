@@ -96,7 +96,26 @@ DEV_LIFT  = 3
 LIFT_START_LATENCY_S   = 0.38     # worst case (unknown direction)
 LIFT_LATENCY_UP_S      = 0.33     # bench_sync direction-aware latencies
 LIFT_LATENCY_DOWN_S    = 0.23
-LIFT_MM_S_PER_PCT      = 1.85     # kLiftCruiseMpsPerPct * 1000
+# ─── Pole motion model (motor-derived, 2026-08-07) ─────────────────────────
+# The Web GUI Lift Control panel reports the drive constants directly:
+#   max 1250 rpm, RR 0.005 m/rev, accel 5000 rpm/s, travel 0-315 mm
+# so 100% = 1250/60 rev/s * 0.005 m/rev = 0.1042 m/s = 104.2 mm/s.
+#
+# This REPLACES the butterfli_hw constant kLiftCruiseMpsPerPct = 0.00185
+# (1.85 mm/s per %). That value implied 100% = 185 mm/s = 2220 rpm, well
+# above the drive's 1250 rpm ceiling — its hw->physical conversion was
+# scaled by 1.5 (the assumed 2:3 gearing), which inflated every velocity
+# by the same factor. 1.85 / 1.5 = 1.23, and the motor constant is 1.04.
+#
+# The bench's *structure* still holds and is what matters: the profile is
+# ACCELERATION-LIMITED, so short strokes never reach cruise (bench §3.5 —
+# every speed >= 40% delivers the same ~0.037 m/s over a 20 mm stroke).
+# A single linear constant is what made the old estimate 2-7x optimistic;
+# lift_travel_time_s() below models the trapezoid instead.
+LIFT_MM_S_PER_PCT      = 1250.0 / 60.0 * 0.005 * 1000.0 / 100.0   # 1.0417
+# butterfli_hw fitted accel 0.166 m/s^2 from the same 1.5x-inflated data;
+# corrected -> 0.111 m/s^2. Validated against the 2026-08-07 C8 runs below.
+LIFT_ACCEL_MM_S2       = 111.0
 LIFT_MIN_MATCH_PCT     = 4        # lowered floor (TODO item 1, 2026-07-25)
 ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
 
@@ -135,10 +154,15 @@ STATES_RAD = {
     },
 }
 
-# ─── Lift heights (metres, SRDF pole_* group states) ────────────────────────
-LIFT_M = {"minimum": 0.01, "quarter": 0.075, "half": 0.15, "full": 0.29}
-LIFT_MIN_M   = 0.01
-LIFT_MAX_M   = 0.29
+# ─── Lift heights (metres) ──────────────────────────────────────────────────
+# Both poles are now configured to 315 mm of travel with 1:1 scaling
+# (Newton, 2026-08-07), so the usable band widened: full_length 0.29 -> 0.30
+# and minimum 0.01 -> 0.005. NOTE: this diverges from the SRDF `pole_*`
+# group states these values originally came from — update the SRDF to match
+# before the ROS 2 side plans against them (see PHASE_PLAN C14).
+LIFT_M = {"minimum": 0.005, "quarter": 0.075, "half": 0.15, "full": 0.30}
+LIFT_MIN_M   = 0.005
+LIFT_MAX_M   = 0.30
 
 # Per-side lift gearing. V1.7.4 switched the lift to TRUE millimetres
 # (1:1, travel 0-330 — confirmed physically 2026-08-06: commanding 193
@@ -153,7 +177,10 @@ LIFT_MAX_M   = 0.29
 # RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR pin it explicitly and win over
 # detection.
 _GEARS = {
-    "1to1": {"hw_per_m": 1000.0, "hw_to_phys": 1.0, "hw_max": 330},
+    # hw_max is the CONTROLLER-configured travel ceiling, not the model's
+    # limit: both poles are set to 315 mm (2026-08-07). full_length 0.30 m
+    # -> 300 hw-mm leaves 15 mm of headroom below it.
+    "1to1": {"hw_per_m": 1000.0, "hw_to_phys": 1.0, "hw_max": 315},
     "2to3": {"hw_per_m": 2000.0 / 3.0, "hw_to_phys": 1.5, "hw_max": 200},
 }
 
@@ -167,8 +194,10 @@ def _lift_gear(side: str, default: str) -> dict:
     return dict(_GEARS[v], name=v)
 
 
+# Both arms now run true-mm 1:1 (right upgraded 2026-08-07). Detection at
+# connect still overrides these, so a rollback needs no edit either.
 LIFT_GEAR = {"left": _lift_gear("left", "1to1"),
-             "right": _lift_gear("right", "2to3")}
+             "right": _lift_gear("right", "1to1")}
 
 # First controller firmware known to report the lift in TRUE millimetres.
 # Left V1.7.4 = 1:1/0-330, right V1.7.1 = 2:3/0-200 (both measured); the
@@ -272,6 +301,43 @@ def est_arm_duration_s(current_deg, target_deg, v_pct: int) -> float:
 SYNC_POLE_OUTLAST = float(os.environ.get("RM_SYNC_POLE_OUTLAST", "1.5"))
 
 
+def lift_travel_time_s(dist_phys_mm: float, pct: int,
+                       ascending=None) -> float:
+    """Predicted pole travel time (start latency + trapezoidal profile).
+
+    Replaces `distance / (k * pct)`, which assumed the pole was always at
+    cruise. It is acceleration-limited, so a short stroke runs a TRIANGULAR
+    profile and never reaches the commanded speed at all — the reason the
+    old linear estimate was wildly optimistic on the strokes this concept
+    actually uses.
+
+    Checked against the 2026-08-07 C8 hardware runs (arm IDLE):
+      left  140 mm @ 50%  -> predicts 3.49 s, measured 3.47 s   (+0.6%)
+      left   10 mm @ 50%  -> predicts 0.83 s, measured 0.68-0.75 s
+      right  15 mm @ 50%  -> predicts 1.12 s, measured 0.90-0.95 s
+    Long strokes land within ~1%; short ones over-predict by 10-25%, which
+    is the safe direction here (a pole predicted slower gets commanded a
+    little faster, and the outlast factor absorbs it).
+
+    ⚠ ARM-IDLE ONLY. With the arm moving, the pole ran 3-4x slower still
+    (left sync leg: this model predicts ~5 s, measured 19.71 s). That
+    coupling is unexplained and unmodelled — it makes the pole even later,
+    so it is safe under the outlast polarity, but sync QUALITY cannot be
+    trusted until it is measured (PHASE_PLAN open item).
+    """
+    latency = (LIFT_LATENCY_UP_S if ascending is True
+               else LIFT_LATENCY_DOWN_S if ascending is False
+               else LIFT_START_LATENCY_S)
+    dist = max(float(dist_phys_mm), 0.0)
+    v = max(int(pct), 1) * LIFT_MM_S_PER_PCT
+    a = LIFT_ACCEL_MM_S2
+    if dist <= v * v / a:                 # triangular: cruise never reached
+        motion = 2.0 * math.sqrt(dist / a)
+    else:                                 # trapezoid: ramp up + cruise + down
+        motion = v / a + dist / v
+    return latency + motion
+
+
 def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float,
                            ascending=None) -> int:
     """Duration-match the lift to the arm move, biased so the pole finishes
@@ -297,13 +363,15 @@ def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float,
     """
     if dist_phys_mm <= 0.0:
         return LIFT_MIN_MATCH_PCT
-    latency = (LIFT_LATENCY_UP_S if ascending is True
-               else LIFT_LATENCY_DOWN_S if ascending is False
-               else LIFT_START_LATENCY_S)
     target_s = arm_duration_s * SYNC_POLE_OUTLAST
-    cruise_s = max(target_s - latency, 0.05)
-    pct = math.floor(dist_phys_mm / cruise_s / LIFT_MM_S_PER_PCT + 1e-9)
-    return max(LIFT_MIN_MATCH_PCT, min(100, pct))
+    # Walk up from the floor and take the FIRST (= slowest) speed whose
+    # predicted travel still fits the target: slowest that fits finishes
+    # latest, and late is the safe direction. If even 100% cannot make the
+    # target the pole is late regardless, so use 100% to minimise it.
+    for pct in range(LIFT_MIN_MATCH_PCT, 101):
+        if lift_travel_time_s(dist_phys_mm, pct, ascending) <= target_s:
+            return pct
+    return 100
 
 
 def parse_mode_arg(argv=None):

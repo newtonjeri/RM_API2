@@ -25,10 +25,10 @@ Example: `RM_LEFT_IP=192.168.2.10 RM_RIGHT_IP=192.168.2.11 RM_HOST_IP=192.168.2.
 | Item | Value |
 |---|---|
 | Lift stroke (physical) | 0–0.3 m |
-| Lift safe range (SRDF states) | 0.01–0.29 m → 7–193 hw-mm |
-| Lift gearing — LEFT (V1.7.4) | **1:1, true mm, travel 0–330** (physically confirmed 2026-08-06: commanding 193 under the old 2/3 assumption left the pole mid-rail). `full_length` 0.29 m → **290** | env `RM_LEFT_LIFT_GEAR` (`1to1`/`2to3`) |
-| Lift gearing — RIGHT (V1.7.1) | 2:3 geared, hw 0–200 (`hw = m × 2000/3`). `full_length` 0.29 m → **193**. **No manual flip needed on upgrade** — the gearing is auto-detected from the controller firmware at connect (`≥ V1.7.4 ⇒ true-mm 1:1`), logged as `lift gearing 2to3 -> 1to1`; the env var only pins it | env `RM_RIGHT_LIFT_GEAR` (override) |
-| Controller-side lift ceiling | Left (V1.7.4): Min 0 / Max **330** true mm — `full_length` command 290 stays inside it. Right (V1.7.1): hw max 200. `lift_hw_mm()` hard-asserts the per-side ceiling. Motor params observed on left: 1250 rpm / 5000 rpm/s / RR 0.005 / joint ID 7 — the V1.7.1-measured speed map (1.85 phys mm/s per %) and start latencies should be revalidated on the upgraded arm before trusting sync-finish numbers. |
+| Lift safe range | **0.005–0.30 m → 5–300 hw-mm** (both poles, 1:1). ⚠ diverges from the SRDF `pole_*` states it came from — update the SRDF before the ROS 2 side plans against it |
+| Lift gearing — BOTH arms | **1:1, true mm, controller travel configured to 315 mm** (2026-08-07; the right arm was upgraded to match the left). `full_length` 0.30 m → **300**, 15 mm under the ceiling | env `RM_LEFT_LIFT_GEAR` / `RM_RIGHT_LIFT_GEAR` (`1to1`/`2to3`) |
+| Gearing detection | Read from the controller firmware at connect (`ctrl_info.version ≥ V1.7.4 ⇒ true-mm 1:1`), logged as `lift gearing 2to3 -> 1to1`; an unreadable version WARNs and keeps the assumption. A rollback to V1.7.1 (2:3, hw 0–200) needs no edit | env pin overrides detection |
+| Controller-side lift ceiling | **315 true mm on both** — `lift_hw_mm()` hard-asserts it, so a 0.32 m target raises rather than clamping. Motor params observed on left: 1250 rpm / 5000 rpm/s / RR 0.005 / joint ID 7 — the V1.7.1-measured speed map (1.85 phys mm/s per %) and start latencies should be revalidated on the upgraded arm before trusting sync-finish numbers. |
 | Arm speed used | 20 % (`rm_movej` v) |
 | Lift speed used | 50 % standalone; **duration-matched** on sync steps (see §1.5) |
 | Hand | Inspire RH56DFX-2L on each arm, protocol path `rm_set_hand_angle`, values 0–1000 (1000 = open), SDK order [little, ring, middle, index, thumb_flex, thumb_rot] |
@@ -48,12 +48,12 @@ Values stored in **radians verbatim** from the SRDF; converted to degrees at dis
 | `zero_pose` | all 0.0 | all 0.0 except **J7 = 3.1416** |
 | `ready` | 0, −1.885, 0, 1.798, 0, 1.379, 0 | 0, −1.885, 0, 1.798, 0, 1.379, **3.1416** |
 | `rest_pose` | 0, −1.431, −0.4538, 1.7103, 0.1047, 1.0821, 1.2043 | 0, −1.431, **+0.4538**, 1.7103, **−0.1047**, 1.0821, 1.9373 |
-| Lift `half_length` | 0.15 m → **100** (2:3) | left: **150** (1:1) |
-| Lift `full_length` | 0.29 m → **193** (2:3) | left: **290** (1:1) |
+| Lift `half_length` | 0.15 m → **150** | 0.15 m → **150** |
+| Lift `full_length` | **0.30 m → 300** | **0.30 m → 300** |
 
 ### 1.4 Concept sequence (both arms, per run)
 
-**Every motion run first pre-positions the pole(s) to `full_length` (0.29 m — left 290 @ 1:1, right 193 @ 2:3)** — a deterministic start state with maximum clearance — dispatched concurrently after the countdown and arrival-verified; a failed homing aborts the run with all arms halted. Then:
+**Every motion run first pre-positions the pole(s) to `full_length` (0.30 m → 300 hw-mm, both poles @ 1:1)** — a deterministic start state with maximum clearance — dispatched concurrently after the countdown and arrival-verified; a failed homing aborts the run with all arms halted. Then:
 
 `arm→ready` → `hand→release` → `sync(arm→zero + pole→half)` → `hand→grasp` → `sync(arm→ready + pole→full)` → `hand→half_grasp` → `arm→rest`
 
@@ -92,7 +92,9 @@ rather than merely being commanded together.
 
 Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level, with **the polarity inverted for this controller**. butterfli_hw treated a LATE pole as the failure mode and rounded the matched speed UP; here an EARLY pole is a *fault* (it completes mid-trajectory) and a late pole is merely slow. So `matched_lift_speed_pct` targets `arm_duration × RM_SYNC_POLE_OUTLAST` (default 1.5), floors at 4 %, and quantizes **ROUND-DOWN**. The acceptance check is correspondingly **"pole outlasts the arm move"** — FAIL if the pole finished before the arm.
 
-⚠ **The speed model is known to be optimistic by 2–7× on this firmware** (left: 140 hw-mm took 3.47 s at 50 % arm-idle, and 19.71 s at 28 % with the arm moving, against ~3 s predicted). That errs in the *safe* direction under the new polarity, but it means sync *quality* is currently poor — `LIFT_MM_S_PER_PCT = 1.85` needs remeasuring per firmware and per arm pose before the finish skews mean anything. `LIFT_TIMEOUT_S` is 60 s (`RM_LIFT_TIMEOUT_S`) because a healthy run once failed purely on the old 25 s limit.
+**Pole motion model (corrected 2026-08-07, motor-derived).** The Web GUI Lift Control panel reports the drive constants: **1250 rpm, RR 0.005 m/rev, accel 5000 rpm/s, travel 0–315 mm** ⇒ **100 % = 104.2 mm/s, k = 1.042 mm/s per %**. This replaced butterfli_hw's 1.85 mm/s/%, which implied 2220 rpm — above the drive's ceiling; its hw→physical ×1.5 conversion inflated every measured velocity. The profile is **acceleration-limited**, so `lift_travel_time_s()` models a trapezoid (triangle on short strokes, where commanding faster does nothing) rather than a single linear constant — that assumption is what made the old estimate 2–7× optimistic. Checked arm-idle against C8: 140 mm @ 50 % predicts 3.49 s vs **3.47 s measured**.
+
+⚠ **Arm-idle only.** With the arm moving the pole ran 3–4× slower still (a sync leg predicted ~5 s took **19.71 s**). That coupling is unexplained and unmodelled; it makes the pole later, so it is safe under the outlast polarity, but sync *quality* cannot be trusted until it is measured. `LIFT_TIMEOUT_S` is 60 s (`RM_LIFT_TIMEOUT_S`) because a healthy run once failed purely on the old 25 s limit.
 
 **Hand dispatch method (hardware-validated 2026-08-06, butterfli_hw
 `acked_angle` semantics)**: both hand paths WORK on both arms (protocol and
@@ -396,7 +398,7 @@ python3 test_dual_free.py     # motion — independent semantics
 
 Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C2 is the most conservative motion mode (step barriers bound divergence), C3 and C4 progressively relax coupling. Total hardware runtime ≈ 6–10 min. Hand steps require the end port NOT in modbus mode (§1.5).
 
-**Before any motion run**: clear space around both arms, both poles free to travel 0.01–0.29 m, e-stop within reach. Each motion test prints a banner and a 3-second countdown before the first dispatch.
+**Before any motion run**: clear space around both arms, both poles free to travel 0.005–0.30 m, e-stop within reach. Each motion test prints a banner and a 3-second countdown before the first dispatch.
 
 ---
 

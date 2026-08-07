@@ -99,16 +99,20 @@ ABORT_JOINT_ERR = 0x0010
 ABORT_SYS_ERR = 5001
 CMD_LATENCY_S = 0.005          # per-command TCP round trip (measured ~8 ms)
 LIFT_START_LATENCY_S = 0.38    # measured (butterfli_hw kLiftStartLatencyS)
-LIFT_SPEED_MAP = [             # speed% -> physical mm/s (LiftBenchmark)
-    (10, 17.3), (20, 32.07), (30, 42.73),
-    (50, 56.44), (70, 63.25), (100, 66.89),
-]
+# Pole motion model — the drive constants the Web GUI reports (1250 rpm,
+# RR 0.005 m/rev, 0-315 mm), same as dual_arm_common. Duplicated rather
+# than imported: the emulator installs itself as the SDK *before*
+# dual_arm_common imports it, so importing back would be circular.
+LIFT_MM_S_PER_PCT = 1250.0 / 60.0 * 0.005 * 1000.0 / 100.0   # 1.0417 mm/s/%
+LIFT_ACCEL_MM_S2 = 111.0
 # Per-arm lift gearing (mirrors dual_arm_common: left 1:1 on V1.7.4,
 # right 2/3 on V1.7.1; same env overrides RM_LEFT/RIGHT_LIFT_GEAR).
 def _gear(side, default):
+    # hw_max mirrors the controller-configured travel: both poles are set
+    # to 315 mm with 1:1 scaling (2026-08-07).
     v = os.environ.get(f"RM_{side.upper()}_LIFT_GEAR", default)
     v = v.strip().lower().replace(":", "to")
-    return {"1to1": (1.0, 330), "2to3": (1.5, 200)}.get(v, (1.5, 200))
+    return {"1to1": (1.0, 315), "2to3": (1.5, 200)}.get(v, (1.5, 200))
 
 MIN_MOTION_S = 0.05
 DEV_JOINT, DEV_HAND, DEV_LIFT = 0, 2, 3
@@ -144,15 +148,21 @@ def _scaled(seconds: float) -> float:
     return seconds / _time_scale
 
 
-def _lift_speed_mm_s(pct: int) -> float:
-    pct = max(1, min(100, int(pct)))
-    pts = LIFT_SPEED_MAP
-    if pct <= pts[0][0]:
-        return pts[0][1] * pct / pts[0][0]
-    for (p0, v0), (p1, v1) in zip(pts, pts[1:]):
-        if pct <= p1:
-            return v0 + (v1 - v0) * (pct - p0) / (p1 - p0)
-    return pts[-1][1]
+def _lift_travel_s(dist_mm: float, pct: int) -> float:
+    """Trapezoidal (or triangular, for short strokes) pole travel time.
+
+    The profile is ACCELERATION-LIMITED, so a short stroke never reaches
+    the commanded speed — modelling that is what makes emulated pole
+    durations line up with the hardware (checked: 140 mm @ 50% -> 3.11 s
+    of motion, measured 3.47 s incl. ~0.33 s start latency).
+    """
+    import math
+    dist = max(float(dist_mm), 0.0)
+    v = max(1, min(100, int(pct))) * LIFT_MM_S_PER_PCT
+    a = LIFT_ACCEL_MM_S2
+    if dist <= v * v / a:
+        return 2.0 * math.sqrt(dist / a)
+    return v / a + dist / v
 
 
 # ─── Process-global SDK state (mirrors the real SDK's globals) ──────────────
@@ -225,9 +235,11 @@ class EmuController:
         self._hand_motion = None
         self.run_mode = 1                     # 1 = REAL, 0 = SIMULATION
         self.collision_stage = 2 if ip == EMU_LEFT_IP else 3   # observed
+        # (still unaligned on the fleet — see PHASE_PLAN R4)
         side = "left" if ip == EMU_LEFT_IP else "right"
-        self.lift_hw_to_phys, self.lift_hw_max = _gear(
-            side, "1to1" if side == "left" else "2to3")
+        # Both arms run true-mm 1:1 since the right's 2026-08-07 upgrade;
+        # RM_*_LIFT_GEAR=2to3 still models a pre-upgrade controller.
+        self.lift_hw_to_phys, self.lift_hw_max = _gear(side, "1to1")
         self._lock = threading.RLock()
         self._arm_motion = None
         self._lift_motion = None
@@ -376,7 +388,7 @@ class EmuController:
             return
         speed_pct, target, done = self._lift_queue.pop(0)
         dist_phys = abs(target - self.lift_hw) * self.lift_hw_to_phys
-        dur = LIFT_START_LATENCY_S + dist_phys / _lift_speed_mm_s(speed_pct)
+        dur = LIFT_START_LATENCY_S + _lift_travel_s(dist_phys, speed_pct)
         motion = _Motion(self.lift_hw, target, _scaled(max(dur, MIN_MOTION_S)),
                          self._lift_done)
         motion.caller_done = done
