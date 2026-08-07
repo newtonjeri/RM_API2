@@ -272,3 +272,274 @@ Environment overrides:
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 
+
+========================================================================
+  Script : test_pole_speed.py
+  Log    : test_pole_speed.log
+  Started: 2026-08-07 19:07:40
+========================================================================
+====================================================================
+C15  Pole speed calibration
+    pole on arm=left @ 192.168.1.10   stroke 100 mm (300 <-> 200 hw-mm)
+    speeds: [10, 20, 30, 37, 40, 50, 70, 100]
+    Phase A: pole ALONE   (add --with-arm for Phase B)
+    mode: REAL   [the lift does NOT execute in SIM]
+    THE LEFT POLE WILL MOVE — the arm stays still
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (1.44 s, event=True)
+  [PASS] pole homed to the top before the sweep
+
+  Phase A — pole ALONE (100 mm legs)
+  ──────────────────────────────────────────────────────────────────
+     10%  down     10.47 s  (model  9.92 s)      9.6 mm/s vs model   10.1   ratio 0.95x
+
+========================================================================
+  Script : test_pole_speed.py
+  Log    : test_pole_speed.log
+  Started: 2026-08-07 19:08:02
+========================================================================
+====================================================================
+C15  Pole speed calibration
+    pole on arm=right @ 192.168.1.103   stroke 100 mm (300 <-> 200 hw-mm)
+    speeds: [10, 20, 30, 37, 40, 50, 70, 100]
+    Phase A: pole ALONE   (add --with-arm for Phase B)
+    mode: REAL   [the lift does NOT execute in SIM]
+    THE RIGHT POLE WILL MOVE — the arm stays still
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+     10%  up       10.48 s  (model 10.02 s)      9.5 mm/s vs model   10.0   ratio 0.96x
+  pre-positioning pole(s) to full_length (0.3 m -> right=300 (1to1)) ...
+  [INFO] right: pole at full length (1.48 s, event=True)
+  [PASS] pole homed to the top before the sweep
+
+  Phase A — pole ALONE (100 mm legs)
+  ──────────────────────────────────────────────────────────────────
+     20%  down      5.28 s  (model  5.22 s)     18.9 mm/s vs model   19.2   ratio 0.99x
+     20%  up        5.31 s  (model  5.32 s)     18.8 mm/s vs model   18.8   ratio 1.00x
+     10%  down     10.55 s  (model  9.92 s)      9.5 mm/s vs model   10.1   ratio 0.94x
+     30%  down      3.76 s  (model  3.71 s)     26.6 mm/s vs model   26.9   ratio 0.99x
+     30%  up        3.77 s  (model  3.81 s)     26.5 mm/s vs model   26.2   ratio 1.01x
+     37%  down      3.20 s  (model  3.17 s)     31.2 mm/s vs model   31.5   ratio 0.99x
+     10%  up       10.50 s  (model 10.02 s)      9.5 mm/s vs model   10.0   ratio 0.95x
+     37%  up        3.22 s  (model  3.27 s)     31.1 mm/s vs model   30.6   ratio 1.02x
+     40%  down      3.03 s  (model  3.01 s)     33.0 mm/s vs model   33.3   ratio 0.99x
+     20%  down      5.30 s  (model  5.22 s)     18.9 mm/s vs model   19.2   ratio 0.99x
+     40%  up        3.03 s  (model  3.11 s)     33.0 mm/s vs model   32.2   ratio 1.02x
+     50%  down      2.63 s  (model  2.62 s)     38.0 mm/s vs model   38.2   ratio 1.00x
+     20%  up        5.31 s  (model  5.32 s)     18.8 mm/s vs model   18.8   ratio 1.00x
+     50%  up        2.65 s  (model  2.72 s)     37.7 mm/s vs model   36.8   ratio 1.03x
+     30%  down      3.76 s  (model  3.71 s)     26.6 mm/s vs model   26.9   ratio 0.99x
+     70%  down      2.25 s  (model  2.26 s)     44.4 mm/s vs model   44.3   ratio 1.00x
+     70%  up        2.25 s  (model  2.36 s)     44.4 mm/s vs model   42.4   ratio 1.05x
+     30%  up        3.75 s  (model  3.81 s)     26.7 mm/s vs model   26.2   ratio 1.02x
+    100%  down      1.98 s  (model  2.13 s)     50.5 mm/s vs model   47.0   ratio 1.07x
+    100%  up        1.99 s  (model  2.23 s)     50.2 mm/s vs model   44.9   ratio 1.12x
+  [PASS] phase A completed every speed  (16/16 legs arrived)
+  [SKIP] phase B (arm coupling)  (--with-arm not given)
+
+  Rerun with --with-arm to measure the coupling.
+
+  Implied k (mm/s per %) from phase A, down legs:
+     10%  ->  k = 0.955   (model uses 1.042)
+     20%  ->  k = 0.946   (model uses 1.042)
+     30%  ->  k = 0.887   (model uses 1.042)
+     37%  ->  k = 0.845   (model uses 1.042)
+     40%  ->  k = 0.826   (model uses 1.042)
+     50%  ->  k = 0.760   (model uses 1.042)
+     70%  ->  k = 0.634   (model uses 1.042)
+    100%  ->  k = 0.505   (model uses 1.042)
+  [PASS] speed law characterized  (8 clean points)
+  [INFO] left: run mode restored to REAL
+     37%  down      3.22 s  (model  3.17 s)     31.1 mm/s vs model   31.5   ratio 0.99x
+
+  Summary: 4 PASS, 0 FAIL, 1 SKIP
+     37%  up        3.21 s  (model  3.27 s)     31.1 mm/s vs model   30.6   ratio 1.02x
+     40%  down      3.04 s  (model  3.01 s)     32.9 mm/s vs model   33.3   ratio 0.99x
+     40%  up        3.05 s  (model  3.11 s)     32.8 mm/s vs model   32.2   ratio 1.02x
+     50%  down      2.64 s  (model  2.62 s)     37.8 mm/s vs model   38.2   ratio 0.99x
+     50%  up        2.63 s  (model  2.72 s)     38.0 mm/s vs model   36.8   ratio 1.03x
+     70%  down      2.24 s  (model  2.26 s)     44.7 mm/s vs model   44.3   ratio 1.01x
+     70%  up        2.25 s  (model  2.36 s)     44.5 mm/s vs model   42.4   ratio 1.05x
+    100%  down      2.00 s  (model  2.13 s)     49.9 mm/s vs model   47.0   ratio 1.06x
+    100%  up        1.99 s  (model  2.23 s)     50.1 mm/s vs model   44.9   ratio 1.12x
+  [PASS] phase A completed every speed  (16/16 legs arrived)
+  [SKIP] phase B (arm coupling)  (--with-arm not given)
+
+  Rerun with --with-arm to measure the coupling.
+
+  Implied k (mm/s per %) from phase A, down legs:
+     10%  ->  k = 0.948   (model uses 1.042)
+     20%  ->  k = 0.944   (model uses 1.042)
+     30%  ->  k = 0.887   (model uses 1.042)
+     37%  ->  k = 0.840   (model uses 1.042)
+     40%  ->  k = 0.822   (model uses 1.042)
+     50%  ->  k = 0.756   (model uses 1.042)
+     70%  ->  k = 0.639   (model uses 1.042)
+    100%  ->  k = 0.499   (model uses 1.042)
+  [PASS] speed law characterized  (8 clean points)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 4 PASS, 0 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_pole_speed.py
+  Log    : test_pole_speed.log
+  Started: 2026-08-07 19:10:23
+========================================================================
+====================================================================
+C15  Pole speed calibration
+    pole on arm=left @ 192.168.1.10   stroke 100 mm (300 <-> 200 hw-mm)
+    speeds: [10, 20, 30, 37, 40, 50, 70, 100]
+    Phase A: pole ALONE  +  Phase B: WITH a concurrent arm move (--with-arm)
+    mode: REAL   [the lift does NOT execute in SIM]
+    THE LEFT POLE WILL MOVE — AND THE ARM in phase B
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.02 s, event=True)
+  [PASS] pole homed to the top before the sweep
+
+  Phase A — pole ALONE (100 mm legs)
+  ──────────────────────────────────────────────────────────────────
+     10%  down     10.67 s  (model  9.92 s)      9.4 mm/s vs model   10.1   ratio 0.93x
+     10%  up       10.50 s  (model 10.02 s)      9.5 mm/s vs model   10.0   ratio 0.95x
+     20%  down      5.30 s  (model  5.22 s)     18.9 mm/s vs model   19.2   ratio 0.98x
+     20%  up        5.31 s  (model  5.32 s)     18.8 mm/s vs model   18.8   ratio 1.00x
+     30%  down      3.75 s  (model  3.71 s)     26.7 mm/s vs model   26.9   ratio 0.99x
+     30%  up        3.78 s  (model  3.81 s)     26.5 mm/s vs model   26.2   ratio 1.01x
+     37%  down      3.22 s  (model  3.17 s)     31.1 mm/s vs model   31.5   ratio 0.99x
+     37%  up        3.22 s  (model  3.27 s)     31.1 mm/s vs model   30.6   ratio 1.02x
+     40%  down      3.04 s  (model  3.01 s)     32.9 mm/s vs model   33.3   ratio 0.99x
+     40%  up        3.04 s  (model  3.11 s)     32.8 mm/s vs model   32.2   ratio 1.02x
+     50%  down      2.64 s  (model  2.62 s)     37.9 mm/s vs model   38.2   ratio 0.99x
+     50%  up        2.66 s  (model  2.72 s)     37.7 mm/s vs model   36.8   ratio 1.02x
+     70%  down      2.23 s  (model  2.26 s)     44.7 mm/s vs model   44.3   ratio 1.01x
+     70%  up        2.24 s  (model  2.36 s)     44.7 mm/s vs model   42.4   ratio 1.05x
+    100%  down      1.97 s  (model  2.13 s)     50.7 mm/s vs model   47.0   ratio 1.08x
+    100%  up        2.00 s  (model  2.23 s)     50.1 mm/s vs model   44.9   ratio 1.12x
+  [PASS] phase A completed every speed  (16/16 legs arrived)
+
+  Phase B — SAME legs with a concurrent arm move (lift dispatched first)
+  ──────────────────────────────────────────────────────────────────
+     10%  down  DID NOT ARRIVE  (model  9.92 s)   <-- incomplete
+     10%  up    DID NOT ARRIVE  (model 10.02 s)   <-- incomplete
+     20%  down  DID NOT ARRIVE  (model  5.22 s)   <-- incomplete
+
+========================================================================
+  Script : test_pole_speed.py
+  Log    : test_pole_speed.log
+  Started: 2026-08-07 19:15:16
+========================================================================
+====================================================================
+C15  Pole speed calibration
+    pole on arm=right @ 192.168.1.103   stroke 100 mm (300 <-> 200 hw-mm)
+    speeds: [10, 20, 30, 37, 40, 50, 70, 100]
+    Phase A: pole ALONE  +  Phase B: WITH a concurrent arm move (--with-arm)
+    mode: REAL   [the lift does NOT execute in SIM]
+    THE RIGHT POLE WILL MOVE — AND THE ARM in phase B
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> right=300 (1to1)) ...
+  [INFO] right: pole at full length (0.02 s, event=True)
+  [PASS] pole homed to the top before the sweep
+
+  Phase A — pole ALONE (100 mm legs)
+  ──────────────────────────────────────────────────────────────────
+     10%  down     10.66 s  (model  9.92 s)      9.4 mm/s vs model   10.1   ratio 0.93x
+     20%  up    DID NOT ARRIVE  (model  5.32 s)   <-- incomplete
+     10%  up       10.50 s  (model 10.02 s)      9.5 mm/s vs model   10.0   ratio 0.96x
+     30%  down      9.40 s  (model  3.71 s)     10.6 mm/s vs model   26.9   ratio 0.39x
+           coupling: 2.51x slower than pole-alone
+     20%  down      5.31 s  (model  5.22 s)     18.8 mm/s vs model   19.2   ratio 0.98x
+     20%  up        5.31 s  (model  5.32 s)     18.8 mm/s vs model   18.8   ratio 1.00x
+     30%  up       13.10 s  (model  3.81 s)      7.6 mm/s vs model   26.2   ratio 0.29x
+           coupling: 3.47x slower than pole-alone
+     30%  down      3.77 s  (model  3.71 s)     26.5 mm/s vs model   26.9   ratio 0.98x
+     30%  up        3.77 s  (model  3.81 s)     26.6 mm/s vs model   26.2   ratio 1.01x
+     37%  down      3.22 s  (model  3.17 s)     31.1 mm/s vs model   31.5   ratio 0.99x
+     37%  up        3.20 s  (model  3.27 s)     31.3 mm/s vs model   30.6   ratio 1.02x
+     37%  down     10.74 s  (model  3.17 s)      9.3 mm/s vs model   31.5   ratio 0.30x
+           coupling: 3.34x slower than pole-alone
+     40%  down      3.03 s  (model  3.01 s)     33.1 mm/s vs model   33.3   ratio 0.99x
+     40%  up        3.04 s  (model  3.11 s)     32.9 mm/s vs model   32.2   ratio 1.02x
+     50%  down      2.65 s  (model  2.62 s)     37.8 mm/s vs model   38.2   ratio 0.99x
+     50%  up        2.64 s  (model  2.72 s)     37.9 mm/s vs model   36.8   ratio 1.03x
+     70%  down      2.23 s  (model  2.26 s)     44.7 mm/s vs model   44.3   ratio 1.01x
+     70%  up        2.25 s  (model  2.36 s)     44.4 mm/s vs model   42.4   ratio 1.05x
+    100%  down      1.98 s  (model  2.13 s)     50.4 mm/s vs model   47.0   ratio 1.07x
+    100%  up        1.98 s  (model  2.23 s)     50.5 mm/s vs model   44.9   ratio 1.12x
+  [PASS] phase A completed every speed  (16/16 legs arrived)
+
+  Phase B — SAME legs with a concurrent arm move (lift dispatched first)
+  ──────────────────────────────────────────────────────────────────
+     37%  up        3.23 s  (model  3.27 s)     31.0 mm/s vs model   30.6   ratio 1.01x
+           coupling: 1.00x slower than pole-alone
+           [WARN] the ARM did not arrive — check joint errors
+           [DIAG] joints J2=16384,J4=16384,J6=16384
+  [PASS] phase B measured  (see the coupling column)
+
+  Implied k (mm/s per %) from phase A, down legs:
+     10%  ->  k = 0.937   (model uses 1.042)
+     20%  ->  k = 0.943   (model uses 1.042)
+     30%  ->  k = 0.889   (model uses 1.042)
+     37%  ->  k = 0.840   (model uses 1.042)
+     40%  ->  k = 0.823   (model uses 1.042)
+     50%  ->  k = 0.757   (model uses 1.042)
+     70%  ->  k = 0.639   (model uses 1.042)
+    100%  ->  k = 0.507   (model uses 1.042)
+  [PASS] speed law characterized  (8 clean points)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+     10%  down  DID NOT ARRIVE  (model  9.92 s)   <-- incomplete
+     10%  up    DID NOT ARRIVE  (model 10.02 s)   <-- incomplete
+     20%  down     15.66 s  (model  5.22 s)      6.4 mm/s vs model   19.2   ratio 0.33x
+           coupling: 2.95x slower than pole-alone
+     20%  up        5.30 s  (model  5.32 s)     18.9 mm/s vs model   18.8   ratio 1.00x
+           coupling: 1.00x slower than pole-alone
+           [DIAG] system 4098; joints J2=16384,J4=16384,J6=16384
+  [PASS] phase B measured  (see the coupling column)
+
+  Implied k (mm/s per %) from phase A, down legs:
+     10%  ->  k = 0.938   (model uses 1.042)
+     20%  ->  k = 0.941   (model uses 1.042)
+     30%  ->  k = 0.884   (model uses 1.042)
+     37%  ->  k = 0.839   (model uses 1.042)
+     40%  ->  k = 0.826   (model uses 1.042)
+     50%  ->  k = 0.756   (model uses 1.042)
+     70%  ->  k = 0.639   (model uses 1.042)
+    100%  ->  k = 0.504   (model uses 1.042)
+  [PASS] speed law characterized  (8 clean points)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
