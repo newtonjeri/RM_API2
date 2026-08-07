@@ -79,6 +79,30 @@ keys; the installed `rm_thread_mode_e` is a real IntEnum, so the
 `rm_get_arm_event_call_back` / `rm_realtime_arm_state_call_back` also exist
 as module-level functions, matching the real `rm_ctypes_wrap`.
 
+## Modelled hardware defect: lift aborts an in-flight planned move
+
+`rm_set_lift_height` issued while a **planned** arm trajectory is in flight
+cancels that trajectory — joints freeze where they are, **no device-0
+arrival event is delivered**, and the dispatch still returns 0. Confirmed on
+hardware 2026-08-07 (C9 `--no-hands`, one arm, hands absent) after the same
+freeze hit C2 on both arms; the reverse is not modelled (an arm command
+issued while the pole moves leaves the pole running, which is what RealMan's
+own online program relies on). This is why sync steps dispatch the lift
+first — see `RM_SYNC_ORDER` in TEST_PROCEDURE §1.5.
+
+The abrupt stop is a **hardware fault, not a clean cancel**: it latches
+JOINT ERRORS and every later motion command returns `ret=1` until
+`rm_clear_system_err`. The emulator models that lifecycle
+(`joint_err_flags`, `motion_locked`) so the recovery requirement is
+reproducible offline. The specific codes (`ABORT_JOINT_ERR`,
+`ABORT_SYS_ERR`) are placeholders — the **behaviour** is what was observed;
+replace them if the real codes are ever captured from a frozen arm.
+
+The emulated suite's **C9 sync-order drill** walks the whole incident:
+`arm_first` freezes the arm and latches the errors → the next run is
+REFUSED by the latched-error gate → `--clear-errors` recovers and the
+sequence completes.
+
 ## Fault injection
 
 Per-arm knobs via `rm_emulator.emu_controller(ip)`:

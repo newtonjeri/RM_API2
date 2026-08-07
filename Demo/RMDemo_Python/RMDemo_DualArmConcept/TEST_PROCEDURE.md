@@ -61,6 +61,28 @@ First step doubles as homing from any start pose. Hand states come from the SRDF
 
 ### 1.5 Arm–pole synchronization (the feature under test)
 
+**⚠ DISPATCH ORDER IS LOAD-BEARING (hardware-decided 2026-08-07).** A lift
+command issued while a **planned** arm trajectory is in flight **aborts that
+trajectory**: the arm stops short and **no device-0 arrival event ever
+arrives**, so the waiter hangs until its timeout. Proven by C9 on a single
+arm with hands absent (`--no-hands` froze at the first sync step; the same
+run with `--no-pole` passed 6/6), after the same freeze hit C2 on both arms.
+RealMan's own Web-GUI online program (`ZIGZAG01`, pole and arm moving
+together) never does this — it issues the lift **non-blocking FIRST** and
+only then commands the arm, which is also the ordering `bench_sync` proved.
+**The abort is a HARDWARE FAULT, not a clean cancel**: it latches JOINT
+ERRORS, and every later motion command is then rejected with `ret=1`
+until `rm_clear_system_err` runs — so a frozen run poisons the next one
+too. Every motion test therefore opens with a **latched-error gate**
+that refuses to start (and names the codes) rather than failing
+confusingly mid-run; `--clear-errors` clears them first.
+
+**Sync steps therefore dispatch the LIFT first, then the arm move.** Env
+`RM_SYNC_ORDER=arm_first` restores the old (freezing) order for A/B tests;
+`RM_SYNC_LEAD_MS=N` gives the pole a head start (it has the longer start
+latency: ~235 ms down / ~330 ms up) so the two devices *start* together
+rather than merely being commanded together.
+
 Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level: both devices are dispatched back-to-back, and the lift speed is **duration-matched** to the arm move — `v = distance / (arm_duration − 0.38 s start latency)`, `pct = ceil(v / 1.85)`, floored at 4 % — with ROUND-UP quantization (early finish is benign, the device waits; late is the failure mode). Per step the test reports dispatch start skew and joint-vs-lift finish skew, mirroring `bench_sync`'s `pa_start`/`pa_finish`.
 
 **Hand dispatch method (hardware-validated 2026-08-06, butterfli_hw
@@ -120,7 +142,10 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `70/70 passed`, then every suite entry `exit 0 (OK)` — including
+Expected: `79/79 passed`, then every suite entry `exit 0 (OK)` — including
+the **C9 sync-order drill** (`arm_first` must reproduce the arm
+freeze AND latch joint errors, the next run must then be REFUSED until
+`--clear-errors` recovers it — the full incident lifecycle),
 the **C2 arm-only drill** (`--no-hands --no-pole` must strip hand and lift
 parts cleanly, sync steps running as plain arm moves) and the **C8
 locked-pole drill**, which injects the 2026-08-06 lift-rejection fault on
@@ -241,6 +266,7 @@ Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
 
 | ID | Check | Pass condition |
 |---|---|---|
+| PL0 | No latched controller errors | clean, or cleared with `--clear-errors` (a frozen run latches joint errors) |
 | PL1 | All dispatches accepted | every `rm_movej`/`rm_set_lift_height` ret 0 |
 | PL2 | Sequence completed | all 7 steps, barrier honored, both arms ok |
 | PL3 | Dispatch skew | max < 50 ms (baseline: single call ≈ 8 ms) |
@@ -266,11 +292,12 @@ it finish rather than Ctrl-C. `RM_ARM=left|right` selects the arm.
 
 | ID | Check | Pass condition |
 |---|---|---|
+| SL0 | No latched controller errors | clean, or cleared with `--clear-errors` |
 | SL1 | Pole pre-positioned | full_length, arrival-verified (SKIP note with `--no-pole`) |
 | SL2 | All dispatches accepted | every `ret == 0` |
 | SL3 | Sequence completed | all steps ok; on failure names the first frozen step |
 | SL4 | Arrival via event | every non-acked device evented (a missing ARM event on a sync step = the C2 freeze signature) |
-| SL5 | Sync dispatch back-to-back | movej→lift gap < 50 ms per sync step |
+| SL5 | Sync dispatch gap | lift↔movej gap within budget (50 ms + `RM_SYNC_LEAD_MS`) |
 | SL6 | Arm–pole sync finish | pole ≤ 0.5 s late on steps that truly completed (a frozen step cannot pass this) |
 
 ### C3 — `test_dual_chained.py` (**moves both arms and both poles**)
@@ -301,7 +328,8 @@ lift and hand do not simulate, so this test is meaningful on REAL.
 
 | ID | Check | Pass condition |
 |---|---|---|
-| SA0 | Pole pre-positioned | full_length reached (per-side gearing) |
+| SA0a | No latched controller errors | clean, or cleared with `--clear-errors` (a frozen run latches joint errors) |
+| SA0b | Pole pre-positioned | full_length reached (per-side gearing) |
 | SA1 | movej ready + hand release | both arrivals, ok |
 | SA2 | movej rest_pose + hand grasp | both arrivals, ok |
 | SA3 | movej_p +X + half_grasp | `dx = +0.20 ± 0.02 m`, `|dy|,|dz| ≤ 0.03 m`, hand ok (movej_p ret 1 ⇒ IK/unreachable, fails cleanly) |
@@ -367,17 +395,17 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 70 | 0 | 0 | offline |
+| run_dry_run | 79 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_pole_only | 7+1 SKIP | 0 | 1 | D5 SKIPs without `--clear-errors` |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
 | test_hand_only | 8 | 0 | 0 | HB2 verdict is the finding |
-| test_dual_locked | 6 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
-| test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
-| test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
-| test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| test_single_arm_locked | 6 | 0 | 0 | the C2 sequence on one arm |
-| **Total** | **127** | **0** | **1** | |
+| test_dual_locked | 7 | 0 | 0 | incl. pole pre-position + PL5 sync-finish |
+| test_dual_chained | 6 | 0 | 0 | incl. pole pre-position |
+| test_dual_free | 5 | 0 | 0 | incl. pole pre-position |
+| test_single_arm_planned | 8 | 0 | 0 | one arm + pole + hand |
+| test_single_arm_locked | 7 | 0 | 0 | the C2 sequence on one arm |
+| **Total** | **141** | **0** | **1** | |
 
 ---
 
