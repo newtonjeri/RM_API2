@@ -343,3 +343,89 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 4 PASS, 3 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 18:48:50
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (vendor Blockly + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.02 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.17 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.02 s   arm  3.73 s   start-skew -10.4 ms   finish-skew +56272 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew  -10.4 ms
+  [PASS] sync dispatch gap  (max 10.4 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+  [INFO] left: run mode restored to REAL
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 18:52:03
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=right @ 192.168.1.103   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE RIGHT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (vendor Blockly + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> right=300 (1to1)) ...
+  [INFO] right: pole at full length (0.01 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  3.18 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.01 s   arm  6.73 s   start-skew  -6.2 ms   finish-skew +53275 ms
+  [DIAG] right: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -6.2 ms
+  [PASS] sync dispatch gap  (max 6.2 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+  [INFO] right: run mode restored to REAL
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP

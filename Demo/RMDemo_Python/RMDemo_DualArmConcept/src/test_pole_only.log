@@ -258,3 +258,75 @@ current c api version:  1.1.6
   [SKIP] home to full length  (--diagnose-only)
 
   Summary: 3 PASS, 1 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-07 18:45:53
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: REAL  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=0 hw-mm  current=214 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (0 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.01 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 10: ret=0 arrived=True success=True (0.77 s)
+    back to 0: ret=0 arrived=True success=True (0.69 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (6.49 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-07 18:46:15
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=right @ 192.168.1.103   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: REAL  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=0 hw-mm  current=987 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (0 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.02 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 10: ret=0 arrived=True success=True (0.77 s)
+    back to 0: ret=0 arrived=True success=True (0.68 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> right=300 (1to1)) ...
+  [INFO] right: pole at full length (6.48 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
