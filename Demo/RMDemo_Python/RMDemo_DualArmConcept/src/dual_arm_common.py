@@ -117,7 +117,24 @@ LIFT_MM_S_PER_PCT      = 1250.0 / 60.0 * 0.005 * 1000.0 / 100.0   # 1.0417
 # corrected -> 0.111 m/s^2. Validated against the 2026-08-07 C8 runs below.
 LIFT_ACCEL_MM_S2       = 111.0
 LIFT_MIN_MATCH_PCT     = 4        # lowered floor (TODO item 1, 2026-07-25)
-ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
+ARM_MAX_DEG_S          = 180.0    # J1-J6 software speed limit (see below)
+
+# ─── Controller limits AS CONFIGURED ON THESE ARMS ─────────────────────────
+# Read from the Web GUI (Configuration -> Robotic Arm Config -> Security
+# Config), Documentation/Hardware Limits screenshots. These are the machine's
+# ACTUAL settings and they are NOT the API-documentation defaults — the docs
+# list 0.1 m/s / 0.2 rad/s / 0.5 / 1.0, every one of which is lower than what
+# is configured here. Read them from the arm rather than trusting the manual.
+TCP_MAX_LINE_SPEED_MS    = 0.250   # rm_get/set_arm_max_line_speed
+TCP_MAX_LINE_ACC_MS2     = 1.600   # rm_get/set_arm_max_line_acc
+TCP_MAX_ANGULAR_SPEED_RS = 0.600   # rm_get/set_arm_max_angular_speed
+TCP_MAX_ANGULAR_ACC_RS2  = 4.000   # rm_get/set_arm_max_angular_acc
+# Joint limits: J1-J6 speed 180 deg/s (range 1-180), J7 225 deg/s
+# (range 1-225); acceleration 600 deg/s^2 on every joint; J1 travel
+# +/-178 deg, J7 +/-365 deg. est_arm_duration_s() uses the 180 figure, so it
+# UNDER-estimates a J7-dominated move.
+ARM_J7_MAX_DEG_S       = 225.0
+ARM_MAX_ACC_DEG_S2     = 600.0
 
 # ─── Sync dispatch ORDER (hardware-decided 2026-08-07) ──────────────────────
 # A lift command issued while a PLANNED arm trajectory is in flight ABORTS
@@ -125,7 +142,7 @@ ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
 # arrives. Proven on one arm with hands absent (C9 --no-hands froze at the
 # first sync step; the same run with --no-pole passed 6/6).
 #
-# RealMan's own Web-GUI online program (ZIGZAG01) moves pole and arm
+# Our ZIGZAG01 Web-GUI program (in-house, not a vendor example) moves
 # together and never does this — it issues the lift NON-BLOCKING FIRST and
 # only then commands the arm, so the pole is already in flight when the arm
 # move starts. That is also the ordering butterfli_hw's bench_sync proved
@@ -134,6 +151,31 @@ ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
 #   RM_SYNC_ORDER=arm_first   restore the old (freezing) order for A/B tests
 #   RM_SYNC_LEAD_MS=N         pole head start before the arm command; 0 =
 #                             back-to-back, exactly like the vendor program
+# ─── Sync BACKEND — how the arm half of a sync step is driven ──────────────
+# Both paths are kept deliberately. C16 established (model-free, both arms)
+# that a lift command and a PLANNED arm move truncate each other, so the
+# 'planned' backend is expected to fail — but it stays as the reference case
+# while RealMan support reviews the behaviour: if they supply a fix or a
+# configuration, re-testing it is one env flip, not a rewrite.
+#
+#   canfd    (default) arm streamed with rm_movej_canfd while the lift runs
+#            — the combination butterfli_hw bench_sync proved works
+#   planned  arm driven by rm_movej — the failing case, kept for A/B and
+#            for re-test when support replies
+#
+# A real bonus of the canfd path: the arm's duration is COMMANDED, not
+# estimated, so the pole match no longer depends on est_arm_duration_s()
+# (measured 24%-120% wrong).
+SYNC_BACKEND = os.environ.get("RM_SYNC_BACKEND", "canfd").lower()
+if SYNC_BACKEND not in ("canfd", "planned"):
+    raise SystemExit(f"RM_SYNC_BACKEND must be canfd|planned, "
+                     f"got {SYNC_BACKEND!r}")
+# Streaming parameters (butterfli_hw proved 100 Hz / high-follow stable:
+# canfd period mean 9.992 ms, p99 <= 10.16 under full concurrent load).
+CANFD_RATE_HZ = float(os.environ.get("RM_CANFD_RATE_HZ", "100"))
+CANFD_FOLLOW = os.environ.get("RM_CANFD_FOLLOW", "1") != "0"
+CANFD_ARM_DURATION_S = float(os.environ.get("RM_CANFD_ARM_S", "4.0"))
+
 SYNC_ORDER = os.environ.get("RM_SYNC_ORDER", "lift_first").lower()
 if SYNC_ORDER not in ("lift_first", "arm_first"):
     raise SystemExit(f"RM_SYNC_ORDER must be lift_first|arm_first, "
@@ -418,6 +460,13 @@ Environment overrides:
   RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
   RM_ARM=left|right                            arm selection (C6/C7)
   RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej, the case C16 showed the controller cannot do
+                    concurrently — kept for A/B and for re-test when RealMan
+                    support replies
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
   RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
                     command lands on an in-flight movej under arm_first and
                     KILLS it — that order froze the arms 2026-08-06/07)
@@ -671,6 +720,7 @@ class ConceptArm:
         # Firmware decides the lift units — adopt them before any lift
         # target is computed (see apply_detected_lift_gear).
         apply_detected_lift_gear(side, robot)
+        ensure_self_collision_enabled(self)
 
     # ── step introspection ──
     def parts_for(self, step):
@@ -709,6 +759,60 @@ class ConceptArm:
                 lift_speed or LIFT_SPEED_PCT,
                 lift_hw_mm(self.side, LIFT_M[target]), 0)
         raise ValueError("hand parts use start_hand_blocking()")
+
+    def start_arm_canfd(self, target, duration_s=None) -> dict:
+        """Stream the arm to `target` with rm_movej_canfd (passthrough).
+
+        This is the arm half of a CANFD sync step. Unlike a planned move it
+        does NOT bypass-plan on the controller and it emits NO device-0
+        arrival event, so completion is duration-based (the stream ends) and
+        verified afterwards by joint position — the same shape as the hand's
+        acked_angle path.
+
+        The profile is a cosine ease (butterfli_hw bench_sync uses the same
+        shape), which keeps commanded velocity continuous at both ends; a
+        step discontinuity here is what the controller flags on the planned
+        path. Duration is COMMANDED, so the pole's duration match against it
+        is exact rather than estimated.
+        """
+        dur = float(duration_s or CANFD_ARM_DURATION_S)
+        holder = {"target": target, "ret": None, "duration_s": dur,
+                  "t_dispatch": time.perf_counter(), "t_done": None,
+                  "sent": 0, "errors": 0}
+        goal = state_deg(self.side, target)
+        ret, st = self.robot.rm_get_current_arm_state()
+        start = list(st["joint"]) if ret == 0 else state_deg(self.side, "ready")
+
+        def work():
+            period = 1.0 / CANFD_RATE_HZ
+            t0 = time.perf_counter()
+            next_t = t0
+            while True:
+                now = time.perf_counter()
+                phase = min(1.0, (now - t0) / dur)
+                # cosine ease: zero velocity at both ends
+                s = (1.0 - math.cos(math.pi * phase)) / 2.0
+                cmd = [a + (b - a) * s for a, b in zip(start, goal)]
+                try:
+                    r = self.robot.rm_movej_canfd(cmd, CANFD_FOLLOW, 0, 0, 0)
+                except Exception:
+                    r = -1
+                holder["sent"] += 1
+                if r != 0:
+                    holder["errors"] += 1
+                    holder["ret"] = r
+                if phase >= 1.0:
+                    break
+                next_t += period
+                time.sleep(max(0.0, next_t - time.perf_counter()))
+            if holder["ret"] is None:
+                holder["ret"] = 0
+            holder["t_done"] = time.perf_counter()
+
+        t = threading.Thread(target=work, daemon=True)
+        holder["thread"] = t
+        t.start()
+        return holder
 
     def start_hand_acked(self, target) -> dict:
         """butterfli_hw acked_angle semantics: NON-BLOCKING send +
@@ -756,8 +860,13 @@ class ConceptArm:
             try:
                 ret, st = self.robot.rm_get_current_arm_state()
                 cur = st["joint"] if ret == 0 else state_deg(self.side, "ready")
-                arm_dur = est_arm_duration_s(
-                    cur, state_deg(self.side, step[1][0]), ARM_SPEED_PCT)
+                # canfd: the arm duration is COMMANDED, so it is exact.
+                # planned: it has to be estimated (24%-120% error measured).
+                arm_dur = (CANFD_ARM_DURATION_S if SYNC_BACKEND == "canfd"
+                           else est_arm_duration_s(
+                               cur, state_deg(self.side, step[1][0]),
+                               ARM_SPEED_PCT))
+                beg["sync_backend"] = SYNC_BACKEND
                 lret, lst = self.robot.rm_get_lift_state()
                 pos_hw = lst.get("pos", 0) if lret == 0 else 0
                 target_hw = lift_hw_mm(self.side, LIFT_M[step[1][1]])
@@ -788,6 +897,17 @@ class ConceptArm:
                                           "acked": False, "verified": False,
                                           "ok": False, "_hand": holder}
                 continue
+            if device == DEV_JOINT and step[0] == "sync" \
+                    and SYNC_BACKEND == "canfd":
+                # Passthrough arm half: streamed, no arrival event, so it
+                # completes on stream end + position verify (see finish()).
+                holder = self.start_arm_canfd(target)
+                beg["devices"][device] = {"target": target, "ret": 0,
+                                          "t_dispatch": holder["t_dispatch"],
+                                          "t_done": None, "event": False,
+                                          "acked": False, "verified": False,
+                                          "ok": False, "_canfd": holder}
+                continue
             t0 = time.perf_counter()
             ret = self._dispatch_device(device, target, lift_speed)
             beg["devices"][device] = {"target": target, "ret": ret,
@@ -799,6 +919,20 @@ class ConceptArm:
     def finish(self, monitor: ArrivalMonitor, beg: dict) -> dict:
         """Wait for every device dispatched by begin(); aggregate a record."""
         for device, d in beg["devices"].items():
+            if "_canfd" in d:
+                holder = d.pop("_canfd")
+                holder["thread"].join(holder["duration_s"] + 10.0)
+                d["ret"] = holder["ret"] if holder["ret"] is not None else -1
+                d["t_done"] = holder["t_done"] or time.perf_counter()
+                # No arrival event exists for passthrough: the stream
+                # finishing IS the completion, and the joint position is
+                # the only real confirmation.
+                d["acked"] = d["ret"] == 0
+                d["verified"] = self.verify_device(device, d["target"])
+                d["ok"] = d["acked"] and d["verified"]
+                d["canfd_sent"] = holder["sent"]
+                d["canfd_errors"] = holder["errors"]
+                continue
             if device == DEV_HAND:
                 holder = d.pop("_hand")
                 holder["thread"].join(HAND_DWELL_S + 5.0)
@@ -851,6 +985,9 @@ class ConceptArm:
                 rec["sync_finish_skew_s"] = l["t_done"] - j["t_done"]
             rec["arm_dur_est_s"] = beg.get("arm_dur_est_s")
             rec["lift_speed_pct"] = beg.get("lift_speed_pct")
+            rec["sync_backend"] = beg.get("sync_backend", SYNC_BACKEND)
+            rec["canfd_sent"] = beg["devices"][DEV_JOINT].get("canfd_sent")
+            rec["canfd_errors"] = beg["devices"][DEV_JOINT].get("canfd_errors")
         return rec
 
     # ── fallback verification ──
@@ -926,6 +1063,42 @@ def stop_all(*arms):
     for arm in arms:
         if arm is not None:
             arm.halt()
+
+
+def ensure_self_collision_enabled(arm: "ConceptArm") -> None:
+    """Turn ON the controller's self-collision safety detection.
+
+    Per the API docs it "ensures that, when enabled, the various parts of
+    the robotic arm do not collide with each other during processes such as
+    trajectory planning and teaching" — whole-arm, at PLANNING time, and
+    independent of anything we check offline. It is free and it covers a
+    failure mode our scene primitives do not, so the tests enable it rather
+    than inheriting whatever the arm was left in.
+
+    Note this is NOT the same as the Web GUI's "Collision Protection
+    Level" (0-8, rm_set_collision_state), which is a contact/torque
+    threshold. Both exist; this one is the geometric check.
+
+    RM_SELF_COLLISION=0 leaves the arm as-found (for A/B testing).
+    """
+    if os.environ.get("RM_SELF_COLLISION") == "0":
+        print(f"  [INFO] {arm.side}: self-collision left as-found "
+              "(RM_SELF_COLLISION=0)")
+        return
+    try:
+        ret, enabled = arm.robot.rm_get_self_collision_enable()
+    except Exception as exc:
+        print(f"  [WARN] {arm.side}: self-collision state unreadable "
+              f"({exc!r}) — cannot confirm it is on")
+        return
+    if ret == 0 and enabled:
+        return                                   # already on, stay quiet
+    try:
+        sret = arm.robot.rm_set_self_collision_enable(True)
+    except Exception as exc:
+        sret = repr(exc)
+    print(f"  [INFO] {arm.side}: self-collision detection was "
+          f"{'OFF' if ret == 0 else 'UNKNOWN'} -> enabling (ret={sret})")
 
 
 def error_state(arm: "ConceptArm") -> dict:

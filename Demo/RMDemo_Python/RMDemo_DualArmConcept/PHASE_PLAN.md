@@ -1,392 +1,356 @@
-# Butterfli — Phase Plan: ROS 2 planning + controller-planned execution
+# Butterfli — Phase Plan: ROS 2 planning + controller execution
 
 *Living document. Newton owns the schedule and the orchestrator; this file is
 the shared contract for what "feasible" means and what closes each gate.*
-*Created 2026-08-07. Update the STATUS column as gates close.*
+*Created 2026-08-07 · **substantially revised 2026-08-07 evening** after the
+C15/C16 hardware sessions overturned the arm–pole synchronization design.*
 
 ---
 
-## 0. The architecture in one paragraph
+## 0. Status at a glance
+
+| | |
+|---|---|
+| **Architecture** | ROS 2 (MoveIt/MTC) plans and validates; the RealMan controller executes. **Unchanged and still sound.** |
+| **What changed** | Arm–pole *synchronization* cannot be done with planned moves. Proven model-free on both arms (C16). Sync moves to **CANFD passthrough**; everything else stays on planned moves. |
+| **Hardware state** | Both arms **V1.7.4**, algo 1.5.9, lifts 1:1 true mm over **0–315 mm**. Firmware mismatch resolved. |
+| **Open externally** | RealMan support query sent — until they reply, **both sync backends stay in the code** (`RM_SYNC_BACKEND=canfd\|planned`). |
+| **Biggest open risk** | **C14 frame alignment** — a ~59 mm discrepancy is visible between the controller tool frame and `R_glove_frame_4`, unresolved. Every cleaning point depends on it. |
+
+---
+
+## 1. The architecture
 
 **ROS 2 decides WHERE to move; the RealMan controller decides HOW to get
 there.** MoveIt/MTC are a **task planner and a validator — not a path source
 to be reproduced**. They own the scene, URDF/TF, IK, reachability and the
 collision verdict; they do *not* hand over a dense trajectory. Execution
-sends the controller a **short list of sparse targets**: joint targets for
-named poses (`rest`, `ready`, stroke entry) and Cartesian targets for the
-cleaning strokes. Peripherals (pole, hand+glove) are sequenced around arm
-motion under a strict ordering rule.
+sends the controller a **short list of sparse targets**.
 
 The safety question is therefore **not** "does the executed path match
 MoveIt's path?" — nothing is trying to match it. It is "**is the motion the
-controller actually produces collision-free in this scene?**", answered on
-two independent layers:
+controller actually produces collision-free in this scene?**":
 
 ```
-  MTC task ──▶ MoveIt: reachability, IK,  ──▶ sparse targets ──▶ controller-planned
-  (stages)     goal-state collision, order     movej / movel      execution
-                        │                            │                  │
-                        │                   OFFLINE verify:      ONLINE backstop:
-                        │                   predict the           self-collision
-                        │                   controller's own      detection
-                        │                   motion (rm_algo),     (free, always on)
-                        │                   FCL vs PRIMITIVES     [fence NOT used]
+  MTC task ──▶ MoveIt: reachability, IK,  ──▶ sparse targets ──▶ controller
+  (stages)     goal-state collision, order    movej / movel       execution
+                        │                     canfd for SYNC          │
+                        │                            │                │
+                        │                   OFFLINE verify:    ONLINE backstop:
+                        │                   predict the         self-collision
+                        │                   controller's own    detection
+                        │                   motion (rm_algo),   (free, always on)
+                        │                   FCL vs PRIMITIVES   [fence NOT used]
                         │                            │
                         └──── planning scene ────────┘
                               URDF · TF · SRDF
                      (C11 rehearsal capture validates the predictor once)
 ```
 
-**Why this shape:** it keeps MoveIt's collision reasoning and MTC's task
-structure while execution stays on the vendor's own motion profiles — which
-are deterministic and repeatable, so a segment verified once stays valid.
 MoveIt's *timing* is discarded; the controller re-times everything. That is
 acceptable for cleaning: geometry and coverage matter, velocity profiles do
 not.
 
----
+### 1.1 Execution domains — the one structural constraint
 
-## 1. Existence proof: ZIGZAG01
-
-Newton's hand-written Web-GUI program (`ZIGZAG01`, 2026-08-07) is
-structurally the same thing this architecture generates automatically:
-
-| ZIGZAG01 | The architecture |
-|---|---|
-| 21 taught waypoints ZIG0…ZIG20 | 20 hinge cleaning points from `cleaning_path_gen` |
-| `MOVEJ` then `MOVEL`, World frame, blending radius 10 | `movej` to pin configuration, `movel` for strokes (§4.1) |
-| lift commanded **non-blocking first**, then the arm moves | the ordering rule (§4.3) |
-| runs, pole and arm move together | the behaviour Phase 2 reproduces from a task spec |
-
-**So the target execution model already runs on this hardware.** Phase 2 does
-not invent it — it generates it from MTC instead of teaching it by hand. This
-materially de-risks the schedule and should be treated as the reference
-behaviour whenever a design question comes up.
-
----
-
-## 2. What the bench tests have established
-
-Findings that now constrain the design (all hardware-observed unless noted):
-
-| # | Finding | Consequence for Phase 2 |
+| Motion | Domain | Why |
 |---|---|---|
-| F1 | **A lift command issued during an in-flight planned arm move ABORTS it** — arm stops short, no arrival event, and it **latches joint errors** that block all later motion until cleared | Hard dispatch invariant (§4.3). Must be enforced in code, not by convention |
-| F2 | Sim mode **executes the arm and is fully observable** (UDP push, arrival events, TCP polls) | The rehearsal-validation loop is viable — this is what makes controller-planned execution collision-safe |
-| F3 | Sim mode does **not** execute lift or hand | Rehearsals cover arm geometry only; peripherals need separate reasoning |
-| F4 | Hand: device-2 arrival events never fire; blocking `rm_set_hand_angle` fails (−4) during arm motion | Hand completion is duration-based (`acked_angle`); modbus RTU is the true-feedback path |
-| F5 | Planned `rm_movej` + concurrent hand works (C6, 7/7 ×3) | Tool/hand actuation during arm motion is safe |
-| F6 | Lift is a profiled positioner; **re-targeting mid-motion restarts the profile** | One target per pole goal; no lookahead re-targeting |
-| F7 | Per-arm lift gearing differs (left 1:1 V1.7.4, right 2:3 V1.7.1) | Firmware alignment is a Phase 2 prerequisite (§7 R4) |
-| F8 | canfd `expand` cannot drive the lift (butterfli_hw `bench_lift_expand`) | No single-command 8-axis sync; pole is always a separate command |
+| Named poses, transits, stroke entry, cleaning strokes | **planned** (`rm_movej` / `rm_movel`) | Controller profiles, arrival events, TCP limits enforced |
+| Pole between arm moves | **planned** (`rm_set_lift_height`) while the arm is idle | Safe; this is what ZIGZAG01 does |
+| **Arm + pole moving together** | **CANFD passthrough** (`rm_movej_canfd` stream + `rm_set_lift_height`) | The only combination that works — F9 |
 
 ---
 
-## 3. PHASE 1 GATE CHECKLIST — the approval table for Phase 2
+## 2. What ZIGZAG01 actually demonstrates
 
-Legend: ✅ passed on hardware · 🟡 partially passed · ⛔ blocked/not run ·
-⬜ not started. **Phase 2 starts when every BLOCKING row is ✅.**
+*(Corrected 2026-08-07 evening. `ZIGZAG01` is an **in-house** Web-GUI program
+written in our lab — not a vendor example.)*
 
-### 3.1 Execution-layer gates (C1–C9) — RM_API2 command semantics
+It was originally read here as proof that synchronized arm+pole motion works.
+**It is not.** Re-reading it against the C16 findings, it is proof of
+something more useful: **the safe usage pattern**.
 
-| ID | Test | What it proves | Blocking? | STATUS | Evidence / what's left |
+Its lift blocks are one `height=330, speed=100, BLOCKING` followed by **seven**
+`height=0, speed=25, NON-BLOCKING`, each issued between MOVEL groups — i.e.
+**always while the arm is idle**. Consequences, all consistent with C16:
+
+- the pole is always the device that gets truncated, never the arm — which is
+  why the program has never produced a Position Command Step Warning;
+- the pole descends in ~25 mm bursts, needing seven re-kicks to cover 330 mm;
+- "pole and arm move together but not strictly synchronized" — the observed
+  behaviour — **is the truncation**, seen from outside.
+
+**So it is an existence proof of the sequencing pattern, not of
+synchronization.** Treat it as the reference for how to command the pole
+around planned arm motion.
+
+---
+
+## 3. What the bench tests have established
+
+| # | Finding | Consequence |
+|---|---|---|
+| ~~F1~~ | ~~A lift command during an in-flight planned arm move aborts it~~ | **Superseded by F9** — the effect is bidirectional, not lift→arm only |
+| F2 | Sim mode **executes the arm and is fully observable** (UDP push, arrival events, TCP polls) | The rehearsal-validation loop is viable (C5) |
+| F3 | Sim mode does **not** execute lift or hand | Rehearsals cover arm geometry only |
+| F4 | Hand: device-2 arrival events never fire; blocking `rm_set_hand_angle` returns −4 during arm motion | Hand completion is duration-based (`acked_angle`); modbus RTU is the true-feedback path |
+| F5 | Planned `rm_movej` + concurrent **hand** works (C6, 7/7 ×3) | Hand/glove actuation during arm motion is safe — hand traffic does not touch the motion planner |
+| F6 | Lift is a profiled positioner; re-targeting mid-motion restarts the profile | One target per pole goal |
+| ~~F7~~ | ~~Per-arm lift gearing differs~~ | **RESOLVED 2026-08-07**: right upgraded to V1.7.4; **both arms 1:1 true mm, 0–315 mm**. Gearing is now auto-detected from `ctrl_info.version` at connect, so a rollback needs no edit |
+| F8 | canfd `expand` cannot drive the lift (`bench_lift_expand`, both poles, 3 unit hypotheses) | No single-command 8-axis sync; the pole is always a separate command |
+| **F9** | **Concurrent lift + PLANNED arm move is unsupported, in BOTH directions.** The command issued *second* truncates the first device's motion. Arm truncated ⇒ latched `Position Command Step Warning` (16384) on the **moving** joints (J2/J4/J6; stationary joints stay Normal). Pole truncated ⇒ silent stop ~25 mm in, no error, no event. Model-free (C16), both arms, all speeds, all dispatch offsets | **Sync moves to CANFD.** Planned moves everywhere else, pole commanded only while the arm is idle. Both backends kept in code pending RealMan's reply |
+| F10 | TCP limits **as configured on these arms**: 0.250 m/s linear, 1.600 m/s² linear acc, 0.600 rad/s angular, 4.000 rad/s² angular acc. Joints J1–J6 180 °/s, J7 225 °/s, 600 °/s². *All higher than the API-doc defaults* | Answers butterfli_hw TODO 6b: the Cartesian tool-speed cap lives in the **controller**, so the proposed trajectory post-processor is unnecessary here. Read limits from the arm, never the manual |
+| F11 | Self-collision detection is **whole-arm, at planning time**; the arms shipped with it OFF | Tests enable it at connect (`RM_SELF_COLLISION=0` opts out). Distinct from the GUI's "Collision Protection Level" 0–8 contact threshold |
+| **F12** | **Pole speed model corrected.** Drive constants (1250 rpm, RR 0.005) give **100 % = 104.2 mm/s, k = 1.042 mm/s per %**. butterfli_hw's 1.85 implied 2220 rpm — above the drive ceiling; its ×1.5 hw→physical conversion inflated every velocity. The profile is **acceleration-limited**, so short strokes never reach cruise | `lift_travel_time_s()` models a trapezoid/triangle. Validated arm-idle: 140 mm @ 50 % predicts 3.49 s vs **3.47 s measured**; C15 Phase A within ±7 % across 10–100 % on both arms |
+| **F13** | `rm_clear_system_err()` **returns 0 without clearing joint error 16384**. Per-joint clear (`rm_set_joint_clear_err`) or the GUI's per-joint button is required | Our `--clear-errors` is insufficient for this fault class — a known gap, and question 4 to RealMan |
+| F14 | Right arm `ready→zero` takes **6.72 s** vs left **3.72 s** at the same 20 %, identical joint deltas, same firmware | Per-arm motion config differs; any arm-duration estimate is per-arm. Unexplained |
+
+---
+
+## 4. PHASE 1 GATE CHECKLIST — the approval table for Phase 2
+
+Legend: ✅ passed · 🟡 partial · ⛔ blocked · ⬜ not started ·
+🔵 *finding delivered* (the test's job was to answer a question, and it did).
+
+### 4.1 Execution-layer gates
+
+| ID | Test | What it proves | Blocking? | STATUS | Evidence |
 |---|---|---|---|---|---|
 | C1 | `test_dual_connect` | Both arms reachable, state readable, handles distinct | yes | ✅ | 9/9, 2026-08-06 |
-| C5 | `test_sim_motion_visibility` | Simulated motion is observable → **rehearsal loop viable** | yes | ✅ | 5/5 + YES verdict on all three channels |
+| C5 | `test_sim_motion_visibility` | Simulated motion observable → rehearsal loop viable | yes | ✅ | 5/5 + YES on all three channels |
+| C6 | `test_single_arm_planned` | Planned moves + pole homing + concurrent hand; Cartesian accuracy | yes | ✅ | 7/7 ×3; `dx=+0.196 m` vs +0.20 |
 | C7 | `test_hand_only` | Hand controllable with measured feedback (both paths) | yes | ✅ | 8/8 both arms |
-| C6 | `test_single_arm_planned` | Planned moves + pole homing + **concurrent hand**; Cartesian accuracy | yes | ✅ | 7/7 ×3 runs; `dx=+0.196 m` vs +0.20 target |
-| C8 | `test_pole_only` | Pole acceptance probe + fault diagnosis + recovery | yes | ⛔ | **Never run on hardware.** ~5 min |
-| C9 | `test_single_arm_locked` | Full concept sequence incl. **arm+pole sync** on one arm | yes | 🟡 | Reproduced the freeze (diagnostic success); passed arm+hand. **Sync untested since the lift-first fix** |
-| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | 🟡 | Arm-only 6/6. Froze with poles; **retest with fix** |
-| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | 🟡 | Arm-only 4P/1F — **1.6 s gate-latency anomaly unexplained** (§7 R5) |
-| C4 | `test_dual_free` | Free-running mode, independent completion | no | 🟡 | Arm-only 4/4; poles untested |
+| C8 | `test_pole_only` | Pole acceptance + fault diagnosis + recovery | yes | ✅ | **7 PASS / 1 SKIP, both arms, 2026-08-07** (was never-run; now closed) |
+| C15 | `test_pole_speed` | Is the pole slow at low speed, or slowed by arm motion? | yes | ✅ | **Phase A 16/16 both arms** — no speed floor; Phase B measured 2.5–3.5× coupling |
+| C16 | `test_arm_pole_baseline` | Concurrency with **no models applied** to either device | yes | 🔵 | **Delivered F9.** Phase 0 (singles) passes; every concurrent cell fails. This test *reporting failure* is the successful outcome |
+| C9 | `test_single_arm_locked` | Full concept sequence incl. arm+pole sync, one arm | yes | 🟡 | Arm+hand path ✅. **`planned` backend fails by controller design (F9)**; **`canfd` backend implemented, unverified on hardware** |
+| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | 🟡 | Arm-only 6/6. Sync steps blocked on the same F9 issue |
+| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | 🟡 | Arm-only 4P/1F — **1.6 s gate-latency anomaly still unexplained** (R5) |
+| C4 | `test_dual_free` | Free-running mode, independent completion | no | 🟡 | Arm-only 4/4; sync untested |
 
-**Honest read:** the arm-only and peripheral-only halves are solid. The
-**arm+pole concurrent (sync) case has never passed on hardware** — the fix is
-implemented and proven in the emulator but is unverified on the arms. That is
-the single most important open gate.
+**Honest read:** every gate that does not involve *simultaneous* arm+pole
+motion has passed on hardware. The sync gates are blocked not by a bug in our
+code but by a controller limitation we have now characterised precisely. The
+remaining work on them is to verify the **canfd** backend on hardware.
 
-### 3.2 Bridge gates (C10–C14) — RECOMMENDED ADDITION
+### 4.2 Bridge gates — ROS 2 ↔ controller
 
-C1–C9 validate *command semantics*. None of them sends a target that came
-from MoveIt, and none exercises the safety layers this architecture leans on.
-These five close that gap; C12 needs no hardware.
+None of C1–C16 sends a target that came from MoveIt. These close that gap.
 
-| ID | Test | Question it answers | Blocking? | STATUS | Where |
-|---|---|---|---|---|---|
-| C12 | **Segment collision verifier** (offline) | For a commanded segment (`movej` joint target / `movel` Cartesian target), predict the controller's own motion with `rm_algo` and FCL-sweep it against the scene + `rm_algo_safety_robot_self_collision_detection`. Is the hinge path clean? Where is it tight? | yes | ⬜ | Emulator + real `rm_algo`; **today, no hardware** |
-| C14 | **Frame alignment** (hardware) | Does a pose expressed in URDF/TF land where the controller thinks it does? Controller work frame `World` and tool frame (ZIGZAG01 used `Hand`) vs URDF `butterfli_ref_frame` / `R_glove_frame_4` | yes | ⬜ | New `test_frame_alignment.py`; ~15 min. **Silent offsets here corrupt every cleaning point** |
-| C13 | Fence / online-safety characterization (hardware) | What the electronic fence bounds (TCP vs arm body), reject-vs-stop, planned-move coverage | **no** — *dropped from blocking 2026-08-07 (Newton): collision safety rests on scene PRIMITIVES + offline FCL, not the fence* | ⬜ | Optional. Keep `rm_set_self_collision_enable` ON as a free backstop |
-| C10 | **Chained-target execution** (hardware) | Mechanism confirmed in the docs (§4.1a); C10 measures the numbers: **max queue depth**, one arrival event vs N, what the blend **percentage** is relative to, whether a mid-chain planning failure rejects the whole chain, and `rm_moves` spline as an alternative | yes | ⬜ | New `test_waypoint_chain.py`; ~15 min. **Gates Mode B** |
-| C11 | Rehearsal-validation loop (hardware) | SIM-execute → UDP capture → FCL check; and does the capture match the C12 predictor? | yes | ⬜ | New `test_rehearsal_validate.py`; ~20 min |
+| ID | Test | Question | Blocking? | STATUS |
+|---|---|---|---|---|
+| C12 | **Segment collision verifier** (offline) | For a commanded segment, predict the controller's own motion (`rm_algo`) and FCL-sweep it against the scene + `rm_algo_safety_robot_self_collision_detection`. Is the hinge path clean? Where is it tight? | yes | ⬜ **no hardware needed — next offline task** |
+| C14 | **Frame alignment** (hardware) | Does a pose expressed in URDF/TF land where the controller thinks it does? | yes | ⬜ **highest risk** — see R2c |
+| C10 | Chained-target execution (hardware) | `connect=1` queue depth, one arrival event vs N, blend-% reference, mid-chain failure behaviour, `rm_moves` spline | yes | ⬜ Gates Mode B |
+| C11 | Rehearsal-validation loop (hardware) | SIM-execute → UDP capture → FCL; does the capture match the C12 predictor? | yes | ⬜ |
+| C17 | **CANFD sync** (hardware) | Does the shipped `RM_SYNC_BACKEND=canfd` path reproduce `bench_sync` — arm streamed while the pole runs, both complete, no faults? | yes | ⬜ **replaces the old "C9-sync" gate** |
+| C13 | Fence characterization | What the fence bounds (TCP vs body), reject-vs-stop | **no** | ⬜ Dropped from blocking — safety rests on primitives + offline FCL |
 
-### 3.3 Approval rule
+### 4.3 Approval rule
 
-> **Phase 2 is approved when C1, C5, C6, C7, C8, C9, C2, C3 and C10, C11,
-> C12, C14 are ✅.** C4 (free mode) and C13 (fence) may stay 🟡/⬜ — the
-> cleaning task needs neither. Collision safety rests on scene **primitives +
-> offline FCL** (C12), with controller self-collision detection as a free
-> backstop.
+> **Phase 2 is approved when C1, C5, C6, C7, C8, C15, C16, C2, C3 and
+> C10, C11, C12, C14, C17 are ✅/🔵.**
+> C4 (free mode) and C13 (fence) may stay open — the cleaning task needs
+> neither. C9 closes as ✅ once C17 passes (they share the canfd path).
 
 ---
 
-## 4. The bridge design (what Phase 2 builds)
+## 5. The bridge design (what Phase 2 builds)
 
-### 4.1 Target selection — which command for which segment
-
-No dense path is reproduced, so the choice is per *segment*, by what that
-segment functionally needs:
+### 5.1 Target selection — which command for which segment
 
 | Segment | Command | Why |
 |---|---|---|
-| Named poses (`rest`, `ready`, transit) | `rm_movej` with **MoveIt's joint values** | Unambiguous; MoveIt has already validated the goal state |
-| **Stroke entry** (approach to the first cleaning point) | `rm_movej` with MoveIt's joint solution for that pose | **Pins the arm configuration** — see the rule below |
-| **Cleaning strokes** (point→point on the surface) | `rm_movel` | Cartesian straightness along the surface is the functional requirement; dense `movel` would stutter, sparse is exactly what the 20-point path is |
+| Named poses (`rest`, `ready`, transit) | `rm_movej` with **MoveIt's joint values** | Unambiguous; MoveIt has validated the goal state |
+| **Stroke entry** | `rm_movej` with MoveIt's joint solution | **Pins the arm configuration** — see the guard below |
+| **Cleaning strokes** | `rm_movel` | Cartesian straightness is the functional requirement; dense `movel` would stutter, sparse is what the 20-point path is |
+| **Any segment with concurrent pole motion** | `rm_movej_canfd` stream | F9 |
 
-### 4.1a `trajectory_connect` — CONFIRMED (SDK docs, 2026-08-07)
+**The guard on `rm_movel`: pin the configuration before the stroke.** It
+solves IK seeded from the *current* configuration, so a stroke is
+deterministic only relative to where it started. Entering every stroke via a
+`movej` to MoveIt's joint solution removes that freedom, and that is what
+makes "verify once offline, trust thereafter" sound. Branch flips *between
+runs* are the real risk; pinning kills them.
 
-Newton's proposal is exactly what the API provides. From the `rm_movej` /
-`rm_movel` / `rm_moves` docstrings:
+### 5.2 `trajectory_connect` — confirmed in the SDK docs
 
-> `connect` (轨迹连接标志)
-> - `0`：立即规划并执行轨迹，不与后续轨迹连接 — *plan and execute now, not
->   connected to what follows*
-> - `1`：将当前轨迹与下一条轨迹一起规划，但不立即执行。**阻塞模式下，即使发送成功也会立即返回** —
->   *plan this trajectory together with the next, do not execute yet; in
->   blocking mode it returns immediately even on success*
-
-So a reduced path is queued and then fired as **one** connected trajectory:
+> `connect=0`: plan and execute now, not connected to what follows.
+> `connect=1`: plan this trajectory together with the next, do not execute
+> yet; **in blocking mode it returns immediately even on success**.
 
 ```python
 for p in path[:-1]:
-    rm_movel(p, v, r, connect=1, block=0)   # queued, planned with the next
-rm_movel(path[-1], v, r, connect=0, block=0) # connect=0 plans + EXECUTES the chain
+    rm_movel(p, v, r, connect=1, block=0)    # queued
+rm_movel(path[-1], v, r, connect=0, block=0) # plans + EXECUTES the chain
 # then wait for ONE arrival event
 ```
 
-Three consequences worth pinning down now:
+1. **`connect=1` never blocks and never completes** — a dispatcher that waits
+   on one waits forever.
+2. **Our `ArrivalMonitor` already handles this**: it latches only on
+   `trajectory_connect == 0` ([`dual_arm_common.py`](src/dual_arm_common.py)).
+3. **Blend radius `r` is a PERCENTAGE (0–100), not millimetres.** ZIGZAG01's
+   "10" is 10 %. What the percentage is *of* is undocumented → C10.
 
-1. **`connect=1` never blocks and never completes.** Completion only exists
-   for the closing `connect=0`. A dispatcher that waits on a `connect=1`
-   segment waits forever.
-2. **Our `ArrivalMonitor` already implements this** — it treats an event with
-   `trajectory_connect == 1` as *not* a completion and only latches on
-   `trajectory_connect == 0` ([`dual_arm_common.py:483`](src/dual_arm_common.py#L483)).
-   Chain semantics are already dry-run tested.
-3. **The blend radius `r` is a PERCENTAGE (0–100), not millimetres**
-   (`交融半径百分比系数`). ZIGZAG01's "10" is 10 %, not 10 mm — §4.2's rule
-   must therefore be expressed as a fraction of segment length, not an
-   absolute distance. What the percentage is *of* is not documented → C10.
+Unknown and gating Mode B: queue depth, mid-chain failure behaviour, and
+whether `rm_moves` (spline, needs ≥3 connected points) follows a curved
+surface better than blended `movel`.
 
-Still unknown, and the reason C10 exists: **how many segments the controller
-will queue**, whether a mid-chain planning failure rejects the whole chain,
-and what the blend percentage is relative to. `rm_moves` (spline) is a third
-option — it needs ≥ 3 consecutive `connect=1` points or it degrades to a
-straight line, and could give smoother surface following than chained
-`movel`. Worth one extra minute in C10.
-
-### 4.1b Two path modes — pick per segment, not per project
+### 5.3 Two path modes — pick per segment
 
 | | **Mode A — sparse targets** | **Mode B — reduced MoveIt path** |
 |---|---|---|
-| Source | named poses + the 20 cleaning points | MoveIt path (geometry only, timing discarded), simplified to few points |
-| Command | `movej` / `movel`, executed one at a time | chained `movel`/`movej` with `connect=1`, closed by `connect=0` |
-| Use when | open space; the direct move is obviously safe | **constrained geometry — arm reaching inside the commode**, around the lid, any place where the direct move would cut a corner through the fixture |
-| Cost | trivial | path simplification + more verification surface |
-| Verified by | C12 segment verifier | C12 on every sub-segment of the chain |
+| Source | named poses + the 20 cleaning points | MoveIt path (geometry only), simplified |
+| Command | one at a time | chained with `connect=1`, closed by `connect=0` |
+| Use when | the direct move is obviously safe | **constrained geometry — reaching inside the commode** |
+| Verified by | C12 | C12 on every sub-segment |
 
-**Selection rule:** start every segment in Mode A; escalate to Mode B when the
-C12 verifier reports the direct move is not clean, or clearance falls below
-the margin. That way complexity is paid only where geometry demands it, and
-the verifier decides — not a guess.
+**Selection rule:** start in Mode A; escalate to Mode B when C12 reports the
+direct move is not clean. The verifier decides, not a guess.
 
-Taking MoveIt's **path** and discarding its timing is right: the controller
-re-times everything anyway, so any time-parameterization effort is wasted
-work. Read the joint positions out of the plan and ignore `time_from_start`.
+### 5.4 Dispatch invariants
 
-**The one guard on `rm_movel`: pin the configuration before the stroke.**
-`rm_movel` solves IK seeded from the *current* configuration, so a stroke is
-deterministic and repeatable — but only relative to where it started. If the
-arm enters the same stroke in a different configuration on a different run,
-the verified result does not transfer. Entering every stroke via a `movej` to
-MoveIt's joint solution removes that freedom, and *that* is what makes
-"verify once offline, trust thereafter" sound. Branch flips within a
-continuous seeded stroke are unlikely; branch flips **between runs** are the
-real risk, and pinning kills them.
+> **(a) Never issue a motion command to one device while the other is
+> mid-trajectory in the PLANNED domain.** It truncates the other's motion —
+> and if the victim is the arm, it latches joint faults. Enforce with a
+> runtime assertion in the dispatcher, not a convention.
+>
+> **(b) If arm and pole must move together, the arm must be in the CANFD
+> stream.** That is the only combination the controller supports.
+>
+> **(c) The hand/glove is exempt** — hand traffic does not touch the motion
+> planner (F5, C6 7/7 ×3).
 
-C12 verifies the resulting motion either way; C11 confirms the predictor
-matches reality once on hardware.
+### 5.5 Rehearsal validation (the collision-safety closure)
 
-### 4.2 Blend radius must be bounded by clearance
+1. SIM mode, execute the segment; 2. capture the actual joints over UDP;
+3. FCL-check the capture against the planning scene; 4. only then run for
+real. Per task, not per cycle. Also the natural archive format — it feeds the
+studio visualizer (`STUDIO_LINK_RESEARCH.md` Phase 0).
 
-Blending cuts corners — the executed path bows **inside** the commanded
-corner. The bow must not exceed the local collision margin:
-
-```
-r_i  ≤  k · min_clearance(waypoint_i)      k ≈ 0.5 as a starting margin
-```
-
-Clearance comes from the planning scene MoveIt already has. A fixed `r=10`
-(the ZIGZAG01 value) is fine in open space and wrong near the fixture.
-
-### 4.3 Dispatch ordering invariant (from F1)
-
-> **Never issue a pole command while that arm's planned trajectory is in
-> flight.** Per arm, per segment: pole first (non-blocking), then the arm
-> move; or pole strictly between arm segments.
-
-This is a safety invariant, not a style preference — violating it aborts the
-trajectory and latches joint errors. It must be enforced with a runtime
-assertion in the dispatcher (reject the command, log loudly) so it cannot be
-reintroduced by a future refactor. Hand/glove actuation is exempt (F5).
-
-### 4.4 Rehearsal validation (the collision-safety closure)
-
-Because the controller re-plans between waypoints, MoveIt's collision proof
-does not automatically transfer to the executed path. C5 proved the fix:
-
-1. put the arm in SIM mode, execute the waypoint chain;
-2. capture the actual joint trajectory over UDP push;
-3. FCL-check that capture against the same planning scene;
-4. only then execute for real.
-
-This runs per task, not per cycle. It is also the natural artifact to store
-alongside each cleaning plan (Phase 0 of `STUDIO_LINK_RESEARCH.md` — the plan
-recorder — feeds the studio visualizer from the same capture).
-
-### 4.5 Interfaces (proposed — Newton owns the orchestrator internals)
+### 5.6 Interfaces
 
 | Component | Owner | Responsibility |
 |---|---|---|
-| `cleaning_path_gen` | existing | fixture → cleaning points (already produces the hinge task) |
-| MTC task builder | Phase 2 | cleaning points → MTC stages → validated sparse targets (reachability, IK, goal-state collision, ordering) |
-| **Segment verifier** | Phase 2 | predict the controller's own motion per segment (`rm_algo`) → FCL sweep + self-collision → verdict |
-| **Rehearsal validator** | Phase 2 | SIM execute + UDP capture + FCL; also calibrates the verifier against reality |
-| **RM dispatcher** | Newton | `rm_movej`/`rm_movel` targets, peripherals, ordering invariant, arrival events |
+| `cleaning_path_gen` | existing | fixture → cleaning points |
+| MTC task builder | Phase 2 | cleaning points → stages → validated sparse targets |
+| **Segment verifier** | Phase 2 | predict controller motion → FCL + self-collision → verdict |
+| **Rehearsal validator** | Phase 2 | SIM execute + UDP capture + FCL; calibrates the verifier |
+| **RM dispatcher** | Newton | targets, peripherals, invariants, arrival events |
 
-The segment verifier is a pure function over (start config, command) — no
-hardware, no ROS runtime, so it belongs in CI and runs on every path change.
-
-**Predictor caveat:** the offline `rm_algo` is v1.6.0 while the controllers
-run 1.5.5 (right) / 1.5.9 (left). IK solutions may differ slightly. C11 is
-what settles it — capture the real motion once and measure the predictor's
-error, then carry that as a margin in the FCL check.
+**Predictor caveat:** the offline `rm_algo` is v1.6.0 while both controllers
+now run **1.5.9**. C11 measures the residual and carries it as an FCL margin.
 
 ---
 
-## 5. PHASE 2 — hinge-area cleaning
+## 6. PHASE 2 — hinge-area cleaning
 
-### 5.1 The task already exists
+### 6.1 The task already exists
 
-`cleaning_tasks/config/commode_cleaning/commode_c/hinge_area_right_cleaning_points.yaml`
-is fully specified: **20 cleaning points** (8 lid-sides-back + 12 hinge area),
-expressed as start-pose-origin translation deltas + Euler RPY deltas in
-`butterfli_ref_frame`, `ik_frame: R_glove_frame_4`, articulation "lid closed,
-body static", surface "concave_interior + near_planar". Left-side and
-lid/seat/body variants exist too.
+`cleaning_tasks/config/commode_cleaning/commode_c/hinge_area_right_cleaning_points.yaml`:
+**20 cleaning points** (8 lid-sides-back + 12 hinge area), start-pose-origin
+translation deltas + Euler RPY deltas in `butterfli_ref_frame`,
+`ik_frame: R_glove_frame_4`, articulation "lid closed, body static", surface
+"concave_interior + near_planar".
 
-**Scope Phase 2 to `hinge_area_right`, right arm only, sequential execution.**
-20 points is the same order as ZIGZAG01's 21 — a like-for-like target.
+**Scope Phase 2 to `hinge_area_right`, right arm, sequential execution.**
 
-### 5.2 Integration point
+### 6.2 Integration point
 
-The file sets `cleaning_path_mode: ruckig_pro_only` — the current pipeline
-time-parameterizes and streams. Phase 2 adds a **new mode**
-(`controller_planned`) rather than replacing the existing one, so both paths
-stay runnable and directly comparable on the same task. That comparison is
-the strongest possible evidence for or against the architecture.
+The file sets `cleaning_path_mode: ruckig_pro_only`. Phase 2 adds a **new
+mode** (`controller_planned`) alongside it, so both are runnable on the same
+task — the strongest possible A/B evidence for the architecture.
 
-### 5.3 Work packages
+### 6.3 Work packages
 
 | WP | Deliverable | Depends on | Hardware? | Est. |
 |---|---|---|---|---|
-| WP1 | Segment verifier: `rm_algo` motion predictor + FCL sweep + self-collision check | — | no | 0.5 d |
-| WP2 | C12 report: run the real 20-point hinge path through WP1; clearance map, tight spots | WP1 | no | 0.5 d |
+| WP1 | Segment verifier (`rm_algo` predictor + FCL + self-collision) | — | no | 0.5 d |
+| WP2 | C12 report on the real 20-point hinge path; clearance map | WP1 | no | 0.5 d |
 | WP3 | MTC task builder for `hinge_area_right` | — | no | 1 d |
 | WP4 | Rehearsal validator (SIM + UDP capture + FCL) | C5 | yes (C11) | 1 d |
-| WP5 | Dispatcher integration + ordering assertion + wrist-force logging | C10, C14 | yes | 1 d |
+| WP5 | Dispatcher integration + invariant assertions + wrist-force logging | C10, C14, C17 | yes | 1 d |
 | WP6 | End-to-end hinge run + acceptance | WP1–WP5 | yes | 1 d |
 
-### 5.4 Definition of done (acceptance test)
+### 6.4 Definition of done
 
-> The `hinge_area_right` task runs end-to-end from an MTC plan — reduced,
-> rehearsal-validated, executed with chained planned moves and concurrent
-> peripherals — **5 consecutive times** with: zero freezes, zero latched
-> faults, every waypoint reached within tolerance, and measured deviation
-> from the MoveIt path within the clearance budget.
+> `hinge_area_right` runs end-to-end from an MTC plan — verified,
+> rehearsal-validated, executed with planned moves (canfd where the pole
+> moves with the arm) — **5 consecutive times** with zero faults, every
+> waypoint within tolerance, and measured deviation inside the clearance
+> budget.
 
 "Implemented" is not done; 5 clean consecutive runs is done.
 
 ---
 
-## 6. Schedule
+## 7. Schedule
 
-### 6.1 Correction to the original plan
-
-Phase 1 **cannot close today**: four blocking gates (C8, C9-sync, C2, C3) plus
-C10/C11 need the hardware, which is not available. Splitting it keeps today
-productive and makes the hardware session short and scripted.
-
-| Phase | Content | Needs hardware | When |
+| Phase | Content | Hardware | Status |
 |---|---|---|---|
-| **1A** | Architecture + this plan + WP1 + WP2 (C12) | no | **today** |
-| **1B** | Hardware gate session (C8, C9, C2, C3, C10, C11) | **yes** | first lab access — **~2 h, scripted** |
-| **2** | WP3–WP6, hinge task | partly | 5 working days after 1B |
+| **1A** | Architecture, this plan, offline verification | no | ✅ **done** — dry run 95/95, emulated suite 13/13 |
+| **1B** | Hardware gate session | yes | 🟡 **partly done 2026-08-07**: C8 ✅, C15 ✅, C16 🔵, C9/C2/C3 characterised. **Remaining: C17, C14, C10, C11** |
+| **1C** | WP1+WP2 (C12), draft C14/C17 tests | no | ⬜ next |
+| **2** | WP3–WP6, hinge task | partly | 5 working days after 1B closes |
 
-**End of next week is achievable if and only if 1B happens by Monday/Tuesday.**
-Each day 1B slips, Phase 2's acceptance slips with it — the offline WPs
-(WP1–WP3) can absorb about two days of that before becoming blocked.
-
-### 6.2 The 1B hardware session script (in order, ~2 h)
+### 7.1 Remaining 1B session (~1 h)
 
 ```bash
-# 0. recover from the last frozen run (joint errors are almost certainly latched)
-RM_ARM=left python3 test_pole_only.py --mode REAL --clear-errors          # C8
-# 1. the fix, one arm, no hands — the critical gate
-RM_ARM=left python3 test_single_arm_locked.py --mode REAL --no-hands      # C9-sync
+# 1. the new sync path — replaces the old planned-sync gate
+RM_ARM=left  python3 test_single_arm_locked.py --mode REAL --no-hands   # C17 (canfd default)
 RM_ARM=right python3 test_single_arm_locked.py --mode REAL --no-hands
-# 2. full sequence, one arm
-RM_ARM=left python3 test_single_arm_locked.py --mode REAL                 # C9 full
-# 3. dual-arm, full sequence
-python3 test_dual_locked.py --mode REAL                                   # C2
-python3 test_dual_chained.py --mode REAL                                  # C3
-# 4. bridge gates (new tests, to be written in 1A/early 2)
-RM_ARM=right python3 test_frame_alignment.py --mode REAL                  # C14
-python3 test_waypoint_chain.py --mode REAL                     # C10 — gates Mode B
-python3 test_rehearsal_validate.py                                        # C11
+# 2. A/B for the support thread: same test, planned backend
+RM_SYNC_BACKEND=planned RM_ARM=left python3 test_single_arm_locked.py --mode REAL --no-hands
+# 3. full sequence, then dual-arm
+RM_ARM=left python3 test_single_arm_locked.py --mode REAL              # C9 full
+python3 test_dual_locked.py  --mode REAL                               # C2
+python3 test_dual_chained.py --mode REAL                               # C3
+# 4. bridge gates (tests to be written in 1C)
+RM_ARM=right python3 test_frame_alignment.py --mode REAL               # C14
+python3 test_waypoint_chain.py --mode REAL                             # C10
+python3 test_rehearsal_validate.py                                     # C11
 ```
 
-Stop at the first red gate and diagnose — later gates assume earlier ones.
+Stop at the first red gate — later gates assume earlier ones.
 
 ---
 
-## 7. Risks and open questions
+## 8. Risks and open questions
 
-| # | Risk / question | Impact | Mitigation / needed decision |
+| # | Risk / question | Impact | Mitigation |
 |---|---|---|---|
-| R1 | **Sync fix unverified on hardware** | Blocks everything | First item in 1B. If it fails, fall back to strictly sequential pole/arm (no concurrency) — costs cycle time, not feasibility |
-| R2 | **The controller's own motion between sparse targets collides** (it is not MoveIt's path and nothing constrains it to be) | Architecture invalid as specified | C12 answers it offline **today** for the real hinge path. Fallback ladder: add intermediate targets at the tight spots → constrain the stroke entry configuration → canfd streaming for that segment only (butterfli_hw already proves streaming works) |
-| R2b | ~~Fence does not bound the arm body~~ — **retired 2026-08-07**: the fence is not in the safety case. Collision safety = scene primitives + offline FCL (C12) | — | Keep `rm_set_self_collision_enable` ON; free and independent |
-| R2c | **Frame misalignment** between URDF/TF and the controller's work/tool frames | Every cleaning point silently offset — worst failure mode, looks like it works | C14, before any cleaning path runs. ZIGZAG01 shows `World` + `Hand` frames exist on the controller; whether `Hand` equals `R_glove_frame_4` is unverified |
-| R3 | `connect=1` chaining behaves differently than documented (e.g. one arrival event vs N, or no true blending) | Dispatcher redesign | C10 measures it directly; ZIGZAG01 suggests it works |
-| R4 | **Firmware mismatch** (right V1.7.1 vs left V1.7.4) | Per-arm behaviour differences, different lift gearing | Upgrade right arm before Phase 2 hardening; scope Phase 2 to the right arm means its firmware matters most |
-| R5 | **C3's 1.6 s follower-gate latency** unexplained | Unknown timing behaviour in chained mode | One dedicated look during 1B; chained mode is the likely Phase 2 execution mode, so this matters |
-| R6 | Dual-arm **concurrent** collision validity | Locked/free modes could collide despite per-arm plans | Phase 2 scoped to one arm. `dual_arm_plan_collision.py` exists for when it isn't |
-| ~~Q1~~ | **ANSWERED 2026-08-07: fixture-taught.** No perception in the loop | scope held | No perception work package. Makes C14 (frame alignment) critical: a taught fixture means every cleaning point is only as good as the frame agreement |
-| ~~Q2~~ | **ANSWERED: the glove is worn on the dexterous hand — hand pose determines glove state.** Cleaning uses the **BACK of the hand** | — | The cleaning hand pose is part of the path spec: command it before the stroke and hold it (proven safe during arm motion, F5). Tool frame must sit on the back-of-hand contact patch (`R_glove_frame_4`) — see C14 |
-| ~~Q3~~ | **ANSWERED: no force control for now, but force feedback wanted.** Newton's concern: the back of the hand cannot sense force | — | **It can — from the arm, not the hand.** The RM75-6**FB** has a 6-axis wrist F/T sensor; `rm_get_force_data` returns `tool_zero_force_data` (external force in the TOOL frame, gravity/tool compensated) — exactly right for back-of-hand contact, independent of which surface touches. Available now, read-only, no force control needed |
+| ~~R1~~ | ~~Sync fix unverified~~ | — | **Closed by C16**: planned-domain sync is impossible, not unverified. Superseded by R1b |
+| **R1b** | **CANFD sync backend unverified on hardware** | Blocks C17, C9, C2 | Implemented and emulator-proven; first item in the remaining 1B session. Fallback: strict sequencing (pole, then arm) — costs cycle time, not feasibility |
+| R2 | The controller's own motion between sparse targets collides | Architecture invalid as specified | C12 answers it offline for the real hinge path. Ladder: intermediate targets → pin stroke entry → canfd for that segment |
+| **R2c** | **Frame misalignment** URDF/TF vs controller work/tool frames | **Highest risk.** Every cleaning point silently offset — looks like it works | Controller tool frame reads (−35, 10, 260) mm; `L_glove_frame_4` is (−55, 7, 205) mm from `ConnectorLink` — **a ~59 mm difference** that may or may not be the flange→ConnectorLink transform. **C14 before any cleaning path runs.** Newton is resolving |
+| R3 | `connect=1` chaining differs from the docs | Dispatcher redesign | C10 measures it |
+| ~~R4~~ | ~~Firmware mismatch~~ | — | **Closed 2026-08-07**: both arms V1.7.4 / algo 1.5.9; lift gearing auto-detected |
+| R5 | **C3's 1.6 s follower-gate latency** unexplained | Unknown chained-mode timing | One dedicated look; chained is the likely Phase 2 execution mode |
+| R6 | Dual-arm concurrent collision validity | Locked/free modes could collide | Phase 2 scoped to one arm; `dual_arm_plan_collision.py` exists |
+| **R7** | **Awaiting RealMan reply** on the F9 truncation, the `expand` field, and F13's clear-error gap | Could reopen the planned-sync option | Both backends kept in code; `RM_SYNC_BACKEND=planned` re-tests in one flip |
+| **R8** | `rm_clear_system_err` does not clear joint 16384 (F13) | Recovery needs the GUI | Add `rm_set_joint_clear_err` per joint to `clear_errors()` |
+| R9 | Right arm is 1.8× slower than left for identical moves (F14) | Per-arm timing models | Unexplained; matters if either arm's duration is ever estimated |
+
+**Answered:** hinge pose is **fixture-taught** (no perception) · the glove is
+worn on the hand, so **hand pose = glove state**, cleaning with the **back of
+the hand** · **no force control** for now, but force feedback is available
+from the **wrist 6-axis sensor** (`tool_zero_force_data`), not the hand.
 
 ---
 
-## 8. Today's checklist (1A — no hardware required)
+## 9. Next actions
 
-- [x] Review + correct this plan (Newton, 2026-08-07 — architecture reframed:
-      MoveIt validates, it does not supply a path to reproduce)
-- [x] Answer Q1–Q3 (fixture-taught · glove = hand pose, back-of-hand contact ·
-      no force control, force feedback via the wrist 6-axis sensor)
-- [ ] Verify the ordering invariant assertion in the dispatcher (Newton, today)
+**Offline (no hardware):**
 - [ ] WP1: segment verifier (`rm_algo` predictor + FCL + self-collision)
 - [ ] WP2: run C12 on the real 20-point hinge path → clearance map
-- [ ] Draft `test_frame_alignment.py` (C14) and `test_waypoint_chain.py`
-      (C10) so 1B is pure execution
-- [ ] Confirm the 1B session slot
+- [ ] Draft `test_frame_alignment.py` (C14) and `test_waypoint_chain.py` (C10)
+- [ ] Add `rm_set_joint_clear_err` to `clear_errors()` (R8)
+
+**Hardware, when available:**
+- [ ] C17 — canfd sync, both arms, plus the planned-backend A/B for support
+- [ ] C14 — frame alignment (resolve the 59 mm question)
+- [ ] C10, C11
+
+**External:**
+- [ ] RealMan reply (R7) — query + logs prepared in `docs/`

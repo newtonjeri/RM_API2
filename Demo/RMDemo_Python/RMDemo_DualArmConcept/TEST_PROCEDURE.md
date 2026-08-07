@@ -75,7 +75,7 @@ pole COMPLETION inside the arm move → the right arm on 2026-08-07 15:42
 run where the pole *outlasted* the arm was clean, on both arms.
 
 Safe pattern: the pole's motion **starts before the arm's and finishes after
-it**, or lies entirely outside. RealMan's own Web-GUI program (`ZIGZAG01`)
+it**, or lies entirely outside. Our in-house Web-GUI program (`ZIGZAG01`)
 does exactly this — one slow 25 % descent spanning many fast arm moves.
 **The halt is a HARDWARE FAULT, not a clean cancel**: it latches JOINT
 ERRORS, and every later motion command is then rejected with `ret=1`

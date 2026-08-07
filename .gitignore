@@ -2,3 +2,6 @@
 Demo/RMDemo_*/RMDemo_*/build
 Demo/RMDemo_*/RMDemo_*/Robotic_Arm/lib/*:Zone.Identifier
 **/__pycache__/**
+# Correspondence drafts — not part of the codebase
+docs/realman_support_query*.txt
+docs/realman_support_logs*.txt

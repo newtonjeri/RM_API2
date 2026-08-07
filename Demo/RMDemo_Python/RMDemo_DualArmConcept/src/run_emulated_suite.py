@@ -15,6 +15,9 @@ import sys
 
 import os
 os.environ.setdefault("RM_HAND_DWELL_S", "0.1")
+# our canfd stream is real wall time; the emulator only scales
+# its own motion durations, so shrink the stream for the suite
+os.environ.setdefault("RM_CANFD_ARM_S", "0.2")
 import rm_emulator
 
 _SCALE = float(os.environ.get("RM_EMU_TIME_SCALE", "10"))
@@ -59,43 +62,78 @@ def _flag_drill() -> int:
 
 
 def _sync_order_drill() -> int:
-    """The 2026-08-06/07 freeze, reproduced and fixed offline.
+    """PLANNED backend: the dispatch order decides WHICH device is truncated.
 
-    With RM_SYNC_ORDER=arm_first (a lift command landing on an in-flight
-    planned movej) C9 must FAIL at the first sync step with no arm arrival
-    event — the exact hardware signature. With the shipped lift_first
-    order it must pass. Order is the only variable."""
+    C16 established the truncation is bidirectional, so under the planned
+    backend BOTH orders fail — what differs is the victim, and only one
+    victim damages the controller:
+
+      arm_first  -> the ARM is truncated -> joint errors LATCH (recovery
+                    needed before anything else can run)
+      lift_first -> the POLE is truncated -> the step fails but the
+                    controller stays CLEAN
+
+    That asymmetry is why lift_first is the shipped order: if the planned
+    path must be used at all, the pole is the safe thing to sacrifice."""
     import dual_arm_common as dac
     import test_single_arm_locked
     argv0 = list(sys.argv)
     saved_order, saved_timeout = dac.SYNC_ORDER, dac.ARM_TIMEOUT_S
+    saved_backend = dac.SYNC_BACKEND
     dac.ARM_TIMEOUT_S = 2.0            # stand-in for the real 40 s wait
+    dac.SYNC_BACKEND = "planned"       # this drill is about the planned path
     ctrl = rm_emulator.emu_controller(dac.LEFT_IP)
     try:
+        sys.argv = [argv0[0], "--no-hands", "--clear-errors"]
         dac.SYNC_ORDER = "arm_first"
-        sys.argv = [argv0[0], "--no-hands"]
-        print("\n-- drill A: arm_first must REPRODUCE the freeze --")
-        code_frozen = test_single_arm_locked.main()
+        print("\n-- arm_first: the ARM is the victim -> faults must LATCH --")
+        code_arm = test_single_arm_locked.main()
         latched = any(ctrl.joint_err_flags) and ctrl.motion_locked
-        print(f"  joint errors latched by the abort: {latched} "
-              f"(flags {ctrl.joint_err_flags})")
+        print(f"  joint errors latched: {latched} ({ctrl.joint_err_flags})")
 
         dac.SYNC_ORDER = "lift_first"
-        print("\n-- drill B: the next run must be REFUSED until cleared --")
-        code_blocked = test_single_arm_locked.main()
-
-        print("\n-- drill C: --clear-errors must recover and complete --")
-        sys.argv = [argv0[0], "--no-hands", "--clear-errors"]
-        code_fixed = test_single_arm_locked.main()
+        print("\n-- lift_first: the POLE is the victim -> no faults --")
+        code_lift = test_single_arm_locked.main()
+        clean = not any(ctrl.joint_err_flags) and not ctrl.motion_locked
+        print(f"  controller clean afterwards: {clean}")
     finally:
         sys.argv = argv0
         dac.SYNC_ORDER, dac.ARM_TIMEOUT_S = saved_order, saved_timeout
-    ok = (code_frozen != 0 and latched and code_blocked != 0
-          and code_fixed == 0)
-    print(f"\n  drill verdict: arm_first exit {code_frozen} (want nonzero), "
-          f"errors latched {latched} (want True), blocked exit {code_blocked} "
-          f"(want nonzero), cleared exit {code_fixed} (want 0) -> "
-          f"{'OK' if ok else 'FAIL'}")
+        dac.SYNC_BACKEND = saved_backend
+    ok = code_arm != 0 and latched and code_lift != 0 and clean
+    print(f"\n  drill verdict: arm_first exit {code_arm} + latched {latched} "
+          f"(want nonzero/True), lift_first exit {code_lift} + clean {clean} "
+          f"(want nonzero/True) -> {'OK' if ok else 'FAIL'}")
+    return 0 if ok else 1
+
+
+def _sync_backend_drill() -> int:
+    """Both sync backends must behave as documented, in one process.
+
+    planned : the arm half is rm_movej -> the controller truncation the
+              emulator models -> the sync step FAILS (kept as the reference
+              case while RealMan support reviews it).
+    canfd   : the arm half is streamed -> no truncation -> it COMPLETES.
+    Same test, same sequence; the backend is the only variable."""
+    import dual_arm_common as dac
+    import test_single_arm_locked
+    argv0, saved = list(sys.argv), dac.SYNC_BACKEND
+    saved_timeout = dac.ARM_TIMEOUT_S
+    dac.ARM_TIMEOUT_S = 2.0
+    sys.argv = [argv0[0], "--no-hands", "--clear-errors"]
+    try:
+        dac.SYNC_BACKEND = "planned"
+        print("\n-- backend=planned: sync must FAIL (known controller limit) --")
+        code_planned = test_single_arm_locked.main()
+        dac.SYNC_BACKEND = "canfd"
+        print("\n-- backend=canfd: sync must COMPLETE (bench_sync recipe) --")
+        code_canfd = test_single_arm_locked.main()
+    finally:
+        sys.argv = argv0
+        dac.SYNC_BACKEND, dac.ARM_TIMEOUT_S = saved, saved_timeout
+    ok = code_planned != 0 and code_canfd == 0
+    print(f"\n  drill verdict: planned exit {code_planned} (want nonzero), "
+          f"canfd exit {code_canfd} (want 0) -> {'OK' if ok else 'FAIL'}")
     return 0 if ok else 1
 
 
@@ -140,9 +178,13 @@ def main() -> int:
           f"{'#' * 68}")
     codes["C2 arm-only drill"] = _flag_drill()
 
-    print(f"\n{'#' * 68}\n# C9 sync-order drill  (the arm-freeze regression)\n"
+    print(f"\n{'#' * 68}\n# C9 sync-order drill  (planned: which device gets truncated)\n"
           f"{'#' * 68}")
     codes["C9 sync-order drill"] = _sync_order_drill()
+
+    print(f"\n{'#' * 68}\n# C9 sync-BACKEND drill  (planned vs canfd)\n"
+          f"{'#' * 68}")
+    codes["C9 backend drill"] = _sync_backend_drill()
 
     print(f"\n{'#' * 68}\n# C8 locked-pole drill  (fault injection)\n"
           f"{'#' * 68}")

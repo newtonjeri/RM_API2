@@ -17,6 +17,8 @@ _log_path = _setup_log(__file__)
 
 import os as _os
 _os.environ.setdefault("RM_HAND_DWELL_S", "0.05")
+# the canfd stream runs in real wall time, unlike the mocks
+_os.environ.setdefault("RM_CANFD_ARM_S", "0.05")
 import dual_arm_common as dac
 
 _checks = {"run": 0, "fail": 0}
@@ -53,6 +55,7 @@ class MockRobot:
         self.fail_at = fail_at            # step counter that returns ret != 0
         self.dispatched = 0
         self.stopped = False
+        self.joints = [0.0] * 7           # tracked so verify_device works
 
     def _arrive(self, device, delay):
         threading.Timer(
@@ -63,6 +66,7 @@ class MockRobot:
         self.dispatched += 1
         if self.fail_at is not None and self.dispatched == self.fail_at:
             return 1
+        self.joints = list(joint)
         self._arrive(dac.DEV_JOINT, self.arm_s)
         return 0
 
@@ -74,7 +78,14 @@ class MockRobot:
         return 0
 
     def rm_get_current_arm_state(self):
-        return 0, {"joint": [0.0] * 7}
+        return 0, {"joint": list(self.joints)}
+
+    def rm_movej_canfd(self, joint, follow, expand=0, trajectory_mode=0,
+                       radio=0):
+        # Passthrough: the setpoint becomes the state, and NO arrival event
+        # is emitted (that is the point — completion is the stream ending).
+        self.joints = list(joint)
+        return 0
 
     def rm_set_hand_angle(self, hand_angle, block=True, timeout=10):
         self.dispatched += 1
@@ -95,6 +106,15 @@ class MockRobot:
 
     def rm_set_lift_speed(self, speed):
         return 0
+
+    def rm_get_self_collision_enable(self):
+        return 0, True                 # already on: no noise in the log
+
+    def rm_set_self_collision_enable(self, enable):
+        return 0
+
+    def rm_get_arm_software_info(self):
+        return 0, {"ctrl_info": {"version": "V1.7.4"}}
 
 
 class _Handle:
@@ -392,6 +412,47 @@ def main() -> int:
             _os.environ.pop("RM_RIGHT_LIFT_GEAR", None)
     finally:
         dac.LIFT_GEAR.update(_saved)
+
+    # ── F1g. Self-collision detection is turned ON at connect ───────────
+    print("\nF1g. Self-collision default")
+
+    class _ScRobot:
+        def __init__(self, start=False, readable=True):
+            self.enabled, self.readable, self.sets = start, readable, 0
+
+        def rm_get_self_collision_enable(self):
+            return (0, self.enabled) if self.readable else (-1, False)
+
+        def rm_set_self_collision_enable(self, enable):
+            self.enabled, self.sets = bool(enable), self.sets + 1
+            return 0
+
+    # minimal arm-like objects: ConceptArm.__init__ would re-enter this
+    off = _ScRobot(start=False)
+
+    class _A:
+        side, robot = "left", off
+    dac.ensure_self_collision_enabled(_A)
+    check("self-collision is ENABLED when found off",
+          off.enabled and off.sets == 1)
+    on = _ScRobot(start=True)
+
+    class _B:
+        side, robot = "left", on
+    dac.ensure_self_collision_enabled(_B)
+    check("already-enabled arm is left alone (no redundant write)",
+          on.enabled and on.sets == 0)
+    _os.environ["RM_SELF_COLLISION"] = "0"
+    try:
+        opt = _ScRobot(start=False)
+
+        class _C:
+            side, robot = "left", opt
+        dac.ensure_self_collision_enabled(_C)
+        check("RM_SELF_COLLISION=0 leaves the arm as-found",
+              not opt.enabled and opt.sets == 0)
+    finally:
+        _os.environ.pop("RM_SELF_COLLISION", None)
 
     # ── F1e. Latched-error gate (a trajectory abort faults the joints) ──
     print("\nF1e. Latched-error gate")

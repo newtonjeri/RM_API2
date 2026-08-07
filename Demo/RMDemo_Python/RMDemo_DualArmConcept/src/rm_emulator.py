@@ -97,6 +97,13 @@ RM75_LIMIT_DEG = [177.6, 130.0, 177.6, 135.0, 177.6, 128.0, 360.0]
 # them if the real codes are ever captured from a frozen arm.
 ABORT_JOINT_ERR = 0x0010
 ABORT_SYS_ERR = 5001
+# The truncation is BIDIRECTIONAL (C16, model-free, both arms): a PLANNED
+# motion command to one device also truncates an in-flight motion on the
+# other. When the victim is the pole it simply stops — measured consistently
+# ~25 mm into a 100 mm move, at every commanded speed, with NO error raised
+# and no arrival event. (A minority of high-speed cells survived on hardware;
+# that is not modelled — the emulator reproduces the dominant behaviour.)
+LIFT_TRUNCATE_MM = 25.0
 CMD_LATENCY_S = 0.005          # per-command TCP round trip (measured ~8 ms)
 LIFT_START_LATENCY_S = 0.38    # measured (butterfli_hw kLiftStartLatencyS)
 # Pole motion model — the drive constants the Web GUI reports (1250 rpm,
@@ -267,6 +274,9 @@ class EmuController:
         # step the hardware demands after a sudden stop.
         self.joint_err_flags = [0] * 7
         self.motion_locked = False
+        # Web GUI screenshots (2026-05-07) show the arms shipped with this
+        # OFF, so default to off and let the tests turn it on.
+        self.self_collision = os.environ.get("RM_EMU_SELF_COLLISION") == "1"
 
     # ── event delivery ──
     def _emit(self, device: int, ok: bool = True):
@@ -306,6 +316,7 @@ class EmuController:
         time.sleep(_scaled(self.command_latency_s))
         v = int(v)
         with self._lock:
+            self._truncate_lift_locked()       # planned move preempts the pole
             if self._arm_motion and not self._arm_motion.done.is_set():
                 self.joints_deg = self._arm_motion.current()
                 self._arm_motion.cancel()      # retarget from current pose
@@ -353,7 +364,7 @@ class EmuController:
             # NO device-0 arrival event is ever delivered (the dispatch
             # itself still returns 0). The reverse does not happen: an arm
             # command issued while the pole is moving leaves the pole
-            # running, which is why RealMan's own online program commands
+            # running, which is why our ZIGZAG01 Web-GUI program commands
             # the lift first and then the arm.
             m = self._arm_motion
             if m is not None and not m.done.is_set():
@@ -528,6 +539,22 @@ class EmuController:
             return list(self.hand_hw)
 
     # ── stops ──
+    def movej_canfd(self, target_deg) -> int:
+        """Streamed setpoint: state follows the command, no event, and no
+        interaction with an in-flight lift move (hardware-consistent)."""
+        with self._lock:
+            if self.motion_locked:
+                return 1
+            if any(abs(q) > lim + 1e-6
+                   for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
+                return 1
+            # a passthrough setpoint supersedes any planned motion cleanly
+            if self._arm_motion and not self._arm_motion.done.is_set():
+                self._arm_motion.cancel()
+                self._arm_motion = None
+            self.joints_deg = list(target_deg)
+        return 0
+
     def stop_arm(self):
         """rm_set_arm_stop: halts arm AND pole, no arrival events."""
         with self._lock:
@@ -543,6 +570,29 @@ class EmuController:
                 return 1                   # rejects the stop command too
             self._halt_lift_locked()
         return 0
+
+    def _truncate_lift_locked(self):
+        """A planned arm command stops an in-flight pole move (C16).
+
+        The pole gets ~LIFT_TRUNCATE_MM further and then stops, silently:
+        no error, no arrival event. If that distance is enough to reach the
+        target the move simply completes normally — which is why short pole
+        legs survive a concurrent arm move and long ones do not.
+        """
+        m = self._lift_motion
+        if m is None or m.done.is_set():
+            return
+        here = m.current()
+        remaining = abs(m.target - here)
+        if remaining <= LIFT_TRUNCATE_MM / max(self.lift_hw_to_phys, 1e-6):
+            return                              # close enough: it will finish
+        m.cancel()                              # cancelled => NO event
+        step = LIFT_TRUNCATE_MM / max(self.lift_hw_to_phys, 1e-6)
+        self.lift_hw = here + (step if m.target > here else -step)
+        self._lift_motion = None
+        for _, _, done in self._lift_queue:
+            done.set()
+        self._lift_queue.clear()
 
     def _halt_lift_locked(self):
         if self._lift_motion and not self._lift_motion.done.is_set():
@@ -729,6 +779,18 @@ class RoboticArm:
     def rm_get_arm_power_state(self):
         return 0, 1
 
+    # ── self-collision safety detection ──
+    # Modelled as plain state: the tests enable it on connect and the
+    # emulator must be able to report both states so the "was OFF ->
+    # enabling" path is exercised offline. RM_EMU_SELF_COLLISION=1 starts
+    # it already on.
+    def rm_get_self_collision_enable(self):
+        return 0, self._ctrl.self_collision
+
+    def rm_set_self_collision_enable(self, enable):
+        self._ctrl.self_collision = bool(enable)
+        return 0
+
     def rm_get_joint_err_flag(self):
         return {"return_code": 0,
                 "err_flag": list(self._ctrl.joint_err_flags),
@@ -783,6 +845,22 @@ class RoboticArm:
 
     def rm_set_arm_stop(self):
         return self._ctrl.stop_arm()
+
+    def rm_movej_canfd(self, joint, follow, expand=0, trajectory_mode=0,
+                       radio=0):
+        """Passthrough: the commanded angles become the state immediately.
+
+        Two fidelity points that matter for the sync tests:
+          * NO arrival event is emitted — passthrough bypasses planning, so
+            there is no trajectory to "arrive". Completion is the caller's
+            stream ending.
+          * It does NOT engage the planned-move truncation path, which is
+            exactly why lift + canfd works on hardware while lift + movej
+            does not (butterfli_hw bench_sync vs C16).
+        """
+        if len(joint) != 7:
+            return 1
+        return self._ctrl.movej_canfd(list(joint))
 
     def rm_movej_p(self, pose, v, r, connect, block):
         # r/connect accepted but not emulated (immediate exact-stop move).

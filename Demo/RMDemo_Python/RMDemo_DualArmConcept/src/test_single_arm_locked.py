@@ -15,8 +15,8 @@ awaited) — only the partner arm and its barrier are absent.
 ROOT CAUSE FOUND WITH THIS TEST (2026-08-07): a lift command issued while
 a PLANNED arm trajectory is in flight ABORTS that trajectory — the arm
 stops short and no device-0 arrival event ever arrives.  Sync steps now
-dispatch the LIFT FIRST (RM_SYNC_ORDER, matching RealMan's own Web-GUI
-online program and bench_sync), so a healthy run completes.  Set
+dispatch the LIFT FIRST (RM_SYNC_ORDER, matching our own ZIGZAG01
+Web-GUI program and bench_sync), so a healthy run completes.  Set
 RM_SYNC_ORDER=arm_first to reproduce the freeze on demand: the pole
 travels, the arm stops short of zero, and the step sits in its 40 s
 joint-event wait before failing over to position verify.
@@ -126,7 +126,7 @@ def main() -> int:
                  if SYNC_LEAD_S else " (back-to-back)")
               + ("   <-- the order that FROZE the arms 2026-08-06/07"
                  if SYNC_ORDER == "arm_first" else
-                 "   (vendor Blockly + bench_sync order)"))
+                 "   (ZIGZAG01 + bench_sync order)"))
         print("    A frozen sync step waits up to 40 s for the arm event,"
               " then position-verifies, halts, and FAILS — let it finish.")
     print("=" * 68)
