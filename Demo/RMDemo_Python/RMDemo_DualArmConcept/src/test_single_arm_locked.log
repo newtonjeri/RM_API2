@@ -83,3 +83,93 @@ Environment overrides:
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 12:32:54
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.29 m -> left=290 (1to1)) ...
+  [INFO] left: pole at full length (0.01 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  2.13 s
+  [INFO] left: run mode restored to REAL
+
+  Summary: 1 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_single_arm_locked.py", line 247, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/test_single_arm_locked.py", line 154, in main
+    rec = arm.finish(monitor, beg)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 604, in finish
+    arrived, success = monitor.wait(self.handle_id, device,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/dual_arm_common.py", line 457, in wait
+    arrived = waiter[0].wait(timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 655, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 359, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 12:34:40
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('arm', 'zero'), ('hand', 'grasp'), ('arm', 'ready'), ('hand', 'half_grasp'), ('arm', 'rest')]   [--no-pole: pole/sync-lift steps stripped]
+    mode: REAL
+    pole pre-positioning SKIPPED (--no-pole)
+    THE LEFT ARM AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] pole pre-positioned to full length  (SKIPPED — pole disabled (--no-pole))
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  2.52 s
+  ('hand', 'release')        ok=True  hand  1.25 s
+  ('arm', 'zero')            ok=True  arm  3.72 s
+  ('hand', 'grasp')          ok=True  hand  1.26 s
+  ('arm', 'ready')           ok=True  arm  3.71 s
+  ('hand', 'half_grasp')     ok=True  hand  0.72 s
+  ('arm', 'rest')            ok=True  arm  2.13 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [PASS] sync dispatch back-to-back  (SKIPPED — poles disabled (--no-pole))
+  [PASS] arm-pole sync finish  (SKIPPED — poles disabled (--no-pole))
+  [INFO] left: run mode restored to REAL
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
