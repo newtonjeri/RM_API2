@@ -9,12 +9,17 @@ second arm removed.  This runs the EXACT dual-locked concept sequence
     -> hand->half_grasp -> arm->rest
 
 through the EXACT per-arm code path run_locked uses (ConceptArm.begin /
-finish: movej dispatched first, then the duration-matched
-rm_set_lift_height, back-to-back non-blocking, arrival events awaited)
-— only the partner arm and its barrier are absent.  If the freeze is the
-planned-movej + lift conflict, it reproduces here at the FIRST SYNC STEP:
-the pole will travel, the arm will stop short of zero, and the step will
-sit in its 40 s joint-event wait before failing over to position verify.
+finish: both devices dispatched back-to-back non-blocking, arrival events
+awaited) — only the partner arm and its barrier are absent.
+
+ROOT CAUSE FOUND WITH THIS TEST (2026-08-07): a lift command issued while
+a PLANNED arm trajectory is in flight ABORTS that trajectory — the arm
+stops short and no device-0 arrival event ever arrives.  Sync steps now
+dispatch the LIFT FIRST (RM_SYNC_ORDER, matching RealMan's own Web-GUI
+online program and bench_sync), so a healthy run completes.  Set
+RM_SYNC_ORDER=arm_first to reproduce the freeze on demand: the pole
+travels, the arm stops short of zero, and the step sits in its 40 s
+joint-event wait before failing over to position verify.
 
 Unlike C2, every step's result prints IMMEDIATELY, so a frozen step is
 visible as it happens instead of after a silent hang.
@@ -35,10 +40,14 @@ import sys
 
 from dual_arm_common import (
     handle_cli,
+    preflight_error_gate, describe_error_state, error_state,
+    error_state_clean,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, DEV_HAND, DEV_JOINT, DEV_LIFT,
-    LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP, ROBOT_PORT, ArrivalMonitor,
+    LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP, ROBOT_PORT, SYNC_LEAD_S, SYNC_ORDER,
+    ArrivalMonitor,
     ConceptArm, apply_run_mode, countdown, home_poles_full, mode_label,
-    parse_mode_arg, parse_no_hands_arg, parse_no_pole_arg,
+    parse_clear_errors_arg, parse_mode_arg,
+    parse_no_hands_arg, parse_no_pole_arg,
     report_run_modes, restore_run_modes, strip_hands, strip_poles,
     teardown,
 )
@@ -49,7 +58,7 @@ ARM_SIDE = os.environ.get("RM_ARM", "left").lower()
 SYNC_DISPATCH_SKEW_LIMIT_MS = 50.0   # movej -> lift dispatch gap in a sync step
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
-N_CHECKS = 6
+N_CHECKS = 7
 
 DEV_NAME = {DEV_JOINT: "arm", DEV_LIFT: "lift", DEV_HAND: "hand"}
 
@@ -83,6 +92,7 @@ def main() -> int:
     forced = parse_mode_arg()
     no_hands = parse_no_hands_arg()
     no_pole = parse_no_pole_arg()
+    clear_errs = parse_clear_errors_arg()
     seq = CONCEPT_SEQUENCE
     if no_hands:
         seq = strip_hands(seq)
@@ -111,6 +121,12 @@ def main() -> int:
           + (" (VIRTUALLY — SIM forced; lift/hand do NOT simulate)"
              if forced == 0 else ""))
     if not no_pole:
+        print(f"    sync dispatch order: {SYNC_ORDER.upper()}"
+              + (f", pole lead {SYNC_LEAD_S*1000:.0f} ms"
+                 if SYNC_LEAD_S else " (back-to-back)")
+              + ("   <-- the order that FROZE the arms 2026-08-06/07"
+                 if SYNC_ORDER == "arm_first" else
+                 "   (vendor Blockly + bench_sync order)"))
         print("    A frozen sync step waits up to 40 s for the arm event,"
               " then position-verifies, halts, and FAILS — let it finish.")
     print("=" * 68)
@@ -133,6 +149,13 @@ def main() -> int:
                    "requested mode did not engage — aborting before motion")
             return 1
         report_run_modes(arm)
+        ok_err, err_detail = preflight_error_gate(
+            arm, clear=clear_errs)
+        if ok_err:
+            result("PASS", "no latched controller errors", err_detail)
+        else:
+            result("FAIL", "no latched controller errors", err_detail)
+            return 1
         countdown()
 
         if no_pole:
@@ -156,6 +179,17 @@ def main() -> int:
             _step_line(rec)
             if any(r != 0 for r in rets) or not rec["ok"]:
                 arm.halt()             # run_locked's stop_all, one arm
+                # Record what the abrupt stop latched, while it is fresh —
+                # an aborted trajectory faults the joints and every later
+                # motion command is rejected until --clear-errors.
+                st = error_state(arm)
+                print(f"  [DIAG] {arm.side}: error state after the failed "
+                      f"step — {describe_error_state(st)}")
+                if not error_state_clean(st):
+                    print("  [DIAG] recover before the next run: "
+                          f"RM_ARM={arm.side} python3 "
+                          "test_single_arm_locked.py --mode REAL "
+                          "--clear-errors")
                 break
 
         bad_ret = sum(1 for rec in recs
@@ -191,7 +225,7 @@ def main() -> int:
 
         sync_recs = [rec for rec in recs if rec["step"][0] == "sync"]
         if no_pole:
-            result("PASS", "sync dispatch back-to-back",
+            result("PASS", "sync dispatch gap",
                    "SKIPPED — poles disabled (--no-pole)")
             result("PASS", "arm-pole sync finish",
                    "SKIPPED — poles disabled (--no-pole)")
@@ -201,18 +235,21 @@ def main() -> int:
                       f"arm-dur-est {rec.get('arm_dur_est_s') or 0:.2f} s, "
                       f"matched lift {rec.get('lift_speed_pct')}%, "
                       f"start skew {rec['sync_start_skew_s']*1000:6.1f} ms")
-            worst_disp = max((rec["sync_start_skew_s"] for rec in sync_recs),
-                            default=None)
+            # Gap between the two dispatches, sign-independent: under
+            # lift_first the lift goes out first, so the raw skew is
+            # negative (= the pole's head start).
+            worst_disp = max((abs(rec["sync_start_skew_s"])
+                              for rec in sync_recs), default=None)
+            budget_ms = SYNC_DISPATCH_SKEW_LIMIT_MS + SYNC_LEAD_S * 1000.0
             if worst_disp is None:
-                result("FAIL", "sync dispatch back-to-back",
-                       "no sync steps ran")
-            elif worst_disp * 1000 < SYNC_DISPATCH_SKEW_LIMIT_MS:
-                result("PASS", "sync dispatch back-to-back",
-                       f"max movej->lift gap {worst_disp*1000:.1f} ms")
+                result("FAIL", "sync dispatch gap", "no sync steps ran")
+            elif worst_disp * 1000 <= budget_ms:
+                result("PASS", "sync dispatch gap",
+                       f"max {worst_disp*1000:.1f} ms between the two "
+                       f"commands (budget {budget_ms:.0f} ms)")
             else:
-                result("FAIL", "sync dispatch back-to-back",
-                       f"{worst_disp*1000:.1f} ms >= "
-                       f"{SYNC_DISPATCH_SKEW_LIMIT_MS} ms")
+                result("FAIL", "sync dispatch gap",
+                       f"{worst_disp*1000:.1f} ms > {budget_ms:.0f} ms")
             # Only steps that genuinely completed have a meaningful finish
             # skew — a frozen arm's timeout timestamp would otherwise make
             # the pole look benignly "early" and pass the check.

@@ -10,6 +10,7 @@ import sys
 
 from dual_arm_common import (
     handle_cli,
+    parse_clear_errors_arg, preflight_error_gate,
     ARM_SPEED_PCT, CONCEPT_SEQUENCE, LEFT_IP, LIFT_SPEED_PCT, RIGHT_IP,
     ArrivalMonitor, apply_run_mode, connect_both, countdown, mode_label,
     home_poles_full, parse_mode_arg, parse_no_hands_arg,
@@ -18,7 +19,7 @@ from dual_arm_common import (
 )
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
-N_CHECKS = 5
+N_CHECKS = 6
 GATE_LATENCY_LIMIT_S = 1.0
 
 
@@ -35,6 +36,7 @@ def main() -> int:
     forced = parse_mode_arg()
     no_hands = parse_no_hands_arg()
     no_pole = parse_no_pole_arg()
+    clear_errs = parse_clear_errors_arg()
     seq = CONCEPT_SEQUENCE
     if no_hands:
         seq = strip_hands(seq)
@@ -74,6 +76,13 @@ def main() -> int:
                    "requested mode did not engage — aborting before motion")
             return 1
         report_run_modes(left, right)
+        ok_err, err_detail = preflight_error_gate(
+            left, right, clear=clear_errs)
+        if ok_err:
+            result("PASS", "no latched controller errors", err_detail)
+        else:
+            result("FAIL", "no latched controller errors", err_detail)
+            return 1
         countdown()
 
         if no_pole:

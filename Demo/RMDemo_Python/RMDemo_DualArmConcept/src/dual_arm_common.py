@@ -95,6 +95,27 @@ LIFT_MM_S_PER_PCT      = 1.85     # kLiftCruiseMpsPerPct * 1000
 LIFT_MIN_MATCH_PCT     = 4        # lowered floor (TODO item 1, 2026-07-25)
 ARM_MAX_DEG_S          = 180.0    # synchronized-profile joint speed at v=100
 
+# ─── Sync dispatch ORDER (hardware-decided 2026-08-07) ──────────────────────
+# A lift command issued while a PLANNED arm trajectory is in flight ABORTS
+# that trajectory: the arm stops short and NO device-0 arrival event ever
+# arrives. Proven on one arm with hands absent (C9 --no-hands froze at the
+# first sync step; the same run with --no-pole passed 6/6).
+#
+# RealMan's own Web-GUI online program (ZIGZAG01) moves pole and arm
+# together and never does this — it issues the lift NON-BLOCKING FIRST and
+# only then commands the arm, so the pole is already in flight when the arm
+# move starts. That is also the ordering butterfli_hw's bench_sync proved
+# (pole command first, arm follows after a measured lead). Hence the
+# default here is lift-first.
+#   RM_SYNC_ORDER=arm_first   restore the old (freezing) order for A/B tests
+#   RM_SYNC_LEAD_MS=N         pole head start before the arm command; 0 =
+#                             back-to-back, exactly like the vendor program
+SYNC_ORDER = os.environ.get("RM_SYNC_ORDER", "lift_first").lower()
+if SYNC_ORDER not in ("lift_first", "arm_first"):
+    raise SystemExit(f"RM_SYNC_ORDER must be lift_first|arm_first, "
+                     f"got {SYNC_ORDER!r}")
+SYNC_LEAD_S = max(0.0, float(os.environ.get("RM_SYNC_LEAD_MS", "0")) / 1000.0)
+
 # ─── Joint states (radians, verbatim from butterfli_alix.srdf) ──────────────
 STATES_RAD = {
     "left": {
@@ -230,16 +251,23 @@ Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
   --no-hands        strip all hand steps/parts from the run
   --no-pole         skip pole pre-positioning and strip pole/sync-lift
                     steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
   -h, --help        show the script's documentation and exit (no motion)
 C8 pole diagnostic (test_pole_only.py) only:
   --diagnose-only   read state and report; NO pole motion at all
-  --clear-errors    call rm_clear_system_err before the acceptance probe
 
 Environment overrides:
   RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
   RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
   RM_ARM=left|right                            arm selection (C6/C7)
   RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 """
@@ -266,7 +294,8 @@ def handle_cli(doc: str, argv=None, extra_flags=()):
         if a == "--mode":
             skip = True
             continue
-        if a.startswith("--mode=") or a in ("--no-hands", "--no-pole") \
+        if a.startswith("--mode=") \
+                or a in ("--no-hands", "--no-pole", "--clear-errors") \
                 or a in extra_flags:
             continue
         print(f"unknown argument: {a!r}")
@@ -301,6 +330,12 @@ def parse_no_pole_arg(argv=None) -> bool:
     """--no-pole skips pole pre-positioning and strips lift parts."""
     args = list(sys.argv[1:] if argv is None else argv)
     return "--no-pole" in args
+
+
+def parse_clear_errors_arg(argv=None) -> bool:
+    """--clear-errors clears latched faults before the run starts."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    return "--clear-errors" in args
 
 
 def strip_poles(sequence):
@@ -484,7 +519,11 @@ class ConceptArm:
         if kind == "hand":
             return [(DEV_HAND, target)]
         if kind == "sync":
-            return [(DEV_JOINT, target[0]), (DEV_LIFT, target[1])]
+            # Lift FIRST by default: a lift command that lands on an
+            # in-flight planned arm trajectory kills it (see SYNC_ORDER).
+            if SYNC_ORDER == "arm_first":
+                return [(DEV_JOINT, target[0]), (DEV_LIFT, target[1])]
+            return [(DEV_LIFT, target[1]), (DEV_JOINT, target[0])]
         if kind == "combo":
             # Arbitrary concurrent parts, e.g. ("combo", (("arm", "ready"),
             # ("hand", "release"))) — all dispatched back-to-back, all
@@ -570,7 +609,13 @@ class ConceptArm:
         for device, target in parts:
             if device != DEV_HAND:
                 monitor.expect(self.handle_id, device)
-        for device, target in parts:
+        for index, (device, target) in enumerate(parts):
+            if index and step[0] == "sync" and SYNC_LEAD_S:
+                # Pole head start: it has the longer start latency (~235 ms
+                # down / ~330 ms up, bench_sync), so leading it makes the
+                # two devices START together rather than merely being
+                # commanded together.
+                time.sleep(SYNC_LEAD_S)
             if device == DEV_HAND:
                 holder = self.start_hand_acked(target)
                 beg["devices"][device] = {"target": target, "ret": 0,
@@ -715,6 +760,100 @@ def stop_all(*arms):
     for arm in arms:
         if arm is not None:
             arm.halt()
+
+
+def error_state(arm: "ConceptArm") -> dict:
+    """Every error surface the controller exposes for one arm."""
+    r = arm.robot
+    st = {"sys": [], "joints": [], "lift_err": None, "readable": False}
+    try:
+        ret, s = r.rm_get_current_arm_state()
+        if ret == 0:
+            st["readable"] = True
+            err = (s or {}).get("err")
+            if isinstance(err, dict):
+                st["sys"] = [str(c) for c in err.get("err", [])
+                             if str(c) not in ("0", "")]
+    except Exception:
+        pass
+    try:
+        jd = r.rm_get_joint_err_flag()
+        if jd.get("return_code") == 0:
+            st["readable"] = True
+            st["joints"] = [(i + 1, f)
+                            for i, f in enumerate(jd.get("err_flag", [])) if f]
+    except Exception:
+        pass
+    try:
+        ret, lst = r.rm_get_lift_state()
+        if ret == 0:
+            st["lift_err"] = lst.get("err_flag", 0)
+    except Exception:
+        pass
+    return st
+
+
+def error_state_clean(st: dict) -> bool:
+    return not st["sys"] and not st["joints"] and not st["lift_err"]
+
+
+def describe_error_state(st: dict) -> str:
+    if not st["readable"]:
+        return "unreadable"
+    if error_state_clean(st):
+        return "clean"
+    bits = []
+    if st["sys"]:
+        bits.append("system " + ",".join(st["sys"]))
+    if st["joints"]:
+        bits.append("joints " + ",".join(f"J{i}={f}" for i, f in st["joints"]))
+    if st["lift_err"]:
+        bits.append(f"lift driver {st['lift_err']}")
+    return "; ".join(bits)
+
+
+def clear_errors(*arms) -> bool:
+    """rm_clear_system_err on every arm, then re-read to confirm."""
+    ok = True
+    for arm in [a for a in arms if a is not None]:
+        try:
+            ret = arm.robot.rm_clear_system_err()
+        except Exception as exc:
+            ret, ok = repr(exc), False
+        st = error_state(arm)
+        print(f"  [INFO] {arm.side}: rm_clear_system_err ret={ret} -> "
+              f"{describe_error_state(st)}")
+        ok = ok and ret == 0 and error_state_clean(st)
+    return ok
+
+
+def preflight_error_gate(*arms, clear: bool = False):
+    """Refuse to start motion on a controller with LATCHED errors.
+
+    A sudden trajectory abort latches joint errors on the hardware (the
+    lift-onto-moving-arm defect below, an e-stop, a collision stop). Every
+    later motion command is then rejected with ret=1 until the errors are
+    cleared, so a run started in that state fails confusingly several steps
+    in. Catching it here turns that into one line before anything moves.
+
+    Returns (ok, detail).
+    """
+    live = [a for a in arms if a is not None]
+    if clear:
+        clear_errors(*live)
+    dirty = []
+    for arm in live:
+        st = error_state(arm)
+        desc = describe_error_state(st)
+        if error_state_clean(st) or not st["readable"]:
+            print(f"  [INFO] {arm.side}: error state {desc}")
+        else:
+            print(f"  [WARN] {arm.side}: LATCHED ERRORS — {desc}")
+            dirty.append(f"{arm.side}: {desc}")
+    if not dirty:
+        return True, "no latched errors"
+    return False, ("; ".join(dirty) + " — motion will be REJECTED (ret=1); "
+                   "rerun with --clear-errors (power-cycle if they persist)")
 
 
 def diagnose_lift_rejection(arm: "ConceptArm"):

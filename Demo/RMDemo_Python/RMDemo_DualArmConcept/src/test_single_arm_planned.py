@@ -29,10 +29,12 @@ import time
 
 from dual_arm_common import (
     handle_cli,
+    preflight_error_gate,
     ARM_SPEED_PCT, ARM_TIMEOUT_S, DEV_HAND, DEV_JOINT, HAND_STATES_HW,
     HAND_TIMEOUT_S, LEFT_IP, RIGHT_IP, ROBOT_PORT, ArrivalMonitor,
     ConceptArm, apply_run_mode, countdown, home_poles_full, mode_label,
-    parse_mode_arg, parse_no_hands_arg, parse_no_pole_arg,
+    parse_clear_errors_arg, parse_mode_arg,
+    parse_no_hands_arg, parse_no_pole_arg,
     report_run_modes, restore_run_modes, run_step,
     teardown,
 )
@@ -45,7 +47,7 @@ POSE_TOL_M = 0.02            # per-axis verification tolerance
 OFFAXIS_TOL_M = 0.03         # allowed drift on Y/Z during the X move
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
-N_CHECKS = 7
+N_CHECKS = 8
 
 
 def result(tag: str, name: str, detail: str = ""):
@@ -86,6 +88,7 @@ def main() -> int:
     forced = parse_mode_arg()
     no_hands = parse_no_hands_arg()
     no_pole = parse_no_pole_arg()
+    clear_errs = parse_clear_errors_arg()
     ip = LEFT_IP if ARM_SIDE == "left" else RIGHT_IP
     print("=" * 68)
     print("C6  Single-arm planned moves + CONCURRENT hand motion")
@@ -128,6 +131,13 @@ def main() -> int:
                    "requested mode did not engage — aborting before motion")
             return 1
         report_run_modes(arm)
+        ok_err, err_detail = preflight_error_gate(
+            arm, clear=clear_errs)
+        if ok_err:
+            result("PASS", "no latched controller errors", err_detail)
+        else:
+            result("FAIL", "no latched controller errors", err_detail)
+            return 1
         countdown()
 
         if no_pole:

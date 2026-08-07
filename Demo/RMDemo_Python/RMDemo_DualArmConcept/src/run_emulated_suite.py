@@ -58,6 +58,47 @@ def _flag_drill() -> int:
         sys.argv = argv0
 
 
+def _sync_order_drill() -> int:
+    """The 2026-08-06/07 freeze, reproduced and fixed offline.
+
+    With RM_SYNC_ORDER=arm_first (a lift command landing on an in-flight
+    planned movej) C9 must FAIL at the first sync step with no arm arrival
+    event — the exact hardware signature. With the shipped lift_first
+    order it must pass. Order is the only variable."""
+    import dual_arm_common as dac
+    import test_single_arm_locked
+    argv0 = list(sys.argv)
+    saved_order, saved_timeout = dac.SYNC_ORDER, dac.ARM_TIMEOUT_S
+    dac.ARM_TIMEOUT_S = 2.0            # stand-in for the real 40 s wait
+    ctrl = rm_emulator.emu_controller(dac.LEFT_IP)
+    try:
+        dac.SYNC_ORDER = "arm_first"
+        sys.argv = [argv0[0], "--no-hands"]
+        print("\n-- drill A: arm_first must REPRODUCE the freeze --")
+        code_frozen = test_single_arm_locked.main()
+        latched = any(ctrl.joint_err_flags) and ctrl.motion_locked
+        print(f"  joint errors latched by the abort: {latched} "
+              f"(flags {ctrl.joint_err_flags})")
+
+        dac.SYNC_ORDER = "lift_first"
+        print("\n-- drill B: the next run must be REFUSED until cleared --")
+        code_blocked = test_single_arm_locked.main()
+
+        print("\n-- drill C: --clear-errors must recover and complete --")
+        sys.argv = [argv0[0], "--no-hands", "--clear-errors"]
+        code_fixed = test_single_arm_locked.main()
+    finally:
+        sys.argv = argv0
+        dac.SYNC_ORDER, dac.ARM_TIMEOUT_S = saved_order, saved_timeout
+    ok = (code_frozen != 0 and latched and code_blocked != 0
+          and code_fixed == 0)
+    print(f"\n  drill verdict: arm_first exit {code_frozen} (want nonzero), "
+          f"errors latched {latched} (want True), blocked exit {code_blocked} "
+          f"(want nonzero), cleared exit {code_fixed} (want 0) -> "
+          f"{'OK' if ok else 'FAIL'}")
+    return 0 if ok else 1
+
+
 def _locked_pole_drill() -> int:
     """Reproduce the 2026-08-06 20:38 lift-rejection state on the emulated
     LEFT arm, expect C8 to FAIL with the diagnosis, then expect a
@@ -98,6 +139,10 @@ def main() -> int:
     print(f"\n{'#' * 68}\n# C2 arm-only drill  (--no-hands --no-pole)\n"
           f"{'#' * 68}")
     codes["C2 arm-only drill"] = _flag_drill()
+
+    print(f"\n{'#' * 68}\n# C9 sync-order drill  (the arm-freeze regression)\n"
+          f"{'#' * 68}")
+    codes["C9 sync-order drill"] = _sync_order_drill()
 
     print(f"\n{'#' * 68}\n# C8 locked-pole drill  (fault injection)\n"
           f"{'#' * 68}")

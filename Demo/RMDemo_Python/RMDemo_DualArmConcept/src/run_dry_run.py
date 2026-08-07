@@ -299,6 +299,72 @@ def main() -> int:
               ("arm", "ready"), ("arm", "zero"),
               ("arm", "ready"), ("arm", "rest")])
 
+    # ── F1d. Sync dispatch ORDER (the 2026-08-07 arm-freeze fix) ────────
+    print("\nF1d. Sync dispatch order")
+    mon = fresh_monitor()
+    left, _ = make_pair(mon)
+    saved_order = dac.SYNC_ORDER
+    try:
+        dac.SYNC_ORDER = "lift_first"
+        check("default order dispatches the LIFT first",
+              [d for d, _ in left.parts_for(("sync", ("zero", "half")))]
+              == [dac.DEV_LIFT, dac.DEV_JOINT])
+        dac.SYNC_ORDER = "arm_first"
+        check("arm_first restores the old order for A/B tests",
+              [d for d, _ in left.parts_for(("sync", ("zero", "half")))]
+              == [dac.DEV_JOINT, dac.DEV_LIFT])
+    finally:
+        dac.SYNC_ORDER = saved_order
+    check("shipped default is lift_first", saved_order == "lift_first")
+    check("non-sync steps are unaffected by the order",
+          left.parts_for(("arm", "ready")) == [(dac.DEV_JOINT, "ready")]
+          and left.parts_for(("lift", "full")) == [(dac.DEV_LIFT, "full")])
+
+    # ── F1e. Latched-error gate (a trajectory abort faults the joints) ──
+    print("\nF1e. Latched-error gate")
+
+    class _ErrRobot:
+        """Minimal robot exposing the three error surfaces."""
+
+        def __init__(self, sys_codes=(), joints=(0,) * 7, lift_err=0):
+            self.sys_codes, self.joints = list(sys_codes), list(joints)
+            self.lift_err, self.cleared = lift_err, 0
+
+        def rm_get_current_arm_state(self):
+            return 0, {"joint": [0.0] * 7,
+                       "err": {"err_len": max(1, len(self.sys_codes)),
+                               "err": self.sys_codes or ["0"]}}
+
+        def rm_get_joint_err_flag(self):
+            return {"return_code": 0, "err_flag": self.joints,
+                    "brake_state": [0] * 7}
+
+        def rm_get_lift_state(self):
+            return 0, {"pos": 0, "err_flag": self.lift_err, "mode": 0}
+
+        def rm_clear_system_err(self):
+            self.cleared += 1
+            self.sys_codes, self.joints, self.lift_err = [], [0] * 7, 0
+            return 0
+
+    clean_arm = dac.ConceptArm("left", _ErrRobot(), _Handle(1))
+    check("clean controller reads clean",
+          dac.error_state_clean(dac.error_state(clean_arm))
+          and dac.describe_error_state(dac.error_state(clean_arm)) == "clean")
+    check("clean controller passes the gate",
+          dac.preflight_error_gate(clean_arm)[0])
+    faulted = _ErrRobot(sys_codes=["5001"], joints=[16] * 7)
+    bad_arm = dac.ConceptArm("left", faulted, _Handle(1))
+    ok_gate, detail = dac.preflight_error_gate(bad_arm)
+    check("latched joint errors BLOCK the run before motion",
+          not ok_gate and "J1=16" in detail and "--clear-errors" in detail)
+    ok_gate, _ = dac.preflight_error_gate(bad_arm, clear=True)
+    check("--clear-errors clears and then passes",
+          ok_gate and faulted.cleared == 1)
+    check("lift driver error alone also blocks",
+          not dac.preflight_error_gate(
+              dac.ConceptArm("left", _ErrRobot(lift_err=1), _Handle(1)))[0])
+
     # ── F1b. Pole pre-positioning helper ────────────────────────────────
     print("\nF1b. Pole homing to full length")
     mon = fresh_monitor()

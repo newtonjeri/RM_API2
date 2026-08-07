@@ -91,6 +91,12 @@ def _ik_seeded(seed_deg, pose6):
 # ─── Timing model (measured values where available) ─────────────────────────
 ARM_MAX_DEG_S = 180.0          # synchronized-profile joint speed at v=100
 RM75_LIMIT_DEG = [177.6, 130.0, 177.6, 135.0, 177.6, 128.0, 360.0]
+# Latched-fault codes after an abrupt trajectory abort. The BEHAVIOUR is
+# hardware-observed (joint errors latch; motion stays rejected until
+# rm_clear_system_err); these specific numbers are placeholders — replace
+# them if the real codes are ever captured from a frozen arm.
+ABORT_JOINT_ERR = 0x0010
+ABORT_SYS_ERR = 5001
 CMD_LATENCY_S = 0.005          # per-command TCP round trip (measured ~8 ms)
 LIFT_START_LATENCY_S = 0.38    # measured (butterfli_hw kLiftStartLatencyS)
 LIFT_SPEED_MAP = [             # speed% -> physical mm/s (LiftBenchmark)
@@ -243,6 +249,12 @@ class EmuController:
                   if s.strip()}
         self.lift_locked = side in locked
         self.sys_err_code = 4103 if self.lift_locked else 0
+        # Latched JOINT errors from an abrupt trajectory abort (see
+        # set_lift_height). While latched, every motion command is
+        # rejected with ret 1 until rm_clear_system_err — the recovery
+        # step the hardware demands after a sudden stop.
+        self.joint_err_flags = [0] * 7
+        self.motion_locked = False
 
     # ── event delivery ──
     def _emit(self, device: int, ok: bool = True):
@@ -274,6 +286,8 @@ class EmuController:
                for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
             return 1                       # target beyond RM75 joint limits
         with self._lock:
+            if self.motion_locked:
+                return 1                   # latched joint errors: clear first
             if self.reject_next_dispatch:
                 self.reject_next_dispatch = False
                 return 1
@@ -316,9 +330,32 @@ class EmuController:
         with self._lock:
             if self.lift_locked:
                 return 1                   # latched rejection, no motion
+            if self.motion_locked:
+                return 1                   # latched joint errors: clear first
             if self.reject_next_dispatch:
                 self.reject_next_dispatch = False
                 return 1
+            # HARDWARE-OBSERVED (2026-08-07, C9 --no-hands, left arm): a
+            # lift command that lands while a PLANNED arm trajectory is in
+            # flight ABORTS that trajectory — the arm stops where it is and
+            # NO device-0 arrival event is ever delivered (the dispatch
+            # itself still returns 0). The reverse does not happen: an arm
+            # command issued while the pole is moving leaves the pole
+            # running, which is why RealMan's own online program commands
+            # the lift first and then the arm.
+            m = self._arm_motion
+            if m is not None and not m.done.is_set():
+                self.joints_deg = m.current()      # frozen mid-trajectory
+                m.cancel()                         # cancelled => no event
+                self._arm_motion = None
+                # The abrupt stop is a HARDWARE FAULT, not a clean cancel:
+                # it latches joint errors, and every later motion command
+                # is rejected until rm_clear_system_err (Newton, hardware,
+                # 2026-08-07). The codes below model the BEHAVIOUR — the
+                # exact controller codes are not captured here.
+                self.joint_err_flags = [ABORT_JOINT_ERR] * 7
+                self.sys_err_code = ABORT_SYS_ERR
+                self.motion_locked = True
         if not (0 <= int(hw_mm) <= 2600):
             return 1                       # documented controller range
         time.sleep(_scaled(self.command_latency_s))
@@ -370,6 +407,8 @@ class EmuController:
         if not (1 <= int(v) <= 100) or len(pose6) != 6:
             return 1
         with self._lock:
+            if self.motion_locked:
+                return 1               # latched joint errors: clear first
             seed = self.current_joints_locked()
         ret, target_deg = _ik_seeded(seed, pose6)
         if ret != 0:
@@ -672,7 +711,8 @@ class RoboticArm:
         return 0, 1
 
     def rm_get_joint_err_flag(self):
-        return {"return_code": 0, "err_flag": [0] * 7,
+        return {"return_code": 0,
+                "err_flag": list(self._ctrl.joint_err_flags),
                 "brake_state": [0] * 7}
 
     def rm_clear_system_err(self):
@@ -680,6 +720,8 @@ class RoboticArm:
         with ctrl._lock:
             ctrl.sys_err_code = 0
             ctrl.lift_locked = False       # modelled recovery path
+            ctrl.joint_err_flags = [0] * 7
+            ctrl.motion_locked = False
         return 0
 
     def rm_get_joint_degree(self):
