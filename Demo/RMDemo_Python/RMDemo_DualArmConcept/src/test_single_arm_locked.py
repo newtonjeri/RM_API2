@@ -227,7 +227,7 @@ def main() -> int:
         if no_pole:
             result("PASS", "sync dispatch gap",
                    "SKIPPED — poles disabled (--no-pole)")
-            result("PASS", "arm-pole sync finish",
+            result("PASS", "pole outlasts the arm move",
                    "SKIPPED — poles disabled (--no-pole)")
         else:
             for rec in sync_recs:
@@ -257,15 +257,24 @@ def main() -> int:
                         if rec.get("sync_finish_skew_s") is not None
                         and rec["ok"]]
             if finished:
-                worst_late = max(finished)
-                if worst_late <= 0.5:
-                    result("PASS", "arm-pole sync finish",
-                           f"worst pole lateness {worst_late*1000:+.0f} ms")
+                # Polarity: the pole must finish AFTER the arm. A pole that
+                # completes mid-trajectory raises Position Command Step
+                # Warning on the moving joints and halts the arm.
+                worst_early = min(finished)
+                if worst_early < 0:
+                    result("FAIL", "pole outlasts the arm move",
+                           f"pole finished {abs(worst_early):.2f} s BEFORE "
+                           "the arm — the fault condition; lower the lift "
+                           "speed (RM_SYNC_POLE_OUTLAST)")
                 else:
-                    result("FAIL", "arm-pole sync finish",
-                           f"pole late by {worst_late:.2f} s")
+                    detail = f"earliest margin +{worst_early:.2f} s"
+                    if max(finished) > 2.0:
+                        detail += (f"; worst lateness {max(finished):.1f} s "
+                                   "— safe but poor sync, the speed model "
+                                   "needs recalibration")
+                    result("PASS", "pole outlasts the arm move", detail)
             else:
-                result("FAIL", "arm-pole sync finish",
+                result("FAIL", "pole outlasts the arm move",
                        "no sync step produced both completions "
                        "(the freeze outcome)")
         return 0 if _results["FAIL"] == 0 else 1

@@ -172,9 +172,20 @@ def main() -> int:
           all(0 <= v <= 1000 for vals in dac.HAND_STATES_HW.values()
               for v in vals))
 
-    # Sync duration matching (butterfli_hw contract, round-UP quantization)
-    check("matched lift speed: 105 phys mm over 4 s arm move -> 16%",
-          dac.matched_lift_speed_pct(4.0, 105.0) == 16)
+    # Sync duration matching — polarity INVERTED 2026-08-07: the pole must
+    # OUTLAST the arm move (a pole completing mid-trajectory faults the
+    # moving joints), so quantization rounds DOWN and targets
+    # arm_duration * SYNC_POLE_OUTLAST.
+    check("matched lift speed: 105 phys mm over 4 s arm move -> 10%",
+          dac.matched_lift_speed_pct(4.0, 105.0) == 10)
+    _pct = dac.matched_lift_speed_pct(4.0, 105.0)
+    _pole_s = dac.LIFT_START_LATENCY_S + 105.0 / (_pct * dac.LIFT_MM_S_PER_PCT)
+    check("matched pole is predicted to finish AFTER the arm",
+          _pole_s > 4.0, f"pole {_pole_s:.2f} s vs arm 4.00 s")
+    check("a bigger outlast factor makes the pole slower, never faster",
+          dac.matched_lift_speed_pct(4.0, 105.0)
+          <= math.ceil(105.0 / (4.0 - dac.LIFT_START_LATENCY_S)
+                       / dac.LIFT_MM_S_PER_PCT))
     check("matched lift speed floors at 4%",
           dac.matched_lift_speed_pct(30.0, 1.0) == 4)
     check("matched lift speed caps at 100%",
@@ -319,6 +330,53 @@ def main() -> int:
     check("non-sync steps are unaffected by the order",
           left.parts_for(("arm", "ready")) == [(dac.DEV_JOINT, "ready")]
           and left.parts_for(("lift", "full")) == [(dac.DEV_LIFT, "full")])
+
+    # ── F1f. Firmware-detected lift gearing (right-arm upgrade safety) ──
+    print("\nF1f. Lift gearing auto-detection")
+
+    class _VerRobot:
+        def __init__(self, version):
+            self.version = version
+
+        def rm_get_arm_software_info(self):
+            if self.version is None:
+                return 1, {}
+            return 0, {"ctrl_info": {"version": self.version}}
+
+    check("version parser handles V-prefix and suffixes",
+          dac._version_tuple("V1.7.4-emu") == (1, 7, 4)
+          and dac._version_tuple("1.7.1") == (1, 7, 1)
+          and dac._version_tuple("") == ())
+    check("V1.7.4 -> true-mm 1to1",
+          dac.detect_lift_gear(_VerRobot("V1.7.4")) == "1to1")
+    check("V1.7.1 -> geared 2to3",
+          dac.detect_lift_gear(_VerRobot("1.7.1")) == "2to3")
+    check("unreadable version -> no verdict",
+          dac.detect_lift_gear(_VerRobot(None)) == "")
+
+    _saved = dict(dac.LIFT_GEAR)
+    try:
+        # The right-arm upgrade: detection must flip it without any edit.
+        dac.LIFT_GEAR["right"] = dict(dac._GEARS["2to3"], name="2to3")
+        dac.apply_detected_lift_gear("right", _VerRobot("V1.7.4"))
+        check("upgraded right arm auto-switches to 1to1 (full -> 290)",
+              dac.LIFT_GEAR["right"]["name"] == "1to1"
+              and dac.lift_hw_mm("right", dac.LIFT_M["full"]) == 290)
+        # An unreadable version must NOT silently change the assumption.
+        dac.LIFT_GEAR["right"] = dict(dac._GEARS["2to3"], name="2to3")
+        dac.apply_detected_lift_gear("right", _VerRobot(None))
+        check("unreadable version keeps the assumed gearing",
+              dac.LIFT_GEAR["right"]["name"] == "2to3")
+        # An explicit env pin outranks detection.
+        _os.environ["RM_RIGHT_LIFT_GEAR"] = "2to3"
+        try:
+            dac.apply_detected_lift_gear("right", _VerRobot("V1.7.4"))
+            check("env pin outranks detection",
+                  dac.LIFT_GEAR["right"]["name"] == "2to3")
+        finally:
+            _os.environ.pop("RM_RIGHT_LIFT_GEAR", None)
+    finally:
+        dac.LIFT_GEAR.update(_saved)
 
     # ── F1e. Latched-error gate (a trajectory abort faults the joints) ──
     print("\nF1e. Latched-error gate")

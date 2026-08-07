@@ -158,24 +158,33 @@ def main() -> int:
                      for e in report["steps"] for rec in (e["left"], e["right"])
                      if e["step"][0] == "sync" and "sync_finish_skew_s" in rec]
         if no_pole:
-            result("PASS", "arm-pole sync finish",
+            result("PASS", "pole outlasts the arm move",
                    "SKIPPED — poles disabled (--no-pole)")
         elif sync_recs:
-            worst_late = max(rec["sync_finish_skew_s"] for _, rec in sync_recs)
+            # Polarity inverted 2026-08-07: a pole that COMPLETES mid-arm-
+            # trajectory faults the moving joints (Position Command Step
+            # Warning). Late = safe, early = fault.
+            worst_early = min(rec["sync_finish_skew_s"]
+                              for _, rec in sync_recs if rec["ok"]) \
+                if any(rec["ok"] for _, rec in sync_recs) else None
             for step, rec in sync_recs:
                 print(f"  [INFO] sync {rec['side']:5s} {str(step[1]):20s} "
                       f"arm-dur-est {rec.get('arm_dur_est_s', 0):.2f} s, "
                       f"matched lift {rec.get('lift_speed_pct')}%, "
                       f"start skew {rec['sync_start_skew_s']*1000:6.1f} ms, "
                       f"finish skew {rec['sync_finish_skew_s']*1000:+7.1f} ms")
-            if worst_late <= 0.5:
-                result("PASS", "arm-pole sync finish",
-                       f"worst pole lateness {worst_late*1000:+.0f} ms")
+            if worst_early is None:
+                result("FAIL", "pole outlasts the arm move",
+                       "no sync step completed")
+            elif worst_early < 0:
+                result("FAIL", "pole outlasts the arm move",
+                       f"pole finished {abs(worst_early):.2f} s BEFORE the "
+                       "arm — the fault condition (RM_SYNC_POLE_OUTLAST)")
             else:
-                result("FAIL", "arm-pole sync finish",
-                       f"pole late by {worst_late:.2f} s")
+                result("PASS", "pole outlasts the arm move",
+                       f"earliest margin +{worst_early:.2f} s")
         else:
-            result("FAIL", "arm-pole sync finish", "no sync steps measured")
+            result("FAIL", "pole outlasts the arm move", "no sync steps measured")
         return 0 if _results["FAIL"] == 0 else 1
     finally:
         restore_run_modes(originals)

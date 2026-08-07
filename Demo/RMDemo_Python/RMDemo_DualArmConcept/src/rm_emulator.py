@@ -682,12 +682,19 @@ class RoboticArm:
                    "robot_controller_version": 3}
 
     def rm_get_arm_software_info(self):
+        # The reported firmware is DERIVED from the emulated lift gearing so
+        # the two can never disagree: the real fleet's V1.7.4 arms report
+        # the lift in true mm (1:1) and V1.7.1 arms are 2:3 geared, and
+        # dual_arm_common detects the gearing from exactly this field.
+        true_mm = self._ctrl.lift_hw_to_phys == 1.0
+        ver = "V1.7.4-emu" if true_mm else "V1.7.1-emu"
+        algo = "1.5.9-emu" if true_mm else "1.5.5-emu"
         return 0, {"product_version": "RM75-6FB",
-                   "algorithm_info": {"version": "1.5.5-emu"},
-                   "ctrl_info": {"version": "V1.7.1-emu",
+                   "algorithm_info": {"version": algo},
+                   "ctrl_info": {"version": ver,
                                  "build_time": "2025/06/16 16:43:55"},
                    "dynamic_info": {"model_version": "2"},
-                   "plan_info": {"version": "V1.7.1-emu",
+                   "plan_info": {"version": ver,
                                  "build_time": "2025/06/16 16:44:12"}}
 
     def rm_get_arm_run_mode(self):

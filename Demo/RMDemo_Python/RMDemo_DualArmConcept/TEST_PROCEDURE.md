@@ -27,7 +27,7 @@ Example: `RM_LEFT_IP=192.168.2.10 RM_RIGHT_IP=192.168.2.11 RM_HOST_IP=192.168.2.
 | Lift stroke (physical) | 0–0.3 m |
 | Lift safe range (SRDF states) | 0.01–0.29 m → 7–193 hw-mm |
 | Lift gearing — LEFT (V1.7.4) | **1:1, true mm, travel 0–330** (physically confirmed 2026-08-06: commanding 193 under the old 2/3 assumption left the pole mid-rail). `full_length` 0.29 m → **290** | env `RM_LEFT_LIFT_GEAR` (`1to1`/`2to3`) |
-| Lift gearing — RIGHT (V1.7.1) | 2:3 geared, hw 0–200 (`hw = m × 2000/3`). `full_length` 0.29 m → **193**. **Flip to `1to1` via `RM_RIGHT_LIFT_GEAR` after its upgrade** | env `RM_RIGHT_LIFT_GEAR` |
+| Lift gearing — RIGHT (V1.7.1) | 2:3 geared, hw 0–200 (`hw = m × 2000/3`). `full_length` 0.29 m → **193**. **No manual flip needed on upgrade** — the gearing is auto-detected from the controller firmware at connect (`≥ V1.7.4 ⇒ true-mm 1:1`), logged as `lift gearing 2to3 -> 1to1`; the env var only pins it | env `RM_RIGHT_LIFT_GEAR` (override) |
 | Controller-side lift ceiling | Left (V1.7.4): Min 0 / Max **330** true mm — `full_length` command 290 stays inside it. Right (V1.7.1): hw max 200. `lift_hw_mm()` hard-asserts the per-side ceiling. Motor params observed on left: 1250 rpm / 5000 rpm/s / RR 0.005 / joint ID 7 — the V1.7.1-measured speed map (1.85 phys mm/s per %) and start latencies should be revalidated on the upgraded arm before trusting sync-finish numbers. |
 | Arm speed used | 20 % (`rm_movej` v) |
 | Lift speed used | 50 % standalone; **duration-matched** on sync steps (see §1.5) |
@@ -61,18 +61,25 @@ First step doubles as homing from any start pose. Hand states come from the SRDF
 
 ### 1.5 Arm–pole synchronization (the feature under test)
 
-**⚠ DISPATCH ORDER IS LOAD-BEARING (hardware-decided 2026-08-07).** A lift
-command issued while a **planned** arm trajectory is in flight **aborts that
-trajectory**: the arm stops short and **no device-0 arrival event ever
-arrives**, so the waiter hangs until its timeout. Proven by C9 on a single
-arm with hands absent (`--no-hands` froze at the first sync step; the same
-run with `--no-pole` passed 6/6), after the same freeze hit C2 on both arms.
-RealMan's own Web-GUI online program (`ZIGZAG01`, pole and arm moving
-together) never does this — it issues the lift **non-blocking FIRST** and
-only then commands the arm, which is also the ordering `bench_sync` proved.
-**The abort is a HARDWARE FAULT, not a clean cancel**: it latches JOINT
+**⚠ THE POLE'S MOTION MUST SPAN THE ARM'S (hardware-decided 2026-08-07).**
+A pole motion **state transition** — its start *or* its completion — while a
+planned arm trajectory is in flight steps the arm's position command and
+halts it mid-path. The Web GUI decodes the resulting joint error 16384
+(0x4000) as **"Position Command Step Warning"**, and it appears only on the
+joints that were MOVING (right arm: J2/J4/J6 flagged, stationary J1/J3/J5/J7
+Normal) — a command discontinuity, not overload or collision.
+
+Evidence: pole START inside the arm move → the original `arm_first` freezes;
+pole COMPLETION inside the arm move → the right arm on 2026-08-07 15:42
+(pole done at 3.47 s, arm needed ~3.7 s, arm halted ~60 % of the way). Every
+run where the pole *outlasted* the arm was clean, on both arms.
+
+Safe pattern: the pole's motion **starts before the arm's and finishes after
+it**, or lies entirely outside. RealMan's own Web-GUI program (`ZIGZAG01`)
+does exactly this — one slow 25 % descent spanning many fast arm moves.
+**The halt is a HARDWARE FAULT, not a clean cancel**: it latches JOINT
 ERRORS, and every later motion command is then rejected with `ret=1`
-until `rm_clear_system_err` runs — so a frozen run poisons the next one
+until `rm_clear_system_err` runs — so a faulted run poisons the next one
 too. Every motion test therefore opens with a **latched-error gate**
 that refuses to start (and names the codes) rather than failing
 confusingly mid-run; `--clear-errors` clears them first.
@@ -83,7 +90,9 @@ confusingly mid-run; `--clear-errors` clears them first.
 latency: ~235 ms down / ~330 ms up) so the two devices *start* together
 rather than merely being commanded together.
 
-Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level: both devices are dispatched back-to-back, and the lift speed is **duration-matched** to the arm move — `v = distance / (arm_duration − 0.38 s start latency)`, `pct = ceil(v / 1.85)`, floored at 4 % — with ROUND-UP quantization (early finish is benign, the device waits; late is the failure mode). Per step the test reports dispatch start skew and joint-vs-lift finish skew, mirroring `bench_sync`'s `pa_start`/`pa_finish`.
+Sync steps port the butterfli_hw sync contract (`TECHNICAL_INTERFACE.md` §"SYNCHRONIZATION", `bench_sync`) to the RM_API2 command level, with **the polarity inverted for this controller**. butterfli_hw treated a LATE pole as the failure mode and rounded the matched speed UP; here an EARLY pole is a *fault* (it completes mid-trajectory) and a late pole is merely slow. So `matched_lift_speed_pct` targets `arm_duration × RM_SYNC_POLE_OUTLAST` (default 1.5), floors at 4 %, and quantizes **ROUND-DOWN**. The acceptance check is correspondingly **"pole outlasts the arm move"** — FAIL if the pole finished before the arm.
+
+⚠ **The speed model is known to be optimistic by 2–7× on this firmware** (left: 140 hw-mm took 3.47 s at 50 % arm-idle, and 19.71 s at 28 % with the arm moving, against ~3 s predicted). That errs in the *safe* direction under the new polarity, but it means sync *quality* is currently poor — `LIFT_MM_S_PER_PCT = 1.85` needs remeasuring per firmware and per arm pose before the finish skews mean anything. `LIFT_TIMEOUT_S` is 60 s (`RM_LIFT_TIMEOUT_S`) because a healthy run once failed purely on the old 25 s limit.
 
 **Hand dispatch method (hardware-validated 2026-08-06, butterfli_hw
 `acked_angle` semantics)**: both hand paths WORK on both arms (protocol and
@@ -142,7 +151,7 @@ python3 run_emulated_suite.py   # the four test scripts, unmodified, against
                                 # the emulator (see EMULATOR.md), ~40 s
 ```
 
-Expected: `79/79 passed`, then every suite entry `exit 0 (OK)` — including
+Expected: `88/88 passed`, then every suite entry `exit 0 (OK)` — including
 the **C9 sync-order drill** (`arm_first` must reproduce the arm
 freeze AND latch joint errors, the next run must then be REFUSED until
 `--clear-errors` recovers it — the full incident lifecycle),
@@ -395,7 +404,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 
 | Test | PASS | FAIL | SKIP | Notes |
 |---|---|---|---|---|
-| run_dry_run | 79 | 0 | 0 | offline |
+| run_dry_run | 88 | 0 | 0 | offline |
 | test_dual_connect | 9 | 0 | 0 | 9 SKIP if arms off |
 | test_pole_only | 7+1 SKIP | 0 | 1 | D5 SKIPs without `--clear-errors` |
 | test_sim_motion_visibility | 5 | 0 | 0 | verdict lines are the finding |
@@ -405,7 +414,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_free | 5 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 8 | 0 | 0 | one arm + pole + hand |
 | test_single_arm_locked | 7 | 0 | 0 | the C2 sequence on one arm |
-| **Total** | **141** | **0** | **1** | |
+| **Total** | **150** | **0** | **1** | |
 
 ---
 

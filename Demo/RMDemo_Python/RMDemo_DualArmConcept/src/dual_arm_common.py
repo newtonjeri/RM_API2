@@ -60,8 +60,13 @@ UDP_PORT   = int(os.environ.get("RM_UDP_PORT", "8095"))
 ARM_SPEED_PCT  = 20           # movej speed percentage, conservative
 LIFT_SPEED_PCT = 50           # measured ~56.4 phys mm/s (LiftBenchmark map)
 
-ARM_TIMEOUT_S  = 40.0
-LIFT_TIMEOUT_S = 25.0
+ARM_TIMEOUT_S  = float(os.environ.get("RM_ARM_TIMEOUT_S", "40"))
+# 25 s was too tight: on 2026-08-07 a left-arm sync leg took 19.7 s and the
+# next one hit exactly 25.02 s and timed out, failing a step in which the ARM
+# was completely healthy. The pole is far slower than the speed model
+# predicts (see matched_lift_speed_pct) — until that is recalibrated, give
+# lift moves real headroom.
+LIFT_TIMEOUT_S = float(os.environ.get("RM_LIFT_TIMEOUT_S", "60"))
 HAND_TIMEOUT_S = 10.0         # full stroke ~0.8 s + generous margin
 # Duration-based hand completion (butterfli_hw acked_angle semantics:
 # hold_until_duration), sized by the MEASURED stroke law rather than a
@@ -137,10 +142,16 @@ LIFT_MAX_M   = 0.29
 
 # Per-side lift gearing. V1.7.4 switched the lift to TRUE millimetres
 # (1:1, travel 0-330 — confirmed physically 2026-08-06: commanding 193
-# under the old 2/3 assumption left the pole mid-rail). The right arm
-# keeps the V1.7.1 2/3 gearing (hw 0-200) until its upgrade — flip with
-# RM_RIGHT_LIFT_GEAR=1to1 after upgrading (RM_LEFT_LIFT_GEAR=2to3 exists
-# for rollback).
+# under the old 2/3 assumption left the pole mid-rail). V1.7.1 is 2/3
+# geared over hw 0-200.
+#
+# The gearing is DETECTED from the controller firmware at connect time
+# (see detect_lift_gear) rather than hard-coded per side, because a wrong
+# assumption is silently dangerous in both directions: 193 on a 1:1
+# controller parks the pole mid-rail, and 290 on a 2:3 controller is out
+# of range. The values below are only the offline/unreadable fallback.
+# RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR pin it explicitly and win over
+# detection.
 _GEARS = {
     "1to1": {"hw_per_m": 1000.0, "hw_to_phys": 1.0, "hw_max": 330},
     "2to3": {"hw_per_m": 2000.0 / 3.0, "hw_to_phys": 1.5, "hw_max": 200},
@@ -158,6 +169,60 @@ def _lift_gear(side: str, default: str) -> dict:
 
 LIFT_GEAR = {"left": _lift_gear("left", "1to1"),
              "right": _lift_gear("right", "2to3")}
+
+# First controller firmware known to report the lift in TRUE millimetres.
+# Left V1.7.4 = 1:1/0-330, right V1.7.1 = 2:3/0-200 (both measured); the
+# exact introducing version is not documented, so this is the boundary we
+# infer from. Override per side with RM_*_LIFT_GEAR if it turns out wrong.
+LIFT_TRUE_MM_FROM_VERSION = (1, 7, 4)
+
+
+def _version_tuple(text) -> tuple:
+    """'1.7.4' / 'V1.7.4-rc' -> (1, 7, 4); () when unparseable."""
+    parts = []
+    for chunk in str(text or "").split("."):
+        digits = "".join(c for c in chunk if c.isdigit())
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def detect_lift_gear(robot) -> str:
+    """Lift gearing implied by the controller firmware, or '' if unreadable."""
+    try:
+        ret, sw = robot.rm_get_arm_software_info()
+    except Exception:
+        return ""
+    if ret != 0 or not isinstance(sw, dict):
+        return ""
+    ver = _version_tuple((sw.get("ctrl_info") or {}).get("version"))
+    if not ver:
+        return ""
+    return "1to1" if ver >= LIFT_TRUE_MM_FROM_VERSION else "2to3"
+
+
+def apply_detected_lift_gear(side: str, robot) -> None:
+    """Adopt the firmware-implied gearing for this side (env pin wins).
+
+    Called on every connect, so upgrading an arm needs no code or env
+    change — and a MISMATCH between assumption and firmware is reported
+    loudly instead of parking the pole in the wrong place.
+    """
+    if os.environ.get(f"RM_{side.upper()}_LIFT_GEAR"):
+        return                                  # explicit pin: leave it alone
+    detected = detect_lift_gear(robot)
+    current = LIFT_GEAR[side]["name"]
+    if not detected:
+        print(f"  [WARN] {side}: controller version unreadable — keeping "
+              f"assumed lift gearing {current} "
+              f"(pin with RM_{side.upper()}_LIFT_GEAR if this is wrong)")
+        return
+    if detected != current:
+        LIFT_GEAR[side] = dict(_GEARS[detected], name=detected)
+        print(f"  [INFO] {side}: lift gearing {current} -> {detected} "
+              f"(detected from controller firmware); full_length now "
+              f"{lift_hw_mm(side, LIFT_M['full'])} hw-mm")
 
 # ─── Hand states (SDK order [little,ring,middle,index,thumb_flex,thumb_rot],
 #     0-1000, 1000 = open; SRDF inspire_hand states via hand_rad_to_hw) ─────
@@ -200,23 +265,44 @@ def est_arm_duration_s(current_deg, target_deg, v_pct: int) -> float:
     return max(delta / (ARM_MAX_DEG_S * v_pct / 100.0), 0.05)
 
 
+# The pole must OUTLAST the arm move: its motion has to span the arm's, so
+# that neither the pole's start nor its completion lands inside the arm's
+# trajectory (see the polarity note below). Target pole duration is the arm
+# duration inflated by this factor.
+SYNC_POLE_OUTLAST = float(os.environ.get("RM_SYNC_POLE_OUTLAST", "1.5"))
+
+
 def matched_lift_speed_pct(arm_duration_s: float, dist_phys_mm: float,
                            ascending=None) -> int:
-    """Duration-match the lift to the arm move (butterfli_hw sync contract).
+    """Duration-match the lift to the arm move, biased so the pole finishes
+    AFTER the arm.
 
-    Speed such that start latency + cruise time == the arm's duration,
-    quantized ROUND-UP (early finish is benign — the device waits; late is
-    the failure mode; bench_sync 2026-07-25). Start latency is
-    direction-aware when the direction is known (bench-measured up 0.33 s
-    / down 0.23 s; 0.38 worst case otherwise).
+    POLARITY INVERTED 2026-08-07 (hardware). butterfli_hw's contract treated
+    a LATE pole as the failure mode (it blocked sequencing) and rounded the
+    speed UP so the pole finished early or on time. On this controller the
+    opposite is true: a pole that COMPLETES while a planned arm trajectory
+    is still running raises `Position Command Step Warning` (0x4000) on every
+    joint that is moving and halts the arm mid-path — decoded from the Web
+    GUI on the right arm, J2/J4/J6 flagged while the stationary J1/J3/J5/J7
+    stayed Normal. A late pole is merely slow; an early pole is a fault.
+
+    So: target `arm_duration * SYNC_POLE_OUTLAST`, and quantize ROUND-DOWN
+    (a lower percentage = slower = later = safer). The speed model itself is
+    known to be optimistic by 2-7x on this firmware, which only makes the
+    pole later still — safe in the same direction, and the reason the left
+    arm survived both sync steps on 2026-08-07.
+
+    Start latency is direction-aware when known (bench up 0.33 s / down
+    0.23 s; 0.38 worst case).
     """
     if dist_phys_mm <= 0.0:
         return LIFT_MIN_MATCH_PCT
     latency = (LIFT_LATENCY_UP_S if ascending is True
                else LIFT_LATENCY_DOWN_S if ascending is False
                else LIFT_START_LATENCY_S)
-    cruise_s = max(arm_duration_s - latency, 0.05)
-    pct = math.ceil(dist_phys_mm / cruise_s / LIFT_MM_S_PER_PCT - 1e-9)
+    target_s = arm_duration_s * SYNC_POLE_OUTLAST
+    cruise_s = max(target_s - latency, 0.05)
+    pct = math.floor(dist_phys_mm / cruise_s / LIFT_MM_S_PER_PCT + 1e-9)
     return max(LIFT_MIN_MATCH_PCT, min(100, pct))
 
 
@@ -268,6 +354,7 @@ Environment overrides:
                     command lands on an in-flight movej under arm_first and
                     KILLS it — that order froze the arms 2026-08-06/07)
   RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 """
@@ -507,6 +594,9 @@ class ConceptArm:
         self.robot = robot
         self.handle_id = handle.id
         self._last_hand = None      # last commanded hand state (echo model)
+        # Firmware decides the lift units — adopt them before any lift
+        # target is computed (see apply_detected_lift_gear).
+        apply_detected_lift_gear(side, robot)
 
     # ── step introspection ──
     def parts_for(self, step):
@@ -681,7 +771,9 @@ class ConceptArm:
             l = beg["devices"][DEV_LIFT]
             rec["sync_start_skew_s"] = l["t_dispatch"] - j["t_dispatch"]
             if j["t_done"] and l["t_done"]:
-                # positive = pole finished LATE vs the arm (the bad direction)
+                # positive = pole finished LATE vs the arm. Late is the SAFE
+                # direction here: a pole completing mid-arm-trajectory faults
+                # the moving joints (see matched_lift_speed_pct).
                 rec["sync_finish_skew_s"] = l["t_done"] - j["t_done"]
             rec["arm_dur_est_s"] = beg.get("arm_dur_est_s")
             rec["lift_speed_pct"] = beg.get("lift_speed_pct")
