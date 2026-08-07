@@ -428,26 +428,32 @@ Environment overrides:
 """
 
 
-def handle_cli(doc: str, argv=None, extra_flags=()):
+def handle_cli(doc: str, argv=None, extra_flags=(), value_flags=()):
     """-h/--help prints the script docs and exits BEFORE anything runs;
     any unknown argument is rejected (exit 2) rather than silently
     ignored — an ignored typo would otherwise move the robot.
 
     extra_flags: additional exact flags this script accepts (e.g. the C8
-    pole diagnostic's --diagnose-only / --clear-errors)."""
+    pole diagnostic's --diagnose-only / --clear-errors).
+    value_flags: flags that CONSUME the next argument (e.g. C15's
+    --speeds / --stroke), so their value is not mistaken for a stray
+    positional and rejected."""
     args = list(sys.argv[1:] if argv is None else argv)
     if "-h" in args or "--help" in args:
         print((doc or "").strip())
         print()
         print(USAGE)
         raise SystemExit(0)
+    consuming = ("--mode",) + tuple(value_flags)
     skip = False
     for a in args:
         if skip:
             skip = False
             continue
-        if a == "--mode":
+        if a in consuming:
             skip = True
+            continue
+        if any(a.startswith(f + "=") for f in value_flags):
             continue
         if a.startswith("--mode=") \
                 or a in ("--no-hands", "--no-pole", "--clear-errors") \
