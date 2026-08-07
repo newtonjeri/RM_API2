@@ -31,6 +31,7 @@ import test_dual_locked
 import test_dual_chained
 import test_dual_free
 import test_single_arm_planned
+import test_single_arm_locked
 import test_pole_only
 
 SUITE = [
@@ -39,6 +40,7 @@ SUITE = [
     ("C5 sim probe", test_sim_motion_visibility),
     ("C7 hand only", test_hand_only),
     ("C2 locked", test_dual_locked),
+    ("C9 single-locked", test_single_arm_locked),
     ("C3 chained", test_dual_chained),
     ("C4 free", test_dual_free),
     ("C6 single-arm", test_single_arm_planned),

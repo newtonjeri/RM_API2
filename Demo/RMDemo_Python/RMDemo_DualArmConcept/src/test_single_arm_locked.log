@@ -1,0 +1,85 @@
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 09:50:12
+========================================================================
+C9 — The DUAL-LOCKED sequence on ONE arm (freeze-isolation probe).
+THE SELECTED ARM, ITS POLE, AND ITS HAND WILL MOVE.
+
+Purpose: reproduce the 2026-08-06 21:25 C2 freeze condition with the
+second arm removed.  This runs the EXACT dual-locked concept sequence
+
+    arm->ready -> hand->release -> SYNC(arm->zero + pole->half)
+    -> hand->grasp -> SYNC(arm->ready + pole->full)
+    -> hand->half_grasp -> arm->rest
+
+through the EXACT per-arm code path run_locked uses (ConceptArm.begin /
+finish: movej dispatched first, then the duration-matched
+rm_set_lift_height, back-to-back non-blocking, arrival events awaited)
+— only the partner arm and its barrier are absent.  If the freeze is the
+planned-movej + lift conflict, it reproduces here at the FIRST SYNC STEP:
+the pole will travel, the arm will stop short of zero, and the step will
+sit in its 40 s joint-event wait before failing over to position verify.
+
+Unlike C2, every step's result prints IMMEDIATELY, so a frozen step is
+visible as it happens instead of after a silent hang.
+
+Comparisons this enables (one variable at a time):
+    C6  (passes)       movej + hand           on one arm
+    C9  (this)         movej + pole [+ hand]  on one arm, locked sequence
+    C9 --no-hands      movej + pole           on one arm
+    C2                 the same with both arms
+
+Arm selection: RM_ARM=left (default) or RM_ARM=right.
+Note: the lift does NOT execute in SIM (2026-08-06 logs) — sync steps can
+only complete on REAL hardware; use --no-pole for a SIM rehearsal.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-07 09:50:12
+========================================================================
+unknown argument: '--oops'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+  --clear-errors    call rm_clear_system_err before the acceptance probe
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

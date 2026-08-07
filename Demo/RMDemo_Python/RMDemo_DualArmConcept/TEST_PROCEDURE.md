@@ -103,6 +103,8 @@ src/
 ├── test_sim_motion_visibility.py  C5 — sim-mode motion visibility probe
 │                          (NO PHYSICAL MOTION — moves only the simulated arm)
 ├── test_dual_locked.py    C2 — parallel locked mode        (MOVES BOTH ARMS)
+├── test_single_arm_locked.py  C9 — the C2 sequence on ONE arm (freeze-
+│                          isolation probe; live per-step output)
 ├── test_dual_chained.py   C3 — chained mode, left leads    (MOVES BOTH ARMS)
 └── test_dual_free.py      C4 — free-running mode           (MOVES BOTH ARMS)
 ```
@@ -247,6 +249,30 @@ Registers (butterfli_hw map): ANGLE_SET 1486, FORCE_SET 1498, SPEED_SET
 
 On any failure: partner arm is halted (`rm_set_arm_stop` + `rm_set_lift_speed(0)`), test fails.
 
+### C9 — `test_single_arm_locked.py` (**moves one arm, its pole, and its hand**)
+
+**Purpose**: isolate the 2026-08-06 21:25 C2 freeze (arms stopped short of
+zero at the first sync step, no arm arrival event) by running the EXACT
+dual-locked concept sequence — including both `sync` steps (concurrent
+planned `rm_movej` + duration-matched `rm_set_lift_height`, the one
+combination never validated on this hardware; bench_sync's proven recipe
+streams the arm via canfd instead) — through the same
+`ConceptArm.begin/finish` code path with the second arm removed. Every
+step's result prints LIVE, so a frozen step is visible as it happens.
+Comparison ladder: C6 (movej+hand, passes) → C9 (movej+pole[+hand]) →
+C9 `--no-hands` (movej+pole) → C2 (both arms). A frozen sync step waits
+its 40 s joint-event timeout, position-verifies, halts, and FAILS — let
+it finish rather than Ctrl-C. `RM_ARM=left|right` selects the arm.
+
+| ID | Check | Pass condition |
+|---|---|---|
+| SL1 | Pole pre-positioned | full_length, arrival-verified (SKIP note with `--no-pole`) |
+| SL2 | All dispatches accepted | every `ret == 0` |
+| SL3 | Sequence completed | all steps ok; on failure names the first frozen step |
+| SL4 | Arrival via event | every non-acked device evented (a missing ARM event on a sync step = the C2 freeze signature) |
+| SL5 | Sync dispatch back-to-back | movej→lift gap < 50 ms per sync step |
+| SL6 | Arm–pole sync finish | pole ≤ 0.5 s late on steps that truly completed (a frozen step cannot pass this) |
+
 ### C3 — `test_dual_chained.py` (**moves both arms and both poles**)
 
 **Purpose**: chained semantics — left leads; right dispatches step k only after left completes step k. Leader advances freely (pipelined: follower k overlaps leader k+1). The follower performs the *following* task; it is not a synchronized copy.
@@ -350,7 +376,8 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_chained | 5 | 0 | 0 | incl. pole pre-position |
 | test_dual_free | 4 | 0 | 0 | incl. pole pre-position |
 | test_single_arm_planned | 7 | 0 | 0 | one arm + pole + hand |
-| **Total** | **121** | **0** | **1** | |
+| test_single_arm_locked | 6 | 0 | 0 | the C2 sequence on one arm |
+| **Total** | **127** | **0** | **1** | |
 
 ---
 
@@ -368,6 +395,7 @@ Recommended order rationale: dry run proves the logic, C1 proves the plumbing, C
 | test_dual_chained.py | `src/test_dual_chained.log` |
 | test_dual_free.py | `src/test_dual_free.log` |
 | test_single_arm_planned.py | `src/test_single_arm_planned.log` |
+| test_single_arm_locked.py | `src/test_single_arm_locked.log` |
 
 Logs append across runs with a timestamped banner per run (same `log_utils` as RMDemo_LiftBenchmark).
 
