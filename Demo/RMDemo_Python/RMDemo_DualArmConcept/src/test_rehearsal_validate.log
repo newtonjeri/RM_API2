@@ -315,3 +315,59 @@ C11  Rehearsal validation — capture the controller, calibrate C12
   [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
 
   Summary: 3 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 19:33:11
+========================================================================
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/hinge_area_right_ruckig_pro_only.json
+     plan source: this repo's plans/ (the contract)
+     arm=192.168.1.103  UDP -> 192.168.1.239:8095  v=20%  mode=SIMULATION
+======================================================================
+  plan stages:
+    move_to_pre_start             14 wp ->  2 targets
+    move_to_start                  5 wp ->  2 targets
+    execute_path                2002 wp -> 20 targets   <-- PATH, subsampled
+    move_to_rest                  12 wp ->  2 targets
+  sparse targets: 26
+current c api version:  1.1.6
+  [PASS] run mode engaged and verified  (SIMULATION — no physical motion)
+  [PASS] UDP capture channel live  (10 frames in 2s)
+
+  staging -> stage 'move_to_pre_start' first waypoint (excluded from the residual)
+    move_to_pre_start        2 targets done
+    move_to_start            2 targets done
+    execute_path            20 targets done
+    move_to_rest             2 targets done
+  [PASS] every sparse target executed  (26/26)
+  [PASS] capture ends at the commanded target  (max joint err 0.001 deg)
+
+  capture saved: /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/rehearsal_right.json  (10177 frames, 50.9 s)
+  [INFO] run mode restored: REAL
+
+  analysing 10177 captured frames vs 550 predicted; sweeping <=37/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 4 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.003     0.01    19.94    19.95     -0.00  free
+  move_to_start             0.003     0.01    19.94    19.94     -0.00  free
+  execute_path              0.004     0.01     0.00     0.00       n/a  touch 46%/46%
+  move_to_rest              0.004     0.01     0.00     0.00       n/a  touch 8%/12%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                 0.01 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
