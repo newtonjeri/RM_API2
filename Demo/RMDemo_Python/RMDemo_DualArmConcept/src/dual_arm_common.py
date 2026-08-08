@@ -170,6 +170,21 @@ SYNC_BACKEND = os.environ.get("RM_SYNC_BACKEND", "canfd").lower()
 if SYNC_BACKEND not in ("canfd", "planned"):
     raise SystemExit(f"RM_SYNC_BACKEND must be canfd|planned, "
                      f"got {SYNC_BACKEND!r}")
+# VENDOR-CONFIRMED DEFECT (RealMan support, WeChat, 2026-08-08): "there is
+# a conflict between the third-generation controller's control of the
+# hoist's movement and the arm's movement ... documented problem, software
+# engineers working on it, no completion date. Temporary solution: when
+# controlling the hoist, choose the blocking mode." Their workaround IS
+# serialization — which matches C16 exactly. Until RealMan ships a fix,
+# the planned backend is LOCKED; sync runs on canfd only.
+if SYNC_BACKEND == "planned" \
+        and os.environ.get("RM_UNLOCK_PLANNED_SYNC") != "1":
+    raise SystemExit(
+        "RM_SYNC_BACKEND=planned is LOCKED.\n"
+        "RealMan confirmed (2026-08-08) a documented Gen-3 controller "
+        "defect: concurrent hoist + arm control conflicts, no fix ETA.\n"
+        "Synchronization runs on the canfd backend (the default). Set "
+        "RM_UNLOCK_PLANNED_SYNC=1 only to RE-TEST after a firmware fix.")
 # Streaming parameters (butterfli_hw proved 100 Hz / high-follow stable:
 # canfd period mean 9.992 ms, p99 <= 10.16 under full concurrent load).
 CANFD_RATE_HZ = float(os.environ.get("RM_CANFD_RATE_HZ", "100"))
@@ -463,9 +478,9 @@ Environment overrides:
   RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
                     step is driven. canfd (default) = streamed passthrough,
                     the combination bench_sync proved works. planned =
-                    rm_movej, the case C16 showed the controller cannot do
-                    concurrently — kept for A/B and for re-test when RealMan
-                    support replies
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
   RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
   RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
                     command lands on an in-flight movej under arm_first and
@@ -1152,7 +1167,15 @@ def describe_error_state(st: dict) -> str:
 
 
 def clear_errors(*arms) -> bool:
-    """rm_clear_system_err on every arm, then re-read to confirm."""
+    """Clear latched faults: system-level first, then PER JOINT.
+
+    Hardware-proven gap (2026-08-07, both arms): after a trajectory
+    truncation, `rm_clear_system_err()` returns 0 but the per-joint
+    Position Command Step Warnings (16384) STAY SET — Newton had to press
+    each joint's own "Clear Error" button in the Web GUI. That button is
+    `rm_set_joint_clear_err(joint_num)`, so this walks the flagged joints
+    and clears them individually, then re-reads to confirm.
+    """
     ok = True
     for arm in [a for a in arms if a is not None]:
         try:
@@ -1160,7 +1183,17 @@ def clear_errors(*arms) -> bool:
         except Exception as exc:
             ret, ok = repr(exc), False
         st = error_state(arm)
-        print(f"  [INFO] {arm.side}: rm_clear_system_err ret={ret} -> "
+        if st["joints"]:
+            # the R8 gap: system clear does not touch these
+            for joint_num, flag in st["joints"]:
+                try:
+                    jret = arm.robot.rm_set_joint_clear_err(joint_num)
+                except Exception as exc:
+                    jret = repr(exc)
+                print(f"  [INFO] {arm.side}: rm_set_joint_clear_err(J"
+                      f"{joint_num}) ret={jret}  (flag was {flag})")
+            st = error_state(arm)
+        print(f"  [INFO] {arm.side}: clear_errors -> "
               f"{describe_error_state(st)}")
         ok = ok and ret == 0 and error_state_clean(st)
     return ok

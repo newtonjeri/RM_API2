@@ -797,12 +797,26 @@ class RoboticArm:
                 "brake_state": [0] * 7}
 
     def rm_clear_system_err(self):
+        # Hardware-faithful (2026-08-07, both arms): returns 0 and clears
+        # SYSTEM-level state, but does NOT touch per-joint error flags —
+        # the R8 gap. Joint 16384 warnings need rm_set_joint_clear_err.
         ctrl = self._ctrl
         with ctrl._lock:
             ctrl.sys_err_code = 0
             ctrl.lift_locked = False       # modelled recovery path
-            ctrl.joint_err_flags = [0] * 7
-            ctrl.motion_locked = False
+            if not any(ctrl.joint_err_flags):
+                ctrl.motion_locked = False
+        return 0
+
+    def rm_set_joint_clear_err(self, joint_num):
+        # The Web GUI's per-joint "Clear Error" button.
+        ctrl = self._ctrl
+        if not 1 <= int(joint_num) <= 7:
+            return 1
+        with ctrl._lock:
+            ctrl.joint_err_flags[int(joint_num) - 1] = 0
+            if not any(ctrl.joint_err_flags) and ctrl.sys_err_code == 0:
+                ctrl.motion_locked = False
         return 0
 
     def rm_get_joint_degree(self):

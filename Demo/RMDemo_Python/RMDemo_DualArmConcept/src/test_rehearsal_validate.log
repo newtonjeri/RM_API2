@@ -1,0 +1,168 @@
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 12:33:22
+========================================================================
+C11 / WP4 — Rehearsal validator: does the arm go where C12 predicted?
+
+C12 (`run_hinge_verify.py`) declares the controller's motion between sparse
+targets collision-free using a MODEL of that motion: joint-linear
+interpolation, plus an offline `rm_algo` that is v1.6.0 while the
+controllers run 1.5.9.  Nothing has ever checked that model against the
+machine.  This test does, and turns the answer into a number the verifier
+can carry forever:
+
+    SIM-execute the real sparse targets   (no physical motion, F2/C5)
+      -> capture the ACTUAL joints over the UDP realtime push
+        -> FCL-sweep the capture against the commode scene
+          -> compare capture vs prediction  ==>  RESIDUAL = the FCL margin
+
+Why simulation is enough: C5 established that sim mode runs the real
+planner and streams the interpolated states over UDP, so the captured
+trajectory is the controller's own geometry — which is exactly what C12
+models.  Sim does not execute lift or hand (F3), so non-arm stages are
+skipped; this gate is about arm geometry.
+
+Two halves, deliberately separable — the arms are only reachable from the
+lab machine, the analysis is not:
+
+    capture   (hardware, SIM)  writes rehearsal_<side>.json
+    analyse   (--replay FILE)  runs anywhere, no arm, no SDK connection
+
+so the lab session is a short capture and the verdict can be produced on
+any machine afterwards.
+
+The residual is reported three ways:
+  * joint-space deviation   max distance from the captured path to the
+                            predicted polyline (deg, 7-dim)
+  * Cartesian deviation     the same worst sample at the tool point (mm)
+  * CLEARANCE deviation     predicted min clearance MINUS captured min
+                            clearance — positive means the predictor was
+                            OPTIMISTIC by that much, and that number is
+                            the margin every future C12 verdict must add.
+
+Usage:
+    RM_ARM=right python3 test_rehearsal_validate.py            # SIM capture
+    python3 test_rehearsal_validate.py --replay rehearsal_right.json
+Options: --plan PATH  --targets N  --samples N  --speed PCT
+         --save PATH  --replay PATH  --mode SIM|REAL
+
+Exception ignored in: Exception ignored in sys.unraisablehook
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 12:33:37
+========================================================================
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=hinge_area_right_ruckig_pro_only.json
+     REPLAY /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/512d3e7a-76ed-4ae4-b1d0-357a66a8d4ba/scratchpad/rehearsal_synth.json — analysis only, no hardware
+======================================================================
+  [SKIP] run mode engaged and verified  (replay)
+  [SKIP] UDP capture channel live  (replay)
+  [SKIP] every sparse target executed  (replay)
+  [SKIP] capture ends at the commanded target  (replay)
+
+  analysing 2033 captured frames (sweeping 60) vs 550 predicted
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (captured 42% vs predicted 40%)
+
+  ────────────────────────────────────────────────────────────────
+  RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────
+    joint-space deviation        27.780 deg (worst at captured sample 36/60)
+    tool-point deviation          61.83 mm  at that sample
+    min clearance  predicted       0.00 mm
+                   captured        0.00 mm
+    predictor optimism             0.00 mm  (conservative)
+  ────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 61.8 mm (clearance optimism + tool deviation)
+  ────────────────────────────────────────────────────────────────
+    Apply with:  run_hinge_verify.py --margin 67
+  [PASS] predictor residual measured  (27.78 deg / 61.8 mm -> margin 61.8 mm)
+
+  Summary: 3 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 12:36:16
+========================================================================
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=hinge_area_right_ruckig_pro_only.json
+     REPLAY /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/512d3e7a-76ed-4ae4-b1d0-357a66a8d4ba/scratchpad/rehearsal_synth.json — analysis only, no hardware
+======================================================================
+  [SKIP] run mode engaged and verified  (replay)
+  [SKIP] UDP capture channel live  (replay)
+  [SKIP] every sparse target executed  (replay)
+  [SKIP] capture ends at the commanded target  (replay)
+
+  analysing 2033 captured frames (sweeping 80) vs 550 predicted
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+    [WARN] stage 'move_to_start' attracted no captured samples — excluded from the residual
+    [WARN] stage 'move_to_rest' attracted no captured samples — excluded from the residual
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 2 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.000     0.00    19.94   297.31   -277.37  free
+  execute_path             29.681    57.83     0.00     0.00       n/a  touch 45%/40%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                57.83 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+    NOTE: a stage deviating > 10 mm at the tool is poorly modelled by
+          joint-linear motion — a Mode B candidate (denser chain).
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 57.8 mm)
+
+  Summary: 3 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 12:37:22
+========================================================================
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=hinge_area_right_ruckig_pro_only.json
+     REPLAY /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/512d3e7a-76ed-4ae4-b1d0-357a66a8d4ba/scratchpad/rehearsal_synth.json — analysis only, no hardware
+======================================================================
+  [SKIP] run mode engaged and verified  (replay)
+  [SKIP] UDP capture channel live  (replay)
+  [SKIP] every sparse target executed  (replay)
+  [SKIP] capture ends at the commanded target  (replay)
+
+  analysing 2033 captured frames vs 550 predicted; sweeping <=30/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 4 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.000     0.00    19.94    19.97     -0.03  free
+  move_to_start             1.222     0.56    19.94    19.94      0.00  free
+  execute_path             29.851    57.82     0.00     0.00       n/a  touch 43%/50%
+  move_to_rest              0.000     0.00     0.00     0.00       n/a  touch 20%/12%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                57.82 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 6 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 6
+    NOTE: a stage deviating > 10 mm at the tool is poorly modelled by
+          joint-linear motion — a Mode B candidate (denser chain).
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 57.8 mm)
+
+  Summary: 3 PASS, 0 FAIL, 4 SKIP

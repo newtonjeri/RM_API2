@@ -477,8 +477,14 @@ def main() -> int:
             return 0, {"pos": 0, "err_flag": self.lift_err, "mode": 0}
 
         def rm_clear_system_err(self):
+            # faithful to hardware: does NOT clear per-joint flags (R8)
             self.cleared += 1
-            self.sys_codes, self.joints, self.lift_err = [], [0] * 7, 0
+            self.sys_codes, self.lift_err = [], 0
+            return 0
+
+        def rm_set_joint_clear_err(self, joint_num):
+            self.joint_clears = getattr(self, "joint_clears", 0) + 1
+            self.joints[int(joint_num) - 1] = 0
             return 0
 
     clean_arm = dac.ConceptArm("left", _ErrRobot(), _Handle(1))
@@ -495,6 +501,9 @@ def main() -> int:
     ok_gate, _ = dac.preflight_error_gate(bad_arm, clear=True)
     check("--clear-errors clears and then passes",
           ok_gate and faulted.cleared == 1)
+    check("R8: flagged joints cleared PER JOINT (system clear is not enough)",
+          getattr(faulted, "joint_clears", 0) == 7
+          and not any(faulted.joints))
     check("lift driver error alone also blocks",
           not dac.preflight_error_gate(
               dac.ConceptArm("left", _ErrRobot(lift_err=1), _Handle(1)))[0])
@@ -606,8 +615,51 @@ def main() -> int:
         gv = run_probe({"RM_RIGHT_LIFT_GEAR": "2to3"})
         check("RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller",
               gv["r_full"] == 200)
+        import subprocess as _sp
+        env_l = dict(_os.environ, RM_SYNC_BACKEND="planned")
+        env_l.pop("RM_UNLOCK_PLANNED_SYNC", None)
+        r = _sp.run([sys.executable, "-c", "import dual_arm_common"],
+                    env=env_l, capture_output=True, text=True)
+        check("RM_SYNC_BACKEND=planned is LOCKED (vendor defect)",
+              r.returncode != 0 and "LOCKED" in (r.stderr + r.stdout))
+        env_u = dict(env_l, RM_UNLOCK_PLANNED_SYNC="1")
+        r = _sp.run([sys.executable, "-c", "import dual_arm_common"],
+                    env=env_u, capture_output=True, text=True)
+        check("RM_UNLOCK_PLANNED_SYNC=1 re-opens it for post-fix re-tests",
+              r.returncode == 0)
     except Exception as exc:
         check("configuration probe subprocess", False, repr(exc))
+
+    # ── F1h. C11 residual math (rehearsal validator, pure geometry) ─────
+    print("\nF1h. C11 rehearsal residual")
+    import test_rehearsal_validate as trv
+
+    st = [{"name": "A", "targets": [[0.0] * 7, [10.0] + [0.0] * 6]},
+          {"name": "B", "targets": [[10.0] + [0.0] * 6,
+                                    [10.0, 10.0] + [0.0] * 5]}]
+    path, owner = trv.predicted_path(st, per_segment=25)
+    check("predicted_path labels every point with its stage",
+          len(path) == len(owner) == 50 and set(owner) == {0, 1})
+
+    # A point ON a stage-0 segment attributes to stage 0 at zero distance.
+    d0, _, _, s0 = trv.attribute([[5.0] + [0.0] * 6], path, owner)[0]
+    check("on-path sample: zero deviation, correct stage",
+          d0 < 1e-9 and s0 == 0)
+    # A known perpendicular offset is measured exactly.
+    d1, _, _, s1 = trv.attribute([[5.0, 3.0] + [0.0] * 5], path, owner)[0]
+    check("off-path sample: deviation measured exactly",
+          abs(d1 - 3.0) < 1e-9 and s1 == 0)
+
+    # The bug this locks in: a capture dominated by ONE stage (the cleaning
+    # stroke is 2002 of 2033 waypoints, and the slowest in wall time) must
+    # still yield samples for the short stages — attribution happens over
+    # every frame, and balancing is per stage, not global.
+    cap = [[1.0] + [0.0] * 6] + [[10.0, y * 0.05] + [0.0] * 5
+                                 for y in range(200)]
+    dev = trv.attribute(cap, path, owner)
+    per = {k: sum(1 for d in dev if d[3] == k) for k in (0, 1)}
+    check("lopsided capture still attributes to every stage",
+          per[0] >= 1 and per[1] >= 1)
 
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)
