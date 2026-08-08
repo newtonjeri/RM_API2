@@ -155,6 +155,27 @@ class CleaningPath:
         return out
 
     # ── into the arm's own frame ──
+    # The controller knows nothing of the UGV body, the pole, the hand or
+    # butterfli_ref_frame — its world starts at its own base. It also sits
+    # MOUNTED: measured against both controllers (C14 capture, 2026-08-08),
+    #
+    #     right  URDF base_link (-0.0788, -0.0021,  0.5131)
+    #            controller     ( 0.5131, -0.0021,  0.0788)
+    #     left   URDF base_link ( 0.1630, -0.0128,  0.4473)
+    #            controller     ( 0.4472, -0.0128, -0.1630)
+    #
+    # i.e. controller = Ry(+90 deg) . urdf_base_link  —  (x,y,z)->(z,y,-x),
+    # the same rotation the controller reports as install pose (0, 90, 0).
+    # Sending URDF-base poses straight to the SDK put every cleaning target
+    # 90 deg out; the chain was accepted and then failed in execution.
+    MOUNT_RY_DEG = 90.0
+
+    def _mount(self):
+        a = math.radians(self.MOUNT_RY_DEG)
+        T = np.eye(4)
+        T[:3, :3] = _Ry(a)
+        return T
+
     def _ref_to_arm_base(self, pole_m):
         """T(arm base -> reference_frame) at a given pole height.
 
@@ -171,8 +192,10 @@ class CleaningPath:
         state = dict(v.home)
         state[f"{pref}sliding_plate_joint"] = pole_m
         tw = v.model.link_world_transforms(state)
-        return np.linalg.inv(tw[f"{pref}base_link"]) @ \
-            tw[self.cfg.reference_frame]
+        # ...expressed in the CONTROLLER's base frame, not the URDF's
+        return (self._mount()
+                @ np.linalg.inv(tw[f"{pref}base_link"])
+                @ tw[self.cfg.reference_frame])
 
     def movel_program(self, pole_m, blend_pct=BLEND_PCT_DEFAULT):
         """The chained movel program, in the ARM BASE frame.

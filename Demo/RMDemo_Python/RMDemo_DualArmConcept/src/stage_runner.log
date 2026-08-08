@@ -625,3 +625,29 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 2 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 20:34:48
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   3.17s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP

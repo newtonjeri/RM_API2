@@ -959,8 +959,13 @@ def main() -> int:
                             - _np.asarray(prog["poses"][0][:3]))
     check("pole height shifts the whole path by 215 mm",
           abs(shift - 0.215) < 1e-3, f"{shift * 1000:.1f} mm")
-    check("the shift is along arm-base +X (mounting rotation)",
-          abs(hi["poses"][0][0] - prog["poses"][0][0] - 0.215) < 1e-3)
+    # In the CONTROLLER's frame (mount applied) the shift is along -Z:
+    # raising the arm base moves a fixed world target down relative to it.
+    # Before the mounting rotation was applied this read +X, which is the
+    # URDF base_link convention — the two differ by Ry(+90).
+    check("raising the pole shifts commanded targets along -Z",
+          abs(hi["poses"][0][2] - prog["poses"][0][2] + 0.215) < 1e-3
+          and abs(hi["poses"][0][0] - prog["poses"][0][0]) < 1e-6)
     check("orientation is unchanged by pole height",
           _np.allclose(hi["poses"][0][3:], prog["poses"][0][3:], atol=1e-9))
 
@@ -1123,6 +1128,34 @@ def main() -> int:
     check("every SDK call site matches the real signature arity",
           not _bad, f"{_seen} call sites checked"
           if not _bad else "; ".join(_bad))
+
+    # ── P8. Controller frame + SIM assumptions ──────────────────────────
+    print("\nP8. Controller base frame + SIM")
+    # The controller knows nothing of the UGV, the pole, the hand or
+    # butterfli_ref_frame, AND it is mounted rotated. Poses must land in
+    # its own base frame: controller = Ry(+90) . urdf_base_link, measured
+    # against both controllers (0.0 mm, 0.07 deg).
+    from cleaning_path import CleaningPath as _CP
+    _prog = _CP(cfgs["hinge_area_right"]).movel_program(0.075)
+    _p0 = _prog["poses"][0]
+    check("the mounting rotation is applied to commanded poses",
+          abs(_CP.MOUNT_RY_DEG - 90.0) < 1e-9)
+    # world-up became +X earlier; with the mount applied it is +Z again,
+    # which is what the controller reports.
+    check("commanded poses are plausible for this arm (|p| < 1.2 m)",
+          0.1 < (_p0[0] ** 2 + _p0[1] ** 2 + _p0[2] ** 2) ** 0.5 < 1.2,
+          f"|p|={(_p0[0]**2+_p0[1]**2+_p0[2]**2)**0.5:.3f} m")
+    # SIM: the controller executes the ARM only (F3), so pole and hand
+    # stages are assumed successful — that is what lets a whole task be
+    # rehearsed on the real SDK without the arm moving for real.
+    _sr = StageRunner(cfgs["hinge_area_right"], None, None, plan,
+                      dry=False, sim=True)
+    _ok, _why = _sr.run_pole({"stage": "move_pole_to_quarter_height"})
+    check("SIM assumes the pole and still RECORDS its height",
+          _ok and _sr.pole_m == 0.075 and "SIM assumed" in _why)
+    _ok2, _why2 = _sr.run_hand({"stage": "hand_release",
+                                "pose_name": "release"})
+    check("SIM assumes the hand", _ok2 and "SIM assumed" in _why2)
 
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)

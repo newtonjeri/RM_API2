@@ -82,13 +82,20 @@ class StageRunner:
     """Walks a task's active stages, one device at a time."""
 
     def __init__(self, cfg, arm, monitor, plan, dry=False,
-                 serialize=SERIALIZE):
+                 serialize=SERIALIZE, sim=False):
         self.cfg = cfg
         self.arm = arm
         self.monitor = monitor
         self.plan = plan
         self.dry = dry
         self.serialize = serialize
+        # SIM mode executes the ARM only — the controller has no model of
+        # the pole or the hand (F3), so those stages would sit in their
+        # arrival waits and time out. Assume them successful instead, so a
+        # whole task can be rehearsed on the real controller and catch the
+        # things that only the real SDK catches (a wrong pose frame, a bad
+        # call signature) WITHOUT the arm ever moving for real.
+        self.sim = sim
         self.in_flight = None          # the invariant, as state
         self.log = []
         self.pole_m = None
@@ -145,6 +152,12 @@ class StageRunner:
             if self.dry:
                 self.pole_m = target_m
                 return True, f"DRY set_lift_height({speed}%, {hw})"
+            if self.sim:
+                # The pole still has to be RECORDED — the cleaning path is
+                # resolved at this height — it just is not commanded.
+                self.pole_m = target_m
+                return True, (f"SIM assumed: {hw} hw-mm at {speed}% "
+                              "(controller does not simulate the pole)")
             self.monitor.expect(self.arm.handle_id, DEV_LIFT)
             ret = self.arm.robot.rm_set_lift_height(speed, hw, 0)
             if ret != 0:
@@ -186,6 +199,9 @@ class StageRunner:
         try:
             if self.dry:
                 return True, (f"DRY set_hand_angle({pose}) {target} from {src}")
+            if self.sim:
+                return True, (f"SIM assumed: {pose} {target} from {src} "
+                              "(controller does not simulate the hand)")
             # (angles, block, timeout) — timeout is POSITIONAL in the
             # real SDK; the same call shape dual_arm_common uses.
             ret = self.arm.robot.rm_set_hand_angle(target, False, 2)
@@ -367,18 +383,29 @@ def main() -> int:
             result("FAIL", "run-mode selection", "did not engage")
             return 1
         report_run_modes(arm)
+        # What mode are we ACTUALLY in? --mode wins; otherwise ask.
+        try:
+            _r, mode_now = robot.rm_get_arm_run_mode()
+            mode_now = mode_now if _r == 0 else None
+        except Exception:
+            mode_now = None
         # A percentage is meaningless without its ceiling — print what the
         # commanded v% actually is in m/s and deg/s on THIS controller.
         lim = speed_limits.read(robot)
         print("  [INFO] limits: " + speed_limits.describe(
             lim, cfg.cleaning_speed_pct, cfg.arm_speed_pct))
+        sim_mode = (forced == 0) or (forced is None and mode_now == 0)
         ok_err, detail = preflight_error_gate(arm)
         if not ok_err:
             result("FAIL", "no latched controller errors", detail)
             return 1
         result("PASS", "no latched controller errors", detail)
         countdown()
-        ok = StageRunner(cfg, arm, monitor, plan).run()
+        if sim_mode:
+            print("  [INFO] SIMULATION: the arm executes; pole and hand "
+                  "stages are ASSUMED successful (the controller models "
+                  "neither — F3)")
+        ok = StageRunner(cfg, arm, monitor, plan, sim=sim_mode).run()
         return 0 if ok else 1
     finally:
         restore_run_modes(originals)
