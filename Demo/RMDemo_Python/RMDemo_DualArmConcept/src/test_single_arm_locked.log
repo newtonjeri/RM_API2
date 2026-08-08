@@ -517,3 +517,97 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-08 19:01:31
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.02 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  2.18 s
+  ('hand', 'release')        ok=True  hand  1.26 s
+  ('sync', ('zero', 'half')) ok=True  lift  5.94 s   arm  4.01 s   start-skew  -6.2 ms   finish-skew  +1922 ms
+  ('hand', 'grasp')          ok=True  hand  1.25 s
+  ('sync', ('ready', 'full')) ok=True  lift  5.96 s   arm  4.01 s   start-skew  -6.4 ms   finish-skew  +1945 ms
+  ('hand', 'half_grasp')     ok=True  hand  0.72 s
+  ('arm', 'rest')            ok=True  arm  2.14 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 4.00 s, matched lift 27%, start skew   -6.2 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 4.00 s, matched lift 27%, start skew   -6.4 ms
+  [PASS] sync dispatch gap  (max 6.4 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +1.92 s)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_single_arm_locked.py
+  Log    : test_single_arm_locked.log
+  Started: 2026-08-08 19:02:01
+========================================================================
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=right @ 192.168.1.103   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: REAL
+    pole pre-positioned to full length (0.29 m) first
+    THE RIGHT ARM, ITS POLE AND ITS HAND WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> right=300 (1to1)) ...
+  [INFO] right: pole at full length (0.02 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  3.68 s
+  ('hand', 'release')        ok=True  hand  1.26 s
+  ('sync', ('zero', 'half')) ok=True  lift  5.96 s   arm  4.01 s   start-skew  -4.2 ms   finish-skew  +1945 ms
+  ('hand', 'grasp')          ok=True  hand  1.27 s
+  ('sync', ('ready', 'full')) ok=True  lift  5.95 s   arm  4.01 s   start-skew  -8.4 ms   finish-skew  +1933 ms
+  ('hand', 'half_grasp')     ok=True  hand  0.72 s
+  ('arm', 'rest')            ok=True  arm  3.67 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 4.00 s, matched lift 27%, start skew   -4.2 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 4.00 s, matched lift 27%, start skew   -8.4 ms
+  [PASS] sync dispatch gap  (max 8.4 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +1.93 s)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP

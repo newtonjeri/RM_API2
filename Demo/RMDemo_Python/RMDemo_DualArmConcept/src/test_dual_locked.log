@@ -402,3 +402,56 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_locked.py
+  Log    : test_dual_locked.log
+  Started: 2026-08-08 19:00:22
+========================================================================
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: REAL
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.92 s, event=True)
+  [INFO] right: pole at full length (0.89 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew  10.55 ms   L   1.48 s   R   2.38 s   |d|  0.90 s   ok=True
+  ('hand', 'release')      skew   0.35 ms   L   1.25 s   R   1.26 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew  25.30 ms   L   5.95 s   R   5.95 s   |d|  0.01 s   ok=True
+  ('hand', 'grasp')        skew   0.31 ms   L   1.25 s   R   1.25 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew  27.45 ms   L   5.96 s   R   5.95 s   |d|  0.02 s   ok=True
+  ('hand', 'half_grasp')   skew   0.18 ms   L   0.72 s   R   0.72 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   6.35 ms   L   2.14 s   R   3.67 s   |d|  1.53 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 27.45 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.35 s, max 1.53 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 4.00 s, matched lift 27%, start skew   -6.3 ms, finish skew +1933.4 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 4.00 s, matched lift 27%, start skew  -10.3 ms, finish skew +1935.3 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 4.00 s, matched lift 27%, start skew  -10.4 ms, finish skew +1945.7 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 4.00 s, matched lift 27%, start skew  -10.4 ms, finish skew +1928.4 ms
+  [PASS] pole outlasts the arm move  (earliest margin +1.93 s)
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP

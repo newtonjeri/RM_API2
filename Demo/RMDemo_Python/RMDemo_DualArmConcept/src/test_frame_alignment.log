@@ -564,3 +564,123 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 3 PASS, 2 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:57:41
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [-2.302999973297119, -77.96900177001953, -1.2450000047683716, 80.93000030517578, 0.04899999871850014, 83.63400268554688, 3.634999990463257], "controller_pose": [0.513095, -0.002135, 0.078787, -3.101, 0.062, 3.059], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.5130998492240906, -0.002137229312211275, 0.07877495139837265, -3.1015634536743164, 0.06293885409832001, 3.059417247772217]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   519.1 mm vs rm_algo   519.1 mm   d= 0.00 mm   full-vector d=0.0 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.00 mm, full vector within 0.0 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (6/10): ['Arm_Tip', 'glove1', 'glove2', 'glove3', 'glove4', 'tip']
+    removed superseded frames: glove1, glove2, glove3, glove4, tip
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    R_glove_frame_1          R_glove_1             50.0     0.0   145.0      50.0    0.0  160.3
+    R_glove_frame_2          R_glove_2             13.5     0.0   165.0      13.5    0.0  180.3
+    R_glove_frame_3          R_glove_3             75.0     7.0   170.0      75.0    7.0  185.3
+    R_glove_frame_4          R_glove_4             55.0     7.0   205.0      55.0    7.0  220.3
+    R_tip_frame              R_tip                 15.0     5.0   230.0      15.0    5.0  245.3
+    R_index_tip_frame        R_index_tip           24.2    28.8   225.0      24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create R_glove_1    <- R_glove_frame_1      at (   50.0,    0.0,  160.3) mm  payload 0.0 kg  ret=0
+    create R_glove_2    <- R_glove_frame_2      at (   13.5,    0.0,  180.3) mm  payload 0.0 kg  ret=0
+    create R_glove_3    <- R_glove_frame_3      at (   75.0,    7.0,  185.3) mm  payload 0.0 kg  ret=0
+    create R_glove_4    <- R_glove_frame_4      at (   55.0,    7.0,  220.3) mm  payload 0.0 kg  ret=0
+    create R_tip        <- R_tip_frame          at (   15.0,    5.0,  245.3) mm  payload 0.0 kg  ret=0
+    create R_index_tip  <- R_index_tip_frame    at (   24.2,   28.8,  240.3) mm  payload 0.0 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    R_glove_frame_1        R_glove_1       50.0    0.0  160.3      50.0    0.0  160.3   0.00 OK
+    R_glove_frame_2        R_glove_2       13.5    0.0  180.3      13.5    0.0  180.3   0.00 OK
+    R_glove_frame_3        R_glove_3       75.0    7.0  185.3      75.0    7.0  185.3   0.00 OK
+    R_glove_frame_4        R_glove_4       55.0    7.0  220.3      55.0    7.0  220.3   0.00 OK
+    R_tip_frame            R_tip           15.0    5.0  245.3      15.0    5.0  245.3   0.00 OK
+    R_index_tip_frame      R_index_tip     24.2   28.8  240.3      24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Arm_Tip' (ret=0, now 'Arm_Tip')
+  [PASS] glove tool frames created  (R_glove_1(ret=0), R_glove_2(ret=0), R_glove_3(ret=0), R_glove_4(ret=0), R_tip(ret=0), R_index_tip(ret=0); active frame verified back on 'Arm_Tip')
+  [INFO] right: run mode restored to REAL
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:58:16
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.9459999799728394, -79.38700103759766, 0.8389999866485596, 78.02899932861328, -0.5419999957084656, 93.72899627685547, 171.67300415039062], "controller_pose": [0.447239, -0.012827, -0.162989, -3.126, 0.039, 0.16], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.4472542405128479, -0.012816064991056919, -0.16298803687095642, -3.1259796619415283, 0.03927914425730705, 0.16000942885875702]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   476.2 mm vs rm_algo   476.2 mm   d= 0.01 mm   full-vector d=0.0 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.01 mm, full vector within 0.0 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (7/10): ['Arm_Tip', 'Hand', 'glove1', 'glove2', 'glove3', 'glove4', 'tip']
+    removed superseded frames: glove1, glove2, glove3, glove4, tip
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    L_glove_frame_1          L_glove_1            -50.0     0.0   140.0     -50.0    0.0  155.3
+    L_glove_frame_2          L_glove_2            -20.0     0.0   165.0     -20.0    0.0  180.3
+    L_glove_frame_3          L_glove_3            -75.0     7.0   170.0     -75.0    7.0  185.3
+    L_glove_frame_4          L_glove_4            -55.0     7.0   205.0     -55.0    7.0  220.3
+    L_tip_frame              L_tip                -15.0     5.0   230.0     -15.0    5.0  245.3
+    L_index_tip_frame        L_index_tip          -24.2    28.8   225.0     -24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create L_glove_1    <- L_glove_frame_1      at (  -50.0,    0.0,  155.3) mm  payload 0.706 kg  ret=0
+    create L_glove_2    <- L_glove_frame_2      at (  -20.0,    0.0,  180.3) mm  payload 0.706 kg  ret=0
+    create L_glove_3    <- L_glove_frame_3      at (  -75.0,    7.0,  185.3) mm  payload 0.706 kg  ret=0
+    create L_glove_4    <- L_glove_frame_4      at (  -55.0,    7.0,  220.3) mm  payload 0.706 kg  ret=0
+    create L_tip        <- L_tip_frame          at (  -15.0,    5.0,  245.3) mm  payload 0.706 kg  ret=0
+    create L_index_tip  <- L_index_tip_frame    at (  -24.2,   28.8,  240.3) mm  payload 0.706 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    L_glove_frame_1        L_glove_1      -50.0    0.0  155.3     -50.0    0.0  155.3   0.00 OK
+    L_glove_frame_2        L_glove_2      -20.0    0.0  180.3     -20.0    0.0  180.3   0.00 OK
+    L_glove_frame_3        L_glove_3      -75.0    7.0  185.3     -75.0    7.0  185.3   0.00 OK
+    L_glove_frame_4        L_glove_4      -55.0    7.0  220.3     -55.0    7.0  220.3   0.00 OK
+    L_tip_frame            L_tip          -15.0    5.0  245.3     -15.0    5.0  245.3   0.00 OK
+    L_index_tip_frame      L_index_tip    -24.2   28.8  240.3     -24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Hand' (ret=0, now 'Hand')
+  [PASS] glove tool frames created  (L_glove_1(ret=0), L_glove_2(ret=0), L_glove_3(ret=0), L_glove_4(ret=0), L_tip(ret=0), L_index_tip(ret=0); active frame verified back on 'Hand')
+  [INFO] left: run mode restored to REAL
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
