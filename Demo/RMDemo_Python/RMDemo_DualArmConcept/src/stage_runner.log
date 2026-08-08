@@ -812,3 +812,135 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 0 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 23:25:16
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: SIMULATION   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] limits: movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (cap 0.250); movej: transit 50% = 112 deg/s on the fastest joint (cap 225)
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [INFO] SIMULATION: the arm executes; pole and hand stages are ASSUMED successful (the controller models neither — F3)
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  SIM assumed: grasp [33, 33, 33, 33, 133, 944] from plan (controller does not simulate the hand)
+    ok   move_pole_to_quarter_height  [pole]   0.00s  SIM assumed: 75 hw-mm at 50% (controller does not simulate the pole)
+    FAIL move_to_start                [arm ]   0.07s  v=50%
+  [FAIL] stage sequence completed  (stopped at 'move_to_start')
+  [INFO] left: run mode restored to REAL
+
+  Summary: 2 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 23:26:12
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: SIMULATION   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] limits: movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (cap 0.250); movej: transit 50% = 112 deg/s on the fastest joint (cap 225)
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [INFO] SIMULATION: the arm executes; pole and hand stages are ASSUMED successful (the controller models neither — F3)
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  SIM assumed: grasp [33, 33, 33, 33, 133, 944] from plan (controller does not simulate the hand)
+    ok   move_pole_to_quarter_height  [pole]   0.00s  SIM assumed: 75 hw-mm at 50% (controller does not simulate the pole)
+    FAIL move_to_start                [arm ]   0.08s  v=50%
+  [FAIL] stage sequence completed  (stopped at 'move_to_start')
+  [INFO] left: run mode restored to REAL
+
+  Summary: 2 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 23:26:37
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: SIMULATION   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] limits: movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (cap 0.250); movej: transit 50% = 112 deg/s on the fastest joint (cap 225)
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [INFO] SIMULATION: the arm executes; pole and hand stages are ASSUMED successful (the controller models neither — F3)
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  SIM assumed: grasp [33, 33, 33, 33, 133, 944] from plan (controller does not simulate the hand)
+    ok   move_pole_to_quarter_height  [pole]   0.00s  SIM assumed: 75 hw-mm at 50% (controller does not simulate the pole)
+    FAIL move_to_start                [arm ]   0.07s  v=50%
+  [FAIL] stage sequence completed  (stopped at 'move_to_start')
+  [INFO] left: run mode restored to REAL
+
+  Summary: 2 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 23:28:09
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: SIMULATION   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  [INFO] limits: movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (cap 0.250); movej: transit 50% = 112 deg/s on the fastest joint (cap 225)
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [INFO] SIMULATION: the arm executes; pole and hand stages are ASSUMED successful (the controller models neither — F3)
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  SIM assumed: grasp [33, 33, 33, 33, 133, 944] from plan (controller does not simulate the hand)
+    ok   move_pole_to_quarter_height  [pole]   0.00s  SIM assumed: 75 hw-mm at 50% (controller does not simulate the pole)
+    FAIL move_to_start                [arm ]   0.07s  v=50%
+  [FAIL] stage sequence completed  (stopped at 'move_to_start')
+  [INFO] left: run mode restored to REAL
+
+  Summary: 2 PASS, 1 FAIL, 0 SKIP
