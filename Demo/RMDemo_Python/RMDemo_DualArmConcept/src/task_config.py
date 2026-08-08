@@ -38,6 +38,7 @@ Usage:
     cfg.strokes()                # ordered Cartesian strokes for movel
 """
 
+import os
 import pathlib
 
 import yaml
@@ -47,12 +48,46 @@ from segment_verifier import WS
 CONFIG_ROOT = WS / "cleaning_tasks" / "config"
 CONTACT_LINKS = CONFIG_ROOT / "contact_links.yaml"
 
-# Controller speed is a PERCENTAGE; the config carries 0..1 scalings.
-# A scaling of 1.0 does not mean "100 % of the controller maximum" is safe
-# to command blind — the controller's own TCP/joint limits (F10) already
-# bound it, so the scaling is applied to a configured ceiling.
-ARM_SPEED_CEILING_PCT = 20      # what every hardware gate has run at
-POLE_SPEED_CEILING_PCT = 50
+# ── Speed scaling: MoveIt's scaling IS the controller's percentage ──
+#
+# MoveIt scales against butterfli_moveit_config/config/joint_limits.yaml,
+# and those limits ARE the controller's own maxima (measured 2026-08-08):
+#
+#     joint_limits.yaml   J1/J2 3.14 rad/s = 179.9 deg/s   J3-J7 224.6
+#     controller (F10)    J1-J6        180 deg/s           J7     225
+#
+# — the same ceiling to within rounding. So `max_velocity_scaling: 1.0`
+# means full controller speed, and the faithful mapping is simply
+#
+#     v% = max_velocity_scaling * 100
+#
+# An earlier version multiplied by 20 instead, a silent 5x slowdown that
+# had nothing to do with the task's intent.
+#
+# The POLE does not line up: joint_limits.yaml allows 160 mm/s while the
+# drive tops out at 104.2 mm/s (F12), so a scaling of 1.0 asks for 154 %
+# of what the pole can do. Its percentage is therefore clamped to 100.
+ARM_MAX_DEG_S_MOVEIT = 179.9      # J1/J2; J3-J7 are 224.6, same ratio
+POLE_MAX_MM_S_MOVEIT = 160.0
+POLE_MAX_MM_S_DRIVE = 104.2       # F12, motor-derived and bench-validated
+
+# A deliberate, VISIBLE derate for bringing a task up on hardware for the
+# first time. 1.0 = exactly what the task config asks for. This is the
+# only place speed is reduced, and every runner prints both numbers, so a
+# slow run is never mistaken for the intended behaviour.
+SPEED_DERATE = float(os.environ.get("RM_SPEED_DERATE", "1.0"))
+
+# Newton's operating policy (2026-08-08): the CLEANING stroke runs at the
+# task's full scaling; EVERYTHING ELSE — transits, approaches, named poses,
+# the pole — runs at half. The cleaning motion is the one whose speed the
+# task actually tuned; the rest just gets the arm there.
+OTHER_FRACTION = float(os.environ.get("RM_OTHER_FRACTION", "0.5"))
+
+# The config would make the approach slower still: task_base.cpp sets the
+# approach planner to `max_velocity_scaling * start_pose_velocity_scaling`,
+# which compounded with the policy above gives 25 %, not 50 %. The policy
+# wins by default; set this to fold the config's intent back in.
+APPROACH_USES_CONFIG = os.environ.get("RM_APPROACH_USES_CONFIG") == "1"
 
 
 def _deep_merge(base: dict, over: dict) -> dict:
@@ -121,23 +156,57 @@ class TaskConfig:
     def pole_group(self):
         return self.params.get("pole_group")
 
-    def _pct(self, key, ceiling, default=1.0):
-        return max(1, min(100, int(round(
-            float(self.params.get(key, default)) * ceiling))))
+    @staticmethod
+    def _clamp_pct(fraction):
+        return max(1, min(100, int(round(fraction * 100))))
+
+    def _scaling(self, key, default=1.0):
+        return float(self.params.get(key, default))
+
+    @property
+    def arm_speed_intended_pct(self):
+        """What the task asks for, before any derate."""
+        return self._clamp_pct(self._scaling("max_velocity_scaling"))
+
+    @property
+    def cleaning_speed_pct(self):
+        """The cleaning stroke: the task's full scaling."""
+        return self._clamp_pct(
+            self._scaling("max_velocity_scaling") * SPEED_DERATE)
 
     @property
     def arm_speed_pct(self):
-        return self._pct("max_velocity_scaling", ARM_SPEED_CEILING_PCT)
+        """Transits and named poses: half, per the operating policy."""
+        return self._clamp_pct(self._scaling("max_velocity_scaling")
+                               * OTHER_FRACTION * SPEED_DERATE)
 
     @property
     def approach_speed_pct(self):
-        """Approach to start_pose is deliberately slower (default 0.5)."""
-        return self._pct("start_pose_velocity_scaling",
-                         ARM_SPEED_CEILING_PCT, 0.5)
+        """Approach to start_pose.
+
+        `start_pose_velocity_scaling` is a MULTIPLIER on the task scaling,
+        not a scaling in its own right — task_base.cpp sets the approach
+        planner to `max_velocity_scaling * start_pose_velocity_scaling`.
+        Reading it alone would run a task at 0.5x the ceiling even when
+        the task itself asked for 0.5x, i.e. twice the intended speed.
+        """
+        extra = (self._scaling("start_pose_velocity_scaling", 0.5)
+                 if APPROACH_USES_CONFIG else 1.0)
+        return self._clamp_pct(self._scaling("max_velocity_scaling")
+                               * extra * OTHER_FRACTION * SPEED_DERATE)
 
     @property
     def pole_speed_pct(self):
-        return self._pct("pole_max_velocity_scaling", POLE_SPEED_CEILING_PCT)
+        """Pole percentage, clamped to what the drive can actually do.
+
+        MoveIt's limit (160 mm/s) exceeds the drive ceiling (104.2 mm/s),
+        so a scaling of 1.0 asks for more than 100 % and simply saturates.
+        """
+        # Saturate against the drive FIRST, then apply the policy —
+        # otherwise the 154 % overshoot would eat the halving.
+        of_drive = min(1.0, self._scaling("pole_max_velocity_scaling")
+                       * POLE_MAX_MM_S_MOVEIT / POLE_MAX_MM_S_DRIVE)
+        return self._clamp_pct(of_drive * OTHER_FRACTION * SPEED_DERATE)
 
     # ── the contact contract ──
     def contact_links(self):
@@ -247,8 +316,12 @@ def _describe(cfg):
     print(f"  groups          arm={cfg.arm_group}  hand={cfg.hand_group}  "
           f"pole={cfg.pole_group}")
     print(f"  frames          ik={cfg.ik_frame}  ref={cfg.reference_frame}")
-    print(f"  speeds          arm={cfg.arm_speed_pct}%  "
-          f"approach={cfg.approach_speed_pct}%  pole={cfg.pole_speed_pct}%")
+    print(f"  speeds          cleaning={cfg.cleaning_speed_pct}%  "
+          f"transit={cfg.arm_speed_pct}%  "
+          f"approach={cfg.approach_speed_pct}%  pole={cfg.pole_speed_pct}%"
+          + ("" if SPEED_DERATE == 1.0 else
+             f"   [DERATED x{SPEED_DERATE:g}; the task asks for "
+             f"{cfg.arm_speed_intended_pct}%]"))
     print(f"  path            {len(cfg.cleaning_points)} points, "
           f"{len(cfg.cleaning_sequence)} strokes")
     ok, order, problems = cfg.enforce_serialization()

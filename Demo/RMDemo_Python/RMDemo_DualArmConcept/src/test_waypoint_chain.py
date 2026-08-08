@@ -190,7 +190,10 @@ def main() -> int:
                   + (f" in {dur:.2f}s" if dur else "")
                   + (f"   <-- needed by {need}" if need else ""))
             if not rejected and dur:
-                max_ok = depth
+                # max(), not assignment: DEPTHS need not be ascending, and
+                # a run of (100, 13) reported "deepest 13" on 2026-08-08
+                # even though depth 100 had completed cleanly.
+                max_ok = max(max_ok, depth)
         # Phase 2 queues every segment of a cleaning path in one chain, so
         # the deepest task depth is the number that matters.
         need_max = max(TASK_DEPTHS)

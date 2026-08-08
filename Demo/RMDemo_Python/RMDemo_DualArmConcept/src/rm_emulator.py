@@ -1068,7 +1068,11 @@ class RoboticArm:
         # r/connect accepted but not emulated (immediate exact-stop move).
         return self._ctrl.movej_p(list(pose), v, block)
 
-    def rm_set_hand_angle(self, hand_angle, block=True, timeout=10):
+    # Signature matches the REAL SDK exactly — block and timeout are
+    # POSITIONAL there. Giving them defaults here let a caller that
+    # omitted `timeout` pass under emulation and then fail on
+    # hardware with a TypeError (2026-08-08, stage_runner).
+    def rm_set_hand_angle(self, hand_angle, block, timeout):
         return self._ctrl.set_hand_angle(hand_angle, block, timeout)
 
     # ── end-port modbus RTU (the butterfli_hw ALL-MODBUS hand path) ──

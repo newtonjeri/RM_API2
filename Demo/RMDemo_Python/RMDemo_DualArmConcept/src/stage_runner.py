@@ -185,7 +185,9 @@ class StageRunner:
         try:
             if self.dry:
                 return True, (f"DRY set_hand_angle({pose}) {target} from {src}")
-            ret = self.arm.robot.rm_set_hand_angle(target, False)
+            # (angles, block, timeout) — timeout is POSITIONAL in the
+            # real SDK; the same call shape dual_arm_common uses.
+            ret = self.arm.robot.rm_set_hand_angle(target, False, 2)
             if ret != 0:
                 return False, f"rejected ret={ret}"
             time.sleep(hand_dwell_s(373.0))     # F4: no arrival event
@@ -226,7 +228,8 @@ class StageRunner:
         try:
             if self.dry:
                 return True, (f"DRY tool={prog['tool_frame']} "
-                              f"{n} chained movel, r={prog['blend_pct']}%")
+                              f"{n} chained movel, r={prog['blend_pct']}%, "
+                              f"v={self.cfg.cleaning_speed_pct}%")
             ret = self.arm.robot.rm_change_tool_frame(prog["tool_frame"])
             if ret != 0:
                 return False, (
@@ -235,7 +238,10 @@ class StageRunner:
                     f"{self.cfg.ik_frame} must exist on the controller. "
                     f"Write it with: RM_ARM={self.cfg.side} python3 "
                     "test_frame_alignment.py --mode REAL --create-frames")
-            speed, blend = self.cfg.arm_speed_pct, prog["blend_pct"]
+            # the stroke runs at the task's full scaling; transits
+            # are halved (TRANSIT_DERATE) — Newton's policy
+            speed = self.cfg.cleaning_speed_pct
+            blend = prog["blend_pct"]
             rejects = []
             self.monitor.expect(self.arm.handle_id, DEV_JOINT)
             for i, q in enumerate(prog["poses"][1:], start=1):
@@ -319,9 +325,11 @@ def main() -> int:
     ip = RIGHT_IP if cfg.side == "right" else LEFT_IP
     print("=" * 72)
     print(f"Phase 2 stage runner — {task}  [{cfg.side}]")
-    print(f"    arm={ip}   ik={cfg.ik_frame}   "
-          f"speeds arm={cfg.arm_speed_pct}% approach="
-          f"{cfg.approach_speed_pct}% pole={cfg.pole_speed_pct}%")
+    print(f"    arm={ip}   ik={cfg.ik_frame}")
+    print(f"    speeds: cleaning={cfg.cleaning_speed_pct}%  "
+          f"transit={cfg.arm_speed_pct}%  approach={cfg.approach_speed_pct}%"
+          f"  pole={cfg.pole_speed_pct}%   (task asks "
+          f"{cfg.arm_speed_intended_pct}% before the transit/derate policy)")
     print(f"    serialization: {'ENFORCED' if SERIALIZE else 'report-only'}"
           "   (RM_SERIALIZE=0 to relax)")
     print(f"    mode: {mode_label(forced)}"

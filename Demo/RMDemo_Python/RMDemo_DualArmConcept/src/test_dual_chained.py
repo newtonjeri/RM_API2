@@ -114,10 +114,18 @@ def main() -> int:
             ordering_ok &= in_order
             lat = foll["t_dispatch"] - report["gate_open_t"][k] \
                 if report["gate_open_t"][k] else float("inf")
-            gate_lat.append(lat)
+            # Only steps whose LEADER completed on a real arrival event
+            # measure the gate. Where completion came from the position /
+            # duration fallback — every hand step, since device-2 events
+            # never fire (F4) — the "latency" is our own polling delay,
+            # not anything the arms did. Asserting on those made C3 fail
+            # for a non-anomaly (Newton, 2026-08-08).
+            by_event = not lead["verified"]
+            gate_lat.append((lat, by_event))
             print(f"  step {k} {str(step):22s} follower start "
                   f"{'after' if in_order else 'BEFORE'} leader done, "
-                  f"gate latency {lat*1000:7.1f} ms, "
+                  f"gate latency {lat*1000:7.1f} ms"
+                  f"{'' if by_event else ' (fallback, not gated)'}, "
                   f"ok={lead['ok'] and foll['ok']}")
 
         if bad_ret == 0:
@@ -136,12 +144,23 @@ def main() -> int:
         else:
             result("FAIL", "ordering invariant violated")
 
-        max_lat = max(gate_lat) if gate_lat else float("inf")
-        if max_lat < GATE_LATENCY_LIMIT_S:
-            result("PASS", "follower gate latency", f"max {max_lat*1000:.1f} ms")
+        evented = [x for x, ok in gate_lat if ok]
+        fell_back = [x for x, ok in gate_lat if not ok]
+        max_lat = max(evented) if evented else None
+        if max_lat is None:
+            result("SKIP", "follower gate latency",
+                   "no step completed on an arrival event")
+        elif max_lat < GATE_LATENCY_LIMIT_S:
+            result("PASS", "follower gate latency",
+                   f"max {max_lat*1000:.1f} ms over {len(evented)} "
+                   "event-gated steps"
+                   + (f"; {len(fell_back)} step(s) used the position "
+                      f"fallback (up to {max(fell_back):.1f} s — that is "
+                      "our polling, not the arms)" if fell_back else ""))
         else:
             result("FAIL", "follower gate latency",
-                   f"max {max_lat:.2f} s >= {GATE_LATENCY_LIMIT_S} s")
+                   f"max {max_lat:.2f} s >= {GATE_LATENCY_LIMIT_S} s "
+                   "on an EVENT-gated step")
 
         if fallbacks:
             print(f"  [WARN] {fallbacks} arrivals confirmed by position "

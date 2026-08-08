@@ -866,9 +866,22 @@ def main() -> int:
     check("groups resolve from arm_defaults by suffix",
           cfgs["toplid_left"].arm_group == "rm75_arm_left"
           and cfgs["toplid_left"].pole_group == "pole_left")
-    check("start_pose scaling gives a slower approach",
-          all(cfgs[t].approach_speed_pct < cfgs[t].arm_speed_pct
-              for t in TASKS))
+    # Policy (Newton, 2026-08-08): cleaning at the task's full scaling,
+    # everything else at half. MoveIt's joint_limits.yaml maxima ARE the
+    # controller's, so scaling 1.0 == v=100% — an earlier version scaled
+    # by 20 and ran everything 5x slow.
+    import task_config as _tc
+    check("cleaning runs at the task's full scaling",
+          all(cfgs[t].cleaning_speed_pct == 100 for t in TASKS))
+    check("everything else runs at half",
+          all(cfgs[t].arm_speed_pct == 50
+              and cfgs[t].approach_speed_pct == 50
+              and cfgs[t].pole_speed_pct == 50 for t in TASKS))
+    check("the pole saturates against the DRIVE, not MoveIt's limit",
+          _tc.POLE_MAX_MM_S_MOVEIT > _tc.POLE_MAX_MM_S_DRIVE
+          and cfgs["hinge_area_right"].pole_speed_pct == 50)
+    check("the intended (pre-policy) speed stays visible",
+          all(cfgs[t].arm_speed_intended_pct == 100 for t in TASKS))
     for t in TASKS:
         ok, order, problems = cfgs[t].enforce_serialization()
         check(f"{t}: no stage drives two devices", ok and not problems)

@@ -279,3 +279,28 @@ Traceback (most recent call last):
     ret = self.arm.robot.rm_set_hand_angle(target, False)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: HandControl.rm_set_hand_angle() missing 1 required positional argument: 'timeout'
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 19:52:21
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=25%  pole=77%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(grasp) [33, 33, 33, 33, 133, 944] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(77%, 75)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([-21.2, -53.9, 6.7, 90.0, 19.6, 52.1, 173.6], v=25%)
+    ok   open_tenth                   [hand]   0.00s  DRY set_hand_angle(open_tenth) [130, 130, 130, 130, 133, 944] from plan
+    ok   execute_path                 [arm ]   3.48s  DRY tool=L_glove_2 27 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, 26.0, 98.0, -6.0, 62.0, 111.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (7 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
