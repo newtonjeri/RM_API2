@@ -349,6 +349,51 @@ HAND_STATES_HW = {
     "grasp":      [33, 33, 33, 33, 133, 944],
 }
 
+# Angle -> hardware counts, fitted from the THREE states above, for which we
+# hold both forms: the SRDF `inspire_hand_*` group states give radians and
+# HAND_STATES_HW gives the counts the bench measured.
+#
+#   fingers  0.01 rad -> 993      1.30 rad -> 33
+#   thumb_1  0.01     -> 981      0.0698  -> 133
+#   thumb_2  0.01     -> 992      0.454   -> 944
+#
+# The finger fit is linear to within one count (0.65 rad predicts 516.7 vs
+# the measured 516), so a task pose named in the SRDF but absent from
+# HAND_STATES_HW can be converted rather than GUESSED. That matters: the
+# commode tasks use `open_tenth` (1.17 rad) and `quarter_grasp` (0.336),
+# neither of which is a concept state. Substituting the nearest name would
+# have driven `open_tenth` to 993 counts instead of ~130 — the hand flying
+# open mid-task while gripping a cloth against the fixture.
+_HAND_FIT = {           # (slope, intercept) per SDK slot
+    "finger": (-744.19, 1000.44),
+    "thumb_1": (-14180.60, 1122.81),
+    "thumb_2": (-108.11, 993.08),
+}
+# SDK order is little, ring, middle, index, thumb flex, thumb rotation.
+HAND_SLOT_JOINTS = ("little_1", "ring_1", "middle_1", "index_1",
+                    "thumb_1", "thumb_2")
+
+
+def hand_rad_to_hw(angles_by_joint: dict) -> list:
+    """{joint suffix -> radians} -> the 6 hardware counts, clamped 0..1000.
+
+    Keys may be full URDF names (`IRH_right_index_1_joint`) or the bare
+    suffixes in HAND_SLOT_JOINTS. Missing joints raise rather than default:
+    a silently-defaulted finger is a wrong grip, not a small error.
+    """
+    def _find(suffix):
+        for k, v in angles_by_joint.items():
+            if k == suffix or k.endswith(f"_{suffix}_joint"):
+                return float(v)
+        raise KeyError(f"no angle for hand joint {suffix!r} in "
+                       f"{sorted(angles_by_joint)}")
+    out = []
+    for slot in HAND_SLOT_JOINTS:
+        kind = slot if slot in ("thumb_1", "thumb_2") else "finger"
+        m, b = _HAND_FIT[kind]
+        out.append(int(round(max(0.0, min(1000.0, m * _find(slot) + b)))))
+    return out
+
 # The concept task: arm/lift/hand states plus two arm-pole SYNC steps.
 CONCEPT_SEQUENCE = [
     ("arm", "ready"),

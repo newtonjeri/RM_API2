@@ -813,6 +813,204 @@ def main() -> int:
     check("unroutable arm still yields an address (falls back)",
           bool(dac.host_ip_for("203.0.113.7")))
 
+    # ── P1. Hand angle -> hardware counts (calibrated, not guessed) ─────
+    print("\nP1. Hand angle conversion")
+    # The three states we hold in BOTH forms must round-trip exactly; the
+    # fit is only trustworthy if it reproduces its own calibration points.
+    for name, ang in (("release", 0.01), ("half_grasp", 0.65),
+                      ("grasp", 1.3)):
+        thumb = {"release": (0.01, 0.01)}.get(name, (0.0698, 0.454))
+        got = dac.hand_rad_to_hw({
+            "little_1": ang, "ring_1": ang, "middle_1": ang, "index_1": ang,
+            "thumb_1": thumb[0], "thumb_2": thumb[1]})
+        want = dac.HAND_STATES_HW[name]
+        check(f"{name} rad->counts reproduces the bench values",
+              all(abs(a - b) <= 1 for a, b in zip(got, want)),
+              f"{got} vs {want}")
+    # The bug this replaces: `open_tenth` is 1.17 rad — nearly CLOSED —
+    # and an earlier version aliased it to `release`, i.e. 993 counts.
+    ot = dac.hand_rad_to_hw({"little_1": 1.17, "ring_1": 1.17,
+                             "middle_1": 1.17, "index_1": 1.17,
+                             "thumb_1": 0.0698, "thumb_2": 0.454})
+    check("open_tenth is nearly closed, NOT open",
+          120 <= ot[0] <= 140, f"{ot[0]} counts (alias would give 993)")
+    qg = dac.hand_rad_to_hw({"little_1": 0.336, "ring_1": 0.336,
+                             "middle_1": 0.336, "index_1": 0.336,
+                             "thumb_1": 0.0, "thumb_2": 0.454})
+    check("quarter_grasp is mostly open, NOT a full grasp",
+          740 <= qg[0] <= 760, f"{qg[0]} counts (alias would give 33)")
+    check("counts are clamped into 0..1000",
+          all(0 <= c <= 1000 for c in qg + ot))
+    _raised = False
+    try:
+        dac.hand_rad_to_hw({"little_1": 0.1})       # missing joints
+    except KeyError:
+        _raised = True
+    check("a missing finger RAISES rather than defaulting", _raised)
+
+    # ── P2. Task config: four tasks, two arms, serialization ────────────
+    print("\nP2. Task config + serialization")
+    from task_config import TaskConfig
+    TASKS = ("hinge_area_right", "hinge_area_left", "toplid_right",
+             "toplid_left")
+    cfgs = {}
+    for t in TASKS:
+        cfgs[t] = TaskConfig.load(t)
+    check("all four tasks load", len(cfgs) == 4)
+    check("side is read per task",
+          [cfgs[t].side for t in TASKS] == ["right", "left", "right",
+                                            "left"])
+    check("ik_frame comes from the task, not the arm default",
+          cfgs["hinge_area_right"].ik_frame == "R_glove_frame_4"
+          and cfgs["toplid_right"].ik_frame == "R_glove_frame_2")
+    check("groups resolve from arm_defaults by suffix",
+          cfgs["toplid_left"].arm_group == "rm75_arm_left"
+          and cfgs["toplid_left"].pole_group == "pole_left")
+    check("start_pose scaling gives a slower approach",
+          all(cfgs[t].approach_speed_pct < cfgs[t].arm_speed_pct
+              for t in TASKS))
+    for t in TASKS:
+        ok, order, problems = cfgs[t].enforce_serialization()
+        check(f"{t}: no stage drives two devices", ok and not problems)
+        check(f"{t}: every motion stage maps to one device",
+              all(d in ("arm", "hand", "pole") for _n, d in order))
+    # toplid sets use_prestart_stage: false but still LISTS the stage
+    check("conditional stages are resolved, not blindly run",
+          any(s.get("stage") == "move_to_pre_start"
+              for s in cfgs["toplid_right"].stage_sequence)
+          and not any(s.get("stage") == "move_to_pre_start"
+                      for s in cfgs["toplid_right"].active_stages()))
+    check("hinge KEEPS pre_start (use_prestart_stage: true)",
+          any(s.get("stage") == "move_to_pre_start"
+              for s in cfgs["hinge_area_right"].active_stages()))
+    check("contact contract is loaded per ik_frame",
+          len(cfgs["hinge_area_right"].contact_links()) > 20)
+
+    # ── P3. Cleaning path: resolution, chaining, anchor ─────────────────
+    print("\nP3. Cleaning path resolution")
+    from cleaning_path import CleaningPath
+    import numpy as _np
+    for t, n_wp in (("hinge_area_right", 44), ("hinge_area_left", 44),
+                    ("toplid_right", 28), ("toplid_left", 28)):
+        p = CleaningPath(cfgs[t])
+        wps = p.waypoints_ref()
+        check(f"{t}: {n_wp} waypoints from the chained sequence",
+              len(wps) == n_wp, f"got {len(wps)}")
+    # Deltas are expressed in the REFERENCE frame: a pure translation delta
+    # must move the waypoint by exactly that vector, whatever the anchor's
+    # orientation is. (task_base.cpp adds in reference_frame axes and
+    # LEFT-multiplies the rotation; it does not rotate into the tool frame.)
+    p = CleaningPath(cfgs["hinge_area_right"])
+    T_anchor = p.anchor()
+    named = dict(p.waypoints_ref())
+    pt2 = cfgs["hinge_area_right"].cleaning_points["point2"]
+    want = T_anchor[:3, 3] + _np.asarray(pt2["translation"], dtype=float)
+    check("translation delta is applied in the reference frame",
+          _np.allclose(named["point2"][:3, 3], want, atol=1e-9))
+    check("zero rotation delta leaves the anchor orientation untouched",
+          _np.allclose(named["point2"][:3, :3], T_anchor[:3, :3],
+                       atol=1e-9))
+    # A broken chain must RAISE — the runtime emits only each segment's
+    # second point, so a break would silently drop a stroke.
+    import copy as _copy
+    broken = _copy.deepcopy(cfgs["hinge_area_right"])
+    broken.cleaning_sequence = [["point1", "point2"], ["point3", "point1"]]
+    _raised = False
+    try:
+        CleaningPath(broken).waypoint_names()
+    except SystemExit:
+        _raised = True
+    check("a non-chained cleaning_sequence RAISES", _raised)
+    # No start_pose and no override must fail loudly, not resolve to origin
+    anchorless = _copy.deepcopy(cfgs["toplid_right"])
+    anchorless.cartesian_poses = {}
+    _raised = False
+    try:
+        CleaningPath(anchorless).anchor()
+    except SystemExit:
+        _raised = True
+    check("a missing anchor RAISES (lookback must be supplied)", _raised)
+    prog = CleaningPath(cfgs["hinge_area_right"]).movel_program(0.075)
+    check("movel program queues every segment",
+          prog["segments"] == 43 and prog["queue_depth"] == 43)
+    check("movel program selects the task's own tool frame",
+          prog["tool_frame"] == "R_glove_4")
+    # The path is a function of POLE HEIGHT — resolving at the wrong one
+    # displaces every pose by the difference (the 215 mm bug).
+    hi = CleaningPath(cfgs["hinge_area_right"]).movel_program(0.29)
+    # NOT along z: the arm is mounted rotated 90 deg about Y, so world-up
+    # is +X in the arm base frame (the same rotation that makes the
+    # controller report x where the offline solver reports z). Compare the
+    # 3-D magnitude and let the axis fall where it may.
+    shift = _np.linalg.norm(_np.asarray(hi["poses"][0][:3])
+                            - _np.asarray(prog["poses"][0][:3]))
+    check("pole height shifts the whole path by 215 mm",
+          abs(shift - 0.215) < 1e-3, f"{shift * 1000:.1f} mm")
+    check("the shift is along arm-base +X (mounting rotation)",
+          abs(hi["poses"][0][0] - prog["poses"][0][0] - 0.215) < 1e-3)
+    check("orientation is unchanged by pole height",
+          _np.allclose(hi["poses"][0][3:], prog["poses"][0][3:], atol=1e-9))
+
+    # ── P4. Stage runner: the serialization invariant ───────────────────
+    print("\nP4. Stage runner invariant")
+    from stage_runner import StageRunner, DeviceBusy
+    from segment_verifier import load_plan as _lp, resolve_plan as _rp
+    plan = _lp(_rp("hinge_area_right_ruckig_pro_only.json"))
+    r = StageRunner(cfgs["hinge_area_right"], None, None, plan, dry=True)
+    check("dry run walks the whole sequence", r.run())
+    check("every stage reported a result", len(r.log) >= 8)
+    check("the pole is recorded so the path can be resolved",
+          r.pole_m == 0.075)
+    # Claiming a second device while one is in flight must raise
+    r2 = StageRunner(cfgs["hinge_area_right"], None, None, plan, dry=True)
+    r2._claim("pole", "x")
+    _raised = False
+    try:
+        r2._claim("arm", "y")
+    except DeviceBusy:
+        _raised = True
+    check("a concurrent device dispatch RAISES (F9 invariant)", _raised)
+    r3 = StageRunner(cfgs["hinge_area_right"], None, None, plan, dry=True,
+                     serialize=False)
+    r3._claim("pole", "x")
+    try:
+        r3._claim("arm", "y")
+        _ok = True
+    except DeviceBusy:
+        _ok = False
+    check("RM_SERIALIZE=0 reports but does not block", _ok)
+    # execute_path must refuse to resolve before the pole has moved
+    r4 = StageRunner(cfgs["hinge_area_right"], None, None, plan, dry=True)
+    ok4, why = r4.run_cleaning_path({"stage": "execute_path"})
+    check("the cleaning path refuses to run before the pole",
+          ok4 is False and "pole" in why)
+
+    # ── P5. Contact contract + fixture articulation ─────────────────────
+    print("\nP5. Contact contract")
+    import run_hinge_verify as rhv
+    for t, surf, stages in (("hinge_area_right", "all",
+                             {"move_to_start", "execute_path"}),
+                            ("toplid_left", "seat_and_lid",
+                             {"move_to_start", "execute_path"})):
+        s_got, st_got = cfgs[t].contact_window()
+        check(f"{t}: contact window read from allow/forbid_collision",
+              s_got == surf and st_got == stages, f"{s_got} over {st_got}")
+    check("stages outside the bracket are NOT contact stages",
+          "move_to_rest" not in cfgs["hinge_area_right"].contact_window()[1]
+          and "move_to_pre_start" not in
+          cfgs["hinge_area_right"].contact_window()[1])
+    check("declared objects map to scene meshes",
+          rhv.allowed_mesh_keys(cfgs["toplid_left"], "seat_and_lid")
+          == {"lid_closed", "lid_open", "seat_closed", "seat_open"})
+    check("an unmapped contact object is NOT silently allowed",
+          rhv.allowed_mesh_keys(cfgs["toplid_left"], "bin_link") == set())
+    # The commode is ARTICULATED — lid/seat have closed (0 deg) and open
+    # (-110 deg) variants and only one exists at a time. Checking against
+    # both put phantom contacts in stages that must be clear.
+    check("every commode task declares a fixture articulation",
+          all(cfgs[t].params.get("commode_fixture_type") == "closed"
+              for t in TASKS))
+
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)
     print(f"Dry run: {n - f}/{n} passed")

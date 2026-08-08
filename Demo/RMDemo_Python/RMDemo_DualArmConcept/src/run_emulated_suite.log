@@ -26997,3 +26997,2574 @@ Emulated suite summary
   C9 backend drill exit 0  (OK)
   C8 locked drill exit 0  (OK)
 ====================================================================
+
+========================================================================
+  Script : run_emulated_suite.py
+  Log    : run_emulated_suite.log
+  Started: 2026-08-08 19:06:57
+========================================================================
+====================================================================
+EMULATED dual-arm concept suite  (time scale x10)
+Arms are emulated in-process — nothing physical moves.
+====================================================================
+
+####################################################################
+# C1 connect  (test_dual_connect)
+####################################################################
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=100 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=100 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 pole diag  (test_pole_only)
+####################################################################
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=3)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=100 hw-mm  current=0 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (100 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 90: ret=0 arrived=True success=True (0.10 s)
+    back to 100: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.47 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+####################################################################
+# C5 sim probe  (test_sim_motion_visibility)
+####################################################################
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.0.132:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (79 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (560 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (1 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: REAL (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C7 hand only  (test_hand_only)
+####################################################################
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=5)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [993, 993, 993, 993, 981, 992])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+    grasp      reached in  0.3 s  ACT=[33, 33, 33, 33, 133, 944]  (max err 0)
+    half_grasp reached in  0.3 s  ACT=[516, 516, 516, 516, 133, 944]  (max err 0)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([0, 0, 0, 0, 0, 0] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 locked  (test_dual_locked)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.47 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.13 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('hand', 'release')      skew   0.25 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew   3.97 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'grasp')        skew   0.33 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew   3.05 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'half_grasp')   skew   0.39 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   0.96 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 3.97 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.00 s, max 0.00 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.2 ms, finish skew   +74.7 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.1 ms, finish skew   +74.8 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms, finish skew   +74.9 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.8 ms, finish skew   +74.8 ms
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 single-locked  (test_single_arm_locked)
+####################################################################
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('hand', 'release')        ok=True  hand  0.10 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -1.0 ms   finish-skew    +75 ms
+  ('hand', 'grasp')          ok=True  hand  0.10 s
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.9 ms   finish-skew    +75 ms
+  ('hand', 'half_grasp')     ok=True  hand  0.10 s
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.0 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms
+  [PASS] sync dispatch gap  (max 1.0 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C3 chained  (test_dual_chained)
+####################################################################
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.4 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency    91.6 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency     2.6 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency   178.7 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency     1.8 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency   178.4 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency    87.5 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [PASS] follower gate latency  (max 178.7 ms)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C4 free  (test_dual_free)
+####################################################################
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 7/7 steps in 1.25 s
+  right: 7/7 steps in 1.25 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C6 single-arm  (test_single_arm_planned)
+####################################################################
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=-0.058 y=+0.101 z=+0.488  ->  target x=+0.142
+  movej_p +X + half_grasp: arm 0.15 s, hand finish skew -0.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  0.21 s   hand  0.10 s   hand-arm finish -0.11 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -0.09s, -0.09s, -0.05s, -0.11s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C11 rehearsal  (test_rehearsal_validate)
+####################################################################
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/hinge_area_right_ruckig_pro_only.json
+     plan source: this repo's plans/ (the contract)
+     arm=192.168.1.103  UDP -> 192.168.0.132:8095  v=20%  mode=SIMULATION
+======================================================================
+  plan stages:
+    move_to_pre_start             14 wp ->  2 targets
+    move_to_start                  5 wp ->  2 targets
+    execute_path                2002 wp -> 20 targets   <-- PATH, subsampled
+    move_to_rest                  12 wp ->  2 targets
+  sparse targets: 26
+current c api version:  emu-1.1.6
+  [PASS] run mode engaged and verified  (SIMULATION — no physical motion)
+  [PASS] UDP capture channel live  (81 frames in 2s)
+
+  staging -> stage 'move_to_pre_start' first waypoint (excluded from the residual)
+    move_to_pre_start        2 targets done
+    move_to_start            2 targets done
+    execute_path            20 targets done
+    move_to_rest             2 targets done
+  [PASS] every sparse target executed  (26/26)
+  [PASS] capture ends at the commanded target  (max joint err 0.000 deg)
+
+  capture saved: /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/rehearsal_right.json  (4148 frames, 2.5 s)
+  [INFO] run mode restored: REAL
+
+  analysing 4148 captured frames vs 550 predicted; sweeping <=37/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 4 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.000     0.00    19.94    20.01     -0.07  free
+  move_to_start             0.000     0.00    19.94    19.94      0.00  free
+  execute_path              0.000     0.00     0.00     0.00       n/a  touch 46%/46%
+  move_to_rest              0.000     0.00     0.00     0.00       n/a  touch 11%/12%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                 0.00 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 arm-only drill  (--no-hands --no-pole)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.37 ms   L   0.01 s   R   0.19 s   |d|  0.19 s   ok=True
+  ('arm', 'zero')          skew   1.01 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'ready')         skew   1.19 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   1.09 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 1.37 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.05 s, max 0.19 s
+  [PASS] pole outlasts the arm move  (SKIPPED — poles disabled (--no-pole))
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 sync-order drill  (planned: which device gets truncated)
+####################################################################
+
+-- arm_first: the ARM is the victim -> faults must LATCH --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('sync', ('zero', 'half')) ok=False  arm  2.00 s   lift  0.46 s   start-skew   0.7 ms   finish-skew  -1538 ms
+  [DIAG] left: error state after the failed step — system 5001; joints J1=16,J2=16,J3=16,J4=16,J5=16,J6=16,J7=16
+  [DIAG] recover before the next run: RM_ARM=left python3 test_single_arm_locked.py --mode REAL --clear-errors
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew    0.7 ms
+  [PASS] sync dispatch gap  (max 0.7 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  joint errors latched: True ([16, 16, 16, 16, 16, 16, 16])
+
+-- lift_first: the POLE is the victim -> no faults --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.37 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.01 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -0.9 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -0.9 ms
+  [PASS] sync dispatch gap  (max 0.9 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  controller clean afterwards: True
+
+  drill verdict: arm_first exit 1 + latched True (want nonzero/True), lift_first exit 1 + clean True (want nonzero/True) -> OK
+
+####################################################################
+# C9 sync-BACKEND drill  (planned vs canfd)
+####################################################################
+
+-- backend=planned: sync must FAIL (known controller limit) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.13 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -1.6 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -1.6 ms
+  [PASS] sync dispatch gap  (max 1.6 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+
+-- backend=canfd: sync must COMPLETE (bench_sync recipe) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.13 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.9 ms   finish-skew    +75 ms
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.8 ms   finish-skew    +75 ms
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.8 ms
+  [PASS] sync dispatch gap  (max 0.9 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.08 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: planned exit 1 (want nonzero), canfd exit 0 (want 0) -> OK
+
+####################################################################
+# C8 locked-pole drill  (fault injection)
+####################################################################
+
+-- drill A: pole locked, C8 must FAIL with the diagnosis --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=21)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [FAIL] controller/joint errors  (sys=['4103'] joints=[] — latched errors block motion; rerun with --clear-errors)
+  [FAIL] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — LIFT DRIVER ERROR latched (stall/overcurrent?); try --clear-errors, then power cycle)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: REJECTED ret=1
+  [FAIL] lift acceptance probe  (the 20:38 signature — controller rejects/ignores lift commands)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: ON
+  [DIAG]   controller err: 4103  <-- likely cause: clear via --clear-errors / Web GUI
+  [DIAG]   joint err flags: clean   brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [DIAG]   lift state: pos=300 hw-mm  current=0 mA  mode=0  err_flag=1  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [SKIP] small stroke probe  (acceptance probe failed)
+  [SKIP] home to full length  (earlier probe failed)
+
+  Summary: 2 PASS, 3 FAIL, 3 SKIP
+
+-- drill B: C8 --clear-errors must recover and pass --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    --clear-errors: rm_clear_system_err will run before D6
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=22)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (latched: sys=['4103'] joints=[] — clearing next)
+  [PASS] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — driver error latched, clearing next)
+  [PASS] rm_clear_system_err  (ret=0)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 290: ret=0 arrived=True success=True (0.10 s)
+    back to 300: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: locked exit 1 (want nonzero), recover exit 0 (want 0) -> OK
+
+====================================================================
+Emulated suite summary
+  C1 connect   exit 0  (OK)
+  C8 pole diag exit 0  (OK)
+  C5 sim probe exit 0  (OK)
+  C7 hand only exit 0  (OK)
+  C2 locked    exit 0  (OK)
+  C9 single-locked exit 0  (OK)
+  C3 chained   exit 0  (OK)
+  C4 free      exit 0  (OK)
+  C6 single-arm exit 0  (OK)
+  C11 rehearsal exit 0  (OK)
+  C2 arm-only drill exit 0  (OK)
+  C9 sync-order drill exit 0  (OK)
+  C9 backend drill exit 0  (OK)
+  C8 locked drill exit 0  (OK)
+====================================================================
+
+========================================================================
+  Script : run_emulated_suite.py
+  Log    : run_emulated_suite.log
+  Started: 2026-08-08 19:14:55
+========================================================================
+====================================================================
+EMULATED dual-arm concept suite  (time scale x10)
+Arms are emulated in-process — nothing physical moves.
+====================================================================
+
+####################################################################
+# C1 connect  (test_dual_connect)
+####################################################################
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=100 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=100 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 pole diag  (test_pole_only)
+####################################################################
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=3)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=100 hw-mm  current=0 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (100 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 90: ret=0 arrived=True success=True (0.10 s)
+    back to 100: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.47 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+####################################################################
+# C5 sim probe  (test_sim_motion_visibility)
+####################################################################
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.0.132:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (84 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (556 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (1 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: REAL (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C7 hand only  (test_hand_only)
+####################################################################
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=5)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [993, 993, 993, 993, 981, 992])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+    grasp      reached in  0.3 s  ACT=[33, 33, 33, 33, 133, 944]  (max err 0)
+    half_grasp reached in  0.3 s  ACT=[516, 516, 516, 516, 133, 944]  (max err 0)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([0, 0, 0, 0, 0, 0] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 locked  (test_dual_locked)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.47 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   0.84 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('hand', 'release')      skew   0.25 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew   3.00 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'grasp')        skew   0.21 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew   2.69 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'half_grasp')   skew   0.17 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   0.86 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 3.00 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.00 s, max 0.00 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms, finish skew   +75.1 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.7 ms, finish skew   +75.0 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.8 ms, finish skew   +75.2 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.8 ms, finish skew   +75.2 ms
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 single-locked  (test_single_arm_locked)
+####################################################################
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('hand', 'release')        ok=True  hand  0.10 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.8 ms   finish-skew    +75 ms
+  ('hand', 'grasp')          ok=True  hand  0.10 s
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.9 ms   finish-skew    +75 ms
+  ('hand', 'half_grasp')     ok=True  hand  0.10 s
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.8 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms
+  [PASS] sync dispatch gap  (max 0.9 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C3 chained  (test_dual_chained)
+####################################################################
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.3 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency    91.4 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency     1.6 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency   177.4 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency     1.8 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency   178.1 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency    87.0 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [PASS] follower gate latency  (max 178.1 ms)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C4 free  (test_dual_free)
+####################################################################
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 7/7 steps in 1.25 s
+  right: 7/7 steps in 1.25 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C6 single-arm  (test_single_arm_planned)
+####################################################################
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.211 y=+0.086 z=+0.562  ->  target x=+0.411
+  movej_p +X + half_grasp: arm 0.15 s, hand finish skew -0.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  0.21 s   hand  0.10 s   hand-arm finish -0.11 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -0.09s, -0.09s, -0.05s, -0.11s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C11 rehearsal  (test_rehearsal_validate)
+####################################################################
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/hinge_area_right_ruckig_pro_only.json
+     plan source: this repo's plans/ (the contract)
+     arm=192.168.1.103  UDP -> 192.168.0.132:8095  v=20%  mode=SIMULATION
+======================================================================
+  plan stages:
+    move_to_pre_start             14 wp ->  2 targets
+    move_to_start                  5 wp ->  2 targets
+    execute_path                2002 wp -> 20 targets   <-- PATH, subsampled
+    move_to_rest                  12 wp ->  2 targets
+  sparse targets: 26
+current c api version:  emu-1.1.6
+  [PASS] run mode engaged and verified  (SIMULATION — no physical motion)
+  [PASS] UDP capture channel live  (83 frames in 2s)
+
+  staging -> stage 'move_to_pre_start' first waypoint (excluded from the residual)
+    move_to_pre_start        2 targets done
+    move_to_start            2 targets done
+    execute_path            20 targets done
+    move_to_rest             2 targets done
+  [PASS] every sparse target executed  (26/26)
+  [PASS] capture ends at the commanded target  (max joint err 0.000 deg)
+
+  capture saved: /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/rehearsal_right.json  (4163 frames, 2.5 s)
+  [INFO] run mode restored: REAL
+
+  analysing 4163 captured frames vs 550 predicted; sweeping <=37/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 4 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.000     0.00    19.94    19.95     -0.01  free
+  move_to_start             0.000     0.00    19.94    19.94      0.00  free
+  execute_path              0.000     0.00     0.00     0.00       n/a  touch 46%/46%
+  move_to_rest              0.000     0.00     0.00     0.00       n/a  touch 11%/12%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                 0.00 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 arm-only drill  (--no-hands --no-pole)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.39 ms   L   0.01 s   R   0.19 s   |d|  0.19 s   ok=True
+  ('arm', 'zero')          skew   1.00 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'ready')         skew   1.17 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   0.96 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 1.39 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.05 s, max 0.19 s
+  [PASS] pole outlasts the arm move  (SKIPPED — poles disabled (--no-pole))
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 sync-order drill  (planned: which device gets truncated)
+####################################################################
+
+-- arm_first: the ARM is the victim -> faults must LATCH --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('sync', ('zero', 'half')) ok=False  arm  2.00 s   lift  0.46 s   start-skew   0.9 ms   finish-skew  -1538 ms
+  [DIAG] left: error state after the failed step — system 5001; joints J1=16,J2=16,J3=16,J4=16,J5=16,J6=16,J7=16
+  [DIAG] recover before the next run: RM_ARM=left python3 test_single_arm_locked.py --mode REAL --clear-errors
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew    0.9 ms
+  [PASS] sync dispatch gap  (max 0.9 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  joint errors latched: True ([16, 16, 16, 16, 16, 16, 16])
+
+-- lift_first: the POLE is the victim -> no faults --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.37 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.01 s
+
+========================================================================
+  Script : run_emulated_suite.py
+  Log    : run_emulated_suite.log
+  Started: 2026-08-08 19:16:49
+========================================================================
+====================================================================
+EMULATED dual-arm concept suite  (time scale x10)
+Arms are emulated in-process — nothing physical moves.
+====================================================================
+
+####################################################################
+# C1 connect  (test_dual_connect)
+####################################################################
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=100 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=100 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C8 pole diag  (test_pole_only)
+####################################################################
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=3)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=100 hw-mm  current=0 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (100 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 90: ret=0 arrived=True success=True (0.10 s)
+    back to 100: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.47 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+####################################################################
+# C5 sim probe  (test_sim_motion_visibility)
+####################################################################
+====================================================================
+C5  Simulation-mode motion visibility probe (no physical motion)
+    arm=192.168.1.10  UDP -> 192.168.0.132:8095  probe: J7 +5.0 deg at v=10%
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] original run mode: REAL
+  [PASS] simulation mode engaged and verified
+  [INFO] rm_set_realtime_push ret=0
+  [PASS] UDP push delivering frames  (83 within 2 s)
+  [PASS] probe movej accepted in simulation mode
+
+  ────────────────────────────────────────────────────────────
+  VERDICT — simulated motion accessibility (547 UDP frames):
+    UDP realtime push sweeps:   YES
+    Arrival event fires:        YES (trajectory_state=True)
+    TCP polling sweeps:         YES  (1 polls)
+  ────────────────────────────────────────────────────────────
+  => Simulated motion IS programmatically accessible: the
+     sim-rehearsal record-and-verify pipeline is viable.
+  [PASS] probe completed with a definitive verdict
+  [PASS] probe joint returned to start
+  [INFO] run mode restored: REAL (ret=0)
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C7 hand only  (test_hand_only)
+####################################################################
+====================================================================
+C7  Hand-alone test (protocol probe, then modbus RTU)
+    hand on arm=left @ 192.168.1.10   modbus device=1 baud=115200
+    ONLY THE HAND MOVES — no arm, no pole motion
+    on exit: restore protocol mode (rm_close_modbus_mode)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] arm run mode: REAL (hand is a physical peripheral; REAL recommended)
+  [PASS] connected  (handle id=5)
+
+  Phase P — protocol path probe (rm_set_hand_angle, blocking 5 s)
+  [PASS] protocol path  (WORKS — end port is free; C2/C6 hand steps can use arrival events)
+
+  Phase M — modbus RTU (ANGLE_SET writes, ANGLE_ACT feedback)
+  [PASS] modbus session opened  (port 1 @ 115200)
+  [PASS] ANGLE_ACT readable  (measured [993, 993, 993, 993, 981, 992])
+  [PASS] SPEED_SET written  (500 x6)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+    grasp      reached in  0.3 s  ACT=[33, 33, 33, 33, 133, 944]  (max err 0)
+    half_grasp reached in  0.3 s  ACT=[516, 516, 516, 516, 133, 944]  (max err 0)
+    release    reached in  0.3 s  ACT=[993, 993, 993, 993, 981, 992]  (max err 0)
+  [PASS] modbus command + measured feedback  (release -> grasp -> half_grasp -> release verified via ANGLE_ACT)
+  [PASS] FORCE_ACT readable  ([0, 0, 0, 0, 0, 0] g (signed))
+
+  VERDICT: protocol path WORKS; modbus RTU path WORKS with real feedback.
+  [INFO] end port restored to protocol mode (rm_close_modbus_mode ret=0)
+  [PASS] end-port state restored
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 locked  (test_dual_locked)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.47 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.07 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('hand', 'release')      skew   0.35 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('zero', 'half')) skew   2.89 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'grasp')        skew   0.35 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('sync', ('ready', 'full')) skew   3.34 ms   L   0.28 s   R   0.28 s   |d|  0.00 s   ok=True
+  ('hand', 'half_grasp')   skew   0.39 ms   L   0.10 s   R   0.10 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   1.15 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 3.34 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.00 s, max 0.00 s
+  [INFO] sync left  ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.7 ms, finish skew   +74.9 ms
+  [INFO] sync right ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.0 ms, finish skew   +74.9 ms
+  [INFO] sync left  ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -1.0 ms, finish skew   +74.9 ms
+  [INFO] sync right ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -1.1 ms, finish skew   +75.1 ms
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 single-locked  (test_single_arm_locked)
+####################################################################
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('hand', 'release')        ok=True  hand  0.10 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.9 ms   finish-skew    +75 ms
+  ('hand', 'grasp')          ok=True  hand  0.10 s
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -1.2 ms   finish-skew    +75 ms
+  ('hand', 'half_grasp')     ok=True  hand  0.10 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -0.8 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -0.8 ms
+  [PASS] sync dispatch gap  (max 0.8 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  controller clean afterwards: True
+
+  drill verdict: arm_first exit 1 + latched True (want nonzero/True), lift_first exit 1 + clean True (want nonzero/True) -> OK
+
+####################################################################
+# C9 sync-BACKEND drill  (planned vs canfd)
+####################################################################
+
+-- backend=planned: sync must FAIL (known controller limit) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -1.2 ms
+  [PASS] sync dispatch gap  (max 1.2 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C3 chained  (test_dual_chained)
+####################################################################
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 2 ...
+  starting in 1 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+  [INFO] left: pole at full length (0.13 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.3 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency    91.9 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency     1.4 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency   178.0 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency     1.8 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency   178.2 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency    87.0 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [PASS] follower gate latency  (max 178.2 ms)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 6 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C4 free  (test_dual_free)
+####################################################################
+====================================================================
+C4  Free-running dual-arm execution (no cross-arm gates)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: as-found  (select with --mode SIM|REAL)
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [INFO] right: pole at full length (0.04 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  per-arm timelines:
+  ────────────────────────────────────────────────────────────
+  left : 7/7 steps in 1.25 s
+  right: 7/7 steps in 1.25 s
+  [PASS] all dispatches accepted
+  [PASS] both arms completed independently
+  [PASS] concurrent free run  (window overlap 100% of shorter run)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C6 single-arm  (test_single_arm_planned)
+####################################################################
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  0.19 s   hand  0.10 s   hand-arm finish -0.09 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.211 y=+0.086 z=+0.562  ->  target x=+0.411
+  movej_p +X + half_grasp: arm 0.15 s, hand finish skew -0.05 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  0.21 s   hand  0.10 s   hand-arm finish -0.11 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -0.09s, -0.09s, -0.05s, -0.11s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C11 rehearsal  (scratch capture)
+####################################################################
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/hinge_area_right_ruckig_pro_only.json
+     plan source: this repo's plans/ (the contract)
+     arm=192.168.1.103  UDP -> 192.168.0.132:8095  v=20%  mode=SIMULATION
+======================================================================
+  plan stages:
+    move_to_pre_start             14 wp ->  2 targets
+    move_to_start                  5 wp ->  2 targets
+    execute_path                2002 wp -> 20 targets   <-- PATH, subsampled
+    move_to_rest                  12 wp ->  2 targets
+  sparse targets: 26
+current c api version:  emu-1.1.6
+  [PASS] run mode engaged and verified  (SIMULATION — no physical motion)
+  [PASS] UDP capture channel live  (85 frames in 2s)
+
+  staging -> stage 'move_to_pre_start' first waypoint (excluded from the residual)
+    move_to_pre_start        2 targets done
+    move_to_start            2 targets done
+    execute_path            20 targets done
+    move_to_rest             2 targets done
+  [PASS] every sparse target executed  (26/26)
+  [PASS] capture ends at the commanded target  (max joint err 0.000 deg)
+
+  capture saved: /tmp/emu_rehearsal.json  (4197 frames, 2.5 s)
+  [INFO] run mode restored: REAL
+
+  analysing 4197 captured frames vs 550 predicted; sweeping <=37/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 4 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.000     0.00    19.94    20.14     -0.20  free
+  move_to_start             0.000     0.00    19.94    19.94      0.00  free
+  execute_path              0.000     0.00     0.00     0.00       n/a  touch 46%/46%
+  move_to_rest              0.000     0.00     0.00     0.00       n/a  touch 11%/12%
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                 0.00 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C2 arm-only drill  (--no-hands --no-pole)
+####################################################################
+====================================================================
+C2  Parallel locked dual-arm execution
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioning SKIPPED (--no-pole)
+    BOTH ARMS WILL MOVE (poles stay put)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+
+  step results:
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')         skew   1.40 ms   L   0.01 s   R   0.19 s   |d|  0.19 s   ok=True
+  ('arm', 'zero')          skew   0.93 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'ready')         skew   0.80 ms   L   0.30 s   R   0.30 s   |d|  0.00 s   ok=True
+  ('arm', 'rest')          skew   1.04 ms   L   0.19 s   R   0.19 s   |d|  0.00 s   ok=True
+  [PASS] all dispatches accepted
+  [PASS] sequence completed with barrier per step
+  [PASS] dispatch skew  (max 1.40 ms)
+  [PASS] arrival via event for every device
+  [INFO] completion delta between arms: mean 0.05 s, max 0.19 s
+  [PASS] pole outlasts the arm move  (SKIPPED — poles disabled (--no-pole))
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# C9 sync-order drill  (planned: which device gets truncated)
+####################################################################
+
+-- arm_first: the ARM is the victim -> faults must LATCH --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.19 s
+  ('sync', ('zero', 'half')) ok=False  arm  2.00 s   lift  0.46 s   start-skew   1.0 ms   finish-skew  -1538 ms
+  [DIAG] left: error state after the failed step — system 5001; joints J1=16,J2=16,J3=16,J4=16,J5=16,J6=16,J7=16
+  [DIAG] recover before the next run: RM_ARM=left python3 test_single_arm_locked.py --mode REAL --clear-errors
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew    1.0 ms
+  [PASS] sync dispatch gap  (max 1.0 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  joint errors latched: True ([16, 16, 16, 16, 16, 16, 16])
+
+-- lift_first: the POLE is the victim -> no faults --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.37 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.01 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -1.4 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -1.4 ms
+  [PASS] sync dispatch gap  (max 1.4 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+
+-- backend=canfd: sync must COMPLETE (bench_sync recipe) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.13 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -1.2 ms   finish-skew    +75 ms
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -1.1 ms   finish-skew    +75 ms
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.2 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -1.1 ms
+  [PASS] sync dispatch gap  (max 1.2 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: planned exit 1 (want nonzero), canfd exit 0 (want 0) -> OK
+
+####################################################################
+# C8 locked-pole drill  (fault injection)
+####################################################################
+
+-- drill A: pole locked, C8 must FAIL with the diagnosis --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=21)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [FAIL] controller/joint errors  (sys=['4103'] joints=[] — latched errors block motion; rerun with --clear-errors)
+  [FAIL] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — LIFT DRIVER ERROR latched (stall/overcurrent?); try --clear-errors, then power cycle)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: REJECTED ret=1
+  [FAIL] lift acceptance probe  (the 20:38 signature — controller rejects/ignores lift commands)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: ON
+  [DIAG]   controller err: 4103  <-- likely cause: clear via --clear-errors / Web GUI
+  [DIAG]   joint err flags: clean   brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [DIAG]   lift state: pos=300 hw-mm  current=0 mA  mode=0  err_flag=1  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [SKIP] small stroke probe  (acceptance probe failed)
+  [SKIP] home to full length  (earlier probe failed)
+
+  Summary: 2 PASS, 3 FAIL, 3 SKIP
+
+-- drill B: C8 --clear-errors must recover and pass --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    --clear-errors: rm_clear_system_err will run before D6
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=22)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (latched: sys=['4103'] joints=[] — clearing next)
+  [PASS] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — driver error latched, clearing next)
+  [PASS] rm_clear_system_err  (ret=0)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 290: ret=0 arrived=True success=True (0.10 s)
+    back to 300: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: locked exit 1 (want nonzero), recover exit 0 (want 0) -> OK
+
+####################################################################
+# C14 glove frames  (both arms)
+####################################################################
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: as-found
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [0.0, -81.99026048322081, -26.000824743036755, 97.99297170122469, 5.998868115019719, 61.99976301110639, 69.00130726760504], "controller_pose": [-0.041483, -0.102023, 0.491833, 1.352612, -0.119986, 1.528316], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": "unavailable: AttributeError(\"'RoboticArm' object has no attribute 'rm_get_current_work_frame'\")", "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.49183300137519836, -0.10202261805534363, 0.04148309677839279, 2.9183201789855957, 0.0421745665371418, 1.4507026672363281]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   504.0 mm vs rm_algo   504.0 mm   d= 0.00 mm   full-vector d=533.3 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.00 mm, full vector within 533.3 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (1/10): ['Arm_Tip']
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    R_glove_frame_1          R_glove_1             50.0     0.0   145.0      50.0    0.0  160.3
+    R_glove_frame_2          R_glove_2             13.5     0.0   165.0      13.5    0.0  180.3
+    R_glove_frame_3          R_glove_3             75.0     7.0   170.0      75.0    7.0  185.3
+    R_glove_frame_4          R_glove_4             55.0     7.0   205.0      55.0    7.0  220.3
+    R_tip_frame              R_tip                 15.0     5.0   230.0      15.0    5.0  245.3
+    R_index_tip_frame        R_index_tip           24.2    28.8   225.0      24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create R_glove_1    <- R_glove_frame_1      at (   50.0,    0.0,  160.3) mm  payload 0.0 kg  ret=0
+    create R_glove_2    <- R_glove_frame_2      at (   13.5,    0.0,  180.3) mm  payload 0.0 kg  ret=0
+    create R_glove_3    <- R_glove_frame_3      at (   75.0,    7.0,  185.3) mm  payload 0.0 kg  ret=0
+    create R_glove_4    <- R_glove_frame_4      at (   55.0,    7.0,  220.3) mm  payload 0.0 kg  ret=0
+    create R_tip        <- R_tip_frame          at (   15.0,    5.0,  245.3) mm  payload 0.0 kg  ret=0
+    create R_index_tip  <- R_index_tip_frame    at (   24.2,   28.8,  240.3) mm  payload 0.0 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    R_glove_frame_1        R_glove_1       50.0    0.0  160.3      50.0    0.0  160.3   0.00 OK
+    R_glove_frame_2        R_glove_2       13.5    0.0  180.3      13.5    0.0  180.3   0.00 OK
+    R_glove_frame_3        R_glove_3       75.0    7.0  185.3      75.0    7.0  185.3   0.00 OK
+    R_glove_frame_4        R_glove_4       55.0    7.0  220.3      55.0    7.0  220.3   0.00 OK
+    R_tip_frame            R_tip           15.0    5.0  245.3      15.0    5.0  245.3   0.00 OK
+    R_index_tip_frame      R_index_tip     24.2   28.8  240.3      24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Arm_Tip' (ret=0, now 'Arm_Tip')
+  [PASS] glove tool frames created  (R_glove_1(ret=0), R_glove_2(ret=0), R_glove_3(ret=0), R_glove_4(ret=0), R_tip(ret=0), R_index_tip(ret=0); active frame verified back on 'Arm_Tip')
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: as-found
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.0, -81.99026048322081, 26.000824743036755, 97.99297170122469, -5.998868115019719, 61.99976301110639, 110.99911365069438], "controller_pose": [0.561589, 0.085891, -0.2111, 2.91832, -0.042176, 1.690883], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": "unavailable: AttributeError(\"'RoboticArm' object has no attribute 'rm_get_current_work_frame'\")", "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.5615891218185425, 0.08589126914739609, -0.211100235581398, 2.918320417404175, -0.04217616841197014, 1.690882921218872]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   606.1 mm vs rm_algo   606.1 mm   d= 0.00 mm   full-vector d=0.0 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.00 mm, full vector within 0.0 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (2/10): ['Arm_Tip', 'Hand']
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    L_glove_frame_1          L_glove_1            -50.0     0.0   140.0     -50.0    0.0  155.3
+    L_glove_frame_2          L_glove_2            -20.0     0.0   165.0     -20.0    0.0  180.3
+    L_glove_frame_3          L_glove_3            -75.0     7.0   170.0     -75.0    7.0  185.3
+    L_glove_frame_4          L_glove_4            -55.0     7.0   205.0     -55.0    7.0  220.3
+    L_tip_frame              L_tip                -15.0     5.0   230.0     -15.0    5.0  245.3
+    L_index_tip_frame        L_index_tip          -24.2    28.8   225.0     -24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create L_glove_1    <- L_glove_frame_1      at (  -50.0,    0.0,  155.3) mm  payload 0.706 kg  ret=0
+    create L_glove_2    <- L_glove_frame_2      at (  -20.0,    0.0,  180.3) mm  payload 0.706 kg  ret=0
+    create L_glove_3    <- L_glove_frame_3      at (  -75.0,    7.0,  185.3) mm  payload 0.706 kg  ret=0
+    create L_glove_4    <- L_glove_frame_4      at (  -55.0,    7.0,  220.3) mm  payload 0.706 kg  ret=0
+    create L_tip        <- L_tip_frame          at (  -15.0,    5.0,  245.3) mm  payload 0.706 kg  ret=0
+    create L_index_tip  <- L_index_tip_frame    at (  -24.2,   28.8,  240.3) mm  payload 0.706 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    L_glove_frame_1        L_glove_1      -50.0    0.0  155.3     -50.0    0.0  155.3   0.00 OK
+    L_glove_frame_2        L_glove_2      -20.0    0.0  180.3     -20.0    0.0  180.3   0.00 OK
+    L_glove_frame_3        L_glove_3      -75.0    7.0  185.3     -75.0    7.0  185.3   0.00 OK
+    L_glove_frame_4        L_glove_4      -55.0    7.0  220.3     -55.0    7.0  220.3   0.00 OK
+    L_tip_frame            L_tip          -15.0    5.0  245.3     -15.0    5.0  245.3   0.00 OK
+    L_index_tip_frame      L_index_tip    -24.2   28.8  240.3     -24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Hand' (ret=0, now 'Hand')
+  [PASS] glove tool frames created  (L_glove_1(ret=0), L_glove_2(ret=0), L_glove_3(ret=0), L_glove_4(ret=0), L_tip(ret=0), L_index_tip(ret=0); active frame verified back on 'Hand')
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 hinge_area_right  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.52s  75 hw-mm at 50%
+    ok   hand_grasp                   [hand]   0.10s  quarter_grasp [750, 750, 750, 750, 1000, 944] from plan (duration-based)
+    ok   move_to_pre_start            [arm ]   0.52s  v=10%
+    ok   move_to_start                [arm ]   0.05s  v=10%
+    ok   execute_path                 [arm ]   3.51s  43 segments, tool R_glove_4
+    ok   move_to_rest                 [arm ]   0.29s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 hinge_area_left  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — hinge_area_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_4   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.52s  75 hw-mm at 50%
+    ok   hand_grasp                   [hand]   0.10s  quarter_grasp [750, 750, 750, 750, 1000, 944] from plan (duration-based)
+    ok   move_to_pre_start            [arm ]   0.52s  v=10%
+    ok   move_to_start                [arm ]   0.05s  v=10%
+    ok   execute_path                 [arm ]   3.53s  43 segments, tool L_glove_4
+    ok   move_to_rest                 [arm ]   0.29s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 toplid_right  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — toplid_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_2   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (6 device stages)
+    ok   hand_grasp                   [hand]   0.10s  grasp [33, 33, 33, 33, 133, 944] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.04s  75 hw-mm at 50%
+    ok   move_to_start                [arm ]   0.41s  v=10%
+    ok   open_tenth                   [hand]   0.10s  open_tenth [130, 130, 130, 130, 133, 944] from plan (duration-based)
+    ok   execute_path                 [arm ]   3.08s  27 segments, tool R_glove_2
+    ok   move_to_rest                 [arm ]   0.21s  v=20%
+  [PASS] stage sequence completed  (6 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 toplid_left  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.10s  grasp [33, 33, 33, 33, 133, 944] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.04s  75 hw-mm at 50%
+    ok   move_to_start                [arm ]   0.35s  v=10%
+    ok   open_tenth                   [hand]   0.10s  open_tenth [130, 130, 130, 130, 133, 944] from plan (duration-based)
+    ok   execute_path                 [arm ]   3.19s  27 segments, tool L_glove_2
+    ok   move_to_rest                 [arm ]   0.18s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (7 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+====================================================================
+Emulated suite summary
+  C1 connect             exit 0  (OK)
+  C8 pole diag           exit 0  (OK)
+  C5 sim probe           exit 0  (OK)
+  C7 hand only           exit 0  (OK)
+  C2 locked              exit 0  (OK)
+  C9 single-locked       exit 0  (OK)
+  C3 chained             exit 0  (OK)
+  C4 free                exit 0  (OK)
+  C6 single-arm          exit 0  (OK)
+  C11 rehearsal          exit 0  (OK)
+  C2 arm-only drill      exit 0  (OK)
+  C9 sync-order drill    exit 0  (OK)
+  C9 backend drill       exit 0  (OK)
+  C8 locked drill        exit 0  (OK)
+  C14 frames             exit 0  (OK)
+  P2 hinge_area_right    exit 0  (OK)
+  P2 hinge_area_left     exit 0  (OK)
+  P2 toplid_right        exit 0  (OK)
+  P2 toplid_left         exit 0  (OK)
+====================================================================
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -0.7 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -0.7 ms
+  [PASS] sync dispatch gap  (max 0.7 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+  controller clean afterwards: True
+
+  drill verdict: arm_first exit 1 + latched True (want nonzero/True), lift_first exit 1 + clean True (want nonzero/True) -> OK
+
+####################################################################
+# C9 sync-BACKEND drill  (planned vs canfd)
+####################################################################
+
+-- backend=planned: sync must FAIL (known controller limit) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.13 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+  ('sync', ('zero', 'half')) ok=False  lift 60.00 s   arm  0.30 s   start-skew  -1.7 ms   finish-skew +59700 ms
+  [DIAG] left: error state after the failed step — clean
+  [PASS] all dispatches accepted
+  [FAIL] sequence completed  (2/4 steps; first failure at ('sync', ('zero', 'half')))
+  [WARN] 1 dispatched devices never delivered an arrival event (0 recovered by position fallback; hand has no fallback) — the C2 freeze signature if the device is the ARM on a sync step
+  [FAIL] arrival via event for every device  (1 missing)
+  [INFO] sync ('zero', 'half')     arm-dur-est 3.00 s, matched lift 37%, start skew   -1.7 ms
+  [PASS] sync dispatch gap  (max 1.7 ms between the two commands (budget 50 ms))
+  [FAIL] pole outlasts the arm move  (no sync step produced both completions (the freeze outcome))
+
+  Summary: 4 PASS, 3 FAIL, 0 SKIP
+
+-- backend=canfd: sync must COMPLETE (bench_sync recipe) --
+====================================================================
+C9  Single-arm LOCKED sequence (the C2 recipe on one arm)
+    arm=left @ 192.168.1.10   arm v=20%   lift v=50% (duration-matched on sync)
+    sequence: [('arm', 'ready'), ('sync', ('zero', 'half')), ('sync', ('ready', 'full')), ('arm', 'rest')]   [--no-hands: hand steps stripped]
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM AND ITS POLE WILL MOVE
+    sync dispatch order: LIFT_FIRST (back-to-back)   (ZIGZAG01 + bench_sync order)
+    A frozen sync step waits up to 40 s for the arm event, then position-verifies, halts, and FAILS — let it finish.
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.14 s, event=True)
+  [PASS] pole pre-positioned to full length
+
+  step results (live):
+  ────────────────────────────────────────────────────────────
+  ('arm', 'ready')           ok=True  arm  0.30 s
+  ('sync', ('zero', 'half')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -1.2 ms   finish-skew    +75 ms
+  ('sync', ('ready', 'full')) ok=True  lift  0.28 s   arm  0.20 s   start-skew  -0.9 ms   finish-skew    +75 ms
+  ('arm', 'rest')            ok=True  arm  0.19 s
+  [PASS] all dispatches accepted
+  [PASS] sequence completed
+  [PASS] arrival via event for every device
+  [INFO] sync ('zero', 'half')     arm-dur-est 0.20 s, matched lift 100%, start skew   -1.2 ms
+  [INFO] sync ('ready', 'full')    arm-dur-est 0.20 s, matched lift 100%, start skew   -0.9 ms
+  [PASS] sync dispatch gap  (max 1.2 ms between the two commands (budget 50 ms))
+  [PASS] pole outlasts the arm move  (earliest margin +0.07 s)
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: planned exit 1 (want nonzero), canfd exit 0 (want 0) -> OK
+
+####################################################################
+# C8 locked-pole drill  (fault injection)
+####################################################################
+
+-- drill A: pole locked, C8 must FAIL with the diagnosis --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=21)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [FAIL] controller/joint errors  (sys=['4103'] joints=[] — latched errors block motion; rerun with --clear-errors)
+  [FAIL] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — LIFT DRIVER ERROR latched (stall/overcurrent?); try --clear-errors, then power cycle)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: REJECTED ret=1
+  [FAIL] lift acceptance probe  (the 20:38 signature — controller rejects/ignores lift commands)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: ON
+  [DIAG]   controller err: 4103  <-- likely cause: clear via --clear-errors / Web GUI
+  [DIAG]   joint err flags: clean   brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [DIAG]   lift state: pos=300 hw-mm  current=0 mA  mode=0  err_flag=1  <-- LIFT DRIVER ERROR latched (stall/overcurrent?)
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [SKIP] small stroke probe  (acceptance probe failed)
+  [SKIP] home to full length  (earlier probe failed)
+
+  Summary: 2 PASS, 3 FAIL, 3 SKIP
+
+-- drill B: C8 --clear-errors must recover and pass --
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    ONLY THE POLE MOVES — arm and hand stay still
+    --clear-errors: rm_clear_system_err will run before D6
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=22)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (latched: sys=['4103'] joints=[] — clearing next)
+  [PASS] lift state  (pos=300 hw-mm  current=0 mA  mode=0  err_flag=1 — driver error latched, clearing next)
+  [PASS] rm_clear_system_err  (ret=0)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  D6 acceptance probe: command CURRENT position (300 hw-mm) — no physical motion
+    hold-position: ret=0 arrived=True success=True (0.04 s)
+  [PASS] lift acceptance probe  (controller accepts lift commands)
+    stroke to 290: ret=0 arrived=True success=True (0.10 s)
+    back to 300: ret=0 arrived=True success=True (0.10 s)
+  [PASS] small stroke probe  (10 hw-mm there and back, events OK)
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (0.04 s, event=True)
+  [PASS] home to full length  (0.3 m -> 300 hw-mm)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+
+  drill verdict: locked exit 1 (want nonzero), recover exit 0 (want 0) -> OK
+
+####################################################################
+# C14 glove frames  (both arms)
+####################################################################
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: as-found
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [0.0, -81.99026048322081, -26.000824743036755, 97.99297170122469, 5.998868115019719, 61.99976301110639, 69.00130726760504], "controller_pose": [-0.041483, -0.102023, 0.491833, 1.352612, -0.119986, 1.528316], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": "unavailable: AttributeError(\"'RoboticArm' object has no attribute 'rm_get_current_work_frame'\")", "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.49183300137519836, -0.10202261805534363, 0.04148309677839279, 2.9183201789855957, 0.0421745665371418, 1.4507026672363281]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   504.0 mm vs rm_algo   504.0 mm   d= 0.00 mm   full-vector d=533.3 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.00 mm, full vector within 533.3 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (1/10): ['Arm_Tip']
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    R_glove_frame_1          R_glove_1             50.0     0.0   145.0      50.0    0.0  160.3
+    R_glove_frame_2          R_glove_2             13.5     0.0   165.0      13.5    0.0  180.3
+    R_glove_frame_3          R_glove_3             75.0     7.0   170.0      75.0    7.0  185.3
+    R_glove_frame_4          R_glove_4             55.0     7.0   205.0      55.0    7.0  220.3
+    R_tip_frame              R_tip                 15.0     5.0   230.0      15.0    5.0  245.3
+    R_index_tip_frame        R_index_tip           24.2    28.8   225.0      24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create R_glove_1    <- R_glove_frame_1      at (   50.0,    0.0,  160.3) mm  payload 0.0 kg  ret=0
+    create R_glove_2    <- R_glove_frame_2      at (   13.5,    0.0,  180.3) mm  payload 0.0 kg  ret=0
+    create R_glove_3    <- R_glove_frame_3      at (   75.0,    7.0,  185.3) mm  payload 0.0 kg  ret=0
+    create R_glove_4    <- R_glove_frame_4      at (   55.0,    7.0,  220.3) mm  payload 0.0 kg  ret=0
+    create R_tip        <- R_tip_frame          at (   15.0,    5.0,  245.3) mm  payload 0.0 kg  ret=0
+    create R_index_tip  <- R_index_tip_frame    at (   24.2,   28.8,  240.3) mm  payload 0.0 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    R_glove_frame_1        R_glove_1       50.0    0.0  160.3      50.0    0.0  160.3   0.00 OK
+    R_glove_frame_2        R_glove_2       13.5    0.0  180.3      13.5    0.0  180.3   0.00 OK
+    R_glove_frame_3        R_glove_3       75.0    7.0  185.3      75.0    7.0  185.3   0.00 OK
+    R_glove_frame_4        R_glove_4       55.0    7.0  220.3      55.0    7.0  220.3   0.00 OK
+    R_tip_frame            R_tip           15.0    5.0  245.3      15.0    5.0  245.3   0.00 OK
+    R_index_tip_frame      R_index_tip     24.2   28.8  240.3      24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Arm_Tip' (ret=0, now 'Arm_Tip')
+  [PASS] glove tool frames created  (R_glove_1(ret=0), R_glove_2(ret=0), R_glove_3(ret=0), R_glove_4(ret=0), R_tip(ret=0), R_index_tip(ret=0); active frame verified back on 'Arm_Tip')
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: as-found
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.0, -81.99026048322081, 26.000824743036755, 97.99297170122469, -5.998868115019719, 61.99976301110639, 110.99911365069438], "controller_pose": [0.561589, 0.085891, -0.2111, 2.91832, -0.042176, 1.690883], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": "unavailable: AttributeError(\"'RoboticArm' object has no attribute 'rm_get_current_work_frame'\")", "install_pose": [0.0, 90.0, 0.0], "offline_fk": [0.5615891218185425, 0.08589126914739609, -0.211100235581398, 2.918320417404175, -0.04217616841197014, 1.690882921218872]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found |p| controller   606.1 mm vs rm_algo   606.1 mm   d= 0.00 mm   full-vector d=0.0 mm
+  [PASS] arm model matches the controller  (|p| agrees within 0.00 mm, full vector within 0.0 mm)
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    existing tool frames (2/10): ['Arm_Tip', 'Hand']
+
+    URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
+    --------------------------------------------------------------------------------------------
+    L_glove_frame_1          L_glove_1            -50.0     0.0   140.0     -50.0    0.0  155.3
+    L_glove_frame_2          L_glove_2            -20.0     0.0   165.0     -20.0    0.0  180.3
+    L_glove_frame_3          L_glove_3            -75.0     7.0   170.0     -75.0    7.0  185.3
+    L_glove_frame_4          L_glove_4            -55.0     7.0   205.0     -55.0    7.0  220.3
+    L_tip_frame              L_tip                -15.0     5.0   230.0     -15.0    5.0  245.3
+    L_index_tip_frame        L_index_tip          -24.2    28.8   225.0     -24.2   28.8  240.3
+    --------------------------------------------------------------------------------------------
+    rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
+
+    create L_glove_1    <- L_glove_frame_1      at (  -50.0,    0.0,  155.3) mm  payload 0.706 kg  ret=0
+    create L_glove_2    <- L_glove_frame_2      at (  -20.0,    0.0,  180.3) mm  payload 0.706 kg  ret=0
+    create L_glove_3    <- L_glove_frame_3      at (  -75.0,    7.0,  185.3) mm  payload 0.706 kg  ret=0
+    create L_glove_4    <- L_glove_frame_4      at (  -55.0,    7.0,  220.3) mm  payload 0.706 kg  ret=0
+    create L_tip        <- L_tip_frame          at (  -15.0,    5.0,  245.3) mm  payload 0.706 kg  ret=0
+    create L_index_tip  <- L_index_tip_frame    at (  -24.2,   28.8,  240.3) mm  payload 0.706 kg  ret=0
+
+    MATCH TABLE — URDF frame vs what the controller now holds
+    URDF link              controller            expected (mm)         read back (mm)  d mm
+    ----------------------------------------------------------------------------------------
+    L_glove_frame_1        L_glove_1      -50.0    0.0  155.3     -50.0    0.0  155.3   0.00 OK
+    L_glove_frame_2        L_glove_2      -20.0    0.0  180.3     -20.0    0.0  180.3   0.00 OK
+    L_glove_frame_3        L_glove_3      -75.0    7.0  185.3     -75.0    7.0  185.3   0.00 OK
+    L_glove_frame_4        L_glove_4      -55.0    7.0  220.3     -55.0    7.0  220.3   0.00 OK
+    L_tip_frame            L_tip          -15.0    5.0  245.3     -15.0    5.0  245.3   0.00 OK
+    L_index_tip_frame      L_index_tip    -24.2   28.8  240.3     -24.2   28.8  240.3   0.00 OK
+    ----------------------------------------------------------------------------------------
+    active tool frame restored to 'Hand' (ret=0, now 'Hand')
+  [PASS] glove tool frames created  (L_glove_1(ret=0), L_glove_2(ret=0), L_glove_3(ret=0), L_glove_4(ret=0), L_tip(ret=0), L_index_tip(ret=0); active frame verified back on 'Hand')
+
+  Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 hinge_area_right  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.52s  75 hw-mm at 50%
+    ok   hand_grasp                   [hand]   0.10s  quarter_grasp [750, 750, 750, 750, 1000, 944] from plan (duration-based)
+    ok   move_to_pre_start            [arm ]   0.52s  v=10%
+    ok   move_to_start                [arm ]   0.05s  v=10%
+    ok   execute_path                 [arm ]   3.48s  43 segments, tool R_glove_4
+    ok   move_to_rest                 [arm ]   0.29s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 hinge_area_left  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — hinge_area_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_4   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.52s  75 hw-mm at 50%
+    ok   hand_grasp                   [hand]   0.10s  quarter_grasp [750, 750, 750, 750, 1000, 944] from plan (duration-based)
+    ok   move_to_pre_start            [arm ]   0.52s  v=10%
+    ok   move_to_start                [arm ]   0.05s  v=10%
+    ok   execute_path                 [arm ]   3.59s  43 segments, tool L_glove_4
+    ok   move_to_rest                 [arm ]   0.29s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 toplid_right  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — toplid_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_2   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (6 device stages)
+    ok   hand_grasp                   [hand]   0.10s  grasp [33, 33, 33, 33, 133, 944] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.04s  75 hw-mm at 50%
+    ok   move_to_start                [arm ]   0.41s  v=10%
+    ok   open_tenth                   [hand]   0.10s  open_tenth [130, 130, 130, 130, 133, 944] from plan (duration-based)
+    ok   execute_path                 [arm ]   3.08s  27 segments, tool R_glove_2
+    ok   move_to_rest                 [arm ]   0.21s  v=20%
+  [PASS] stage sequence completed  (6 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+####################################################################
+# P2 toplid_left  (serialized stages + chained movel)
+####################################################################
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2   speeds arm=20% approach=10% pole=50%
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.10s  grasp [33, 33, 33, 33, 133, 944] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   0.04s  75 hw-mm at 50%
+    ok   move_to_start                [arm ]   0.35s  v=10%
+    ok   open_tenth                   [hand]   0.10s  open_tenth [130, 130, 130, 130, 133, 944] from plan (duration-based)
+    ok   execute_path                 [arm ]   3.16s  27 segments, tool L_glove_2
+    ok   move_to_rest                 [arm ]   0.18s  v=20%
+    ok   hand_release                 [hand]   0.10s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+  [PASS] stage sequence completed  (7 stages ran)
+
+  Summary: 3 PASS, 0 FAIL, 0 SKIP
+
+====================================================================
+Emulated suite summary
+  C1 connect             exit 0  (OK)
+  C8 pole diag           exit 0  (OK)
+  C5 sim probe           exit 0  (OK)
+  C7 hand only           exit 0  (OK)
+  C2 locked              exit 0  (OK)
+  C9 single-locked       exit 0  (OK)
+  C3 chained             exit 0  (OK)
+  C4 free                exit 0  (OK)
+  C6 single-arm          exit 0  (OK)
+  C11 rehearsal          exit 0  (OK)
+  C2 arm-only drill      exit 0  (OK)
+  C9 sync-order drill    exit 0  (OK)
+  C9 backend drill       exit 0  (OK)
+  C8 locked drill        exit 0  (OK)
+  C14 frames             exit 0  (OK)
+  P2 hinge_area_right    exit 0  (OK)
+  P2 hinge_area_left     exit 0  (OK)
+  P2 toplid_right        exit 0  (OK)
+  P2 toplid_left         exit 0  (OK)
+====================================================================

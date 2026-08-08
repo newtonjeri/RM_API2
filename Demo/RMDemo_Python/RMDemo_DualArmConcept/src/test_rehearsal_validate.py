@@ -386,6 +386,10 @@ def capture(mode, plan_path, stroke_n, speed_pct, save_path):
         rec = {
             "side": ARM_SIDE, "plan": str(plan_path), "mode":
                 "REAL" if want else "SIM",
+            # Provenance: an emulated capture must never be mistaken for a
+            # hardware one when the residual is read months later.
+            "sdk": ("emulated" if "rm_emulator" in sys.modules
+                    else "hardware"),
             "speed_pct": speed_pct, "stroke_targets": stroke_n,
             "joint_names": ARM_JOINTS, "stages": stages, "marks": marks,
             "samples": [{"t": round(t - t0, 4), "q": [round(v, 4) for v in q]}

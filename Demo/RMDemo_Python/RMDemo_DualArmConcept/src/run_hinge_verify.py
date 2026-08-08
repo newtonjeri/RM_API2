@@ -36,12 +36,90 @@ import sys
 import time
 
 from segment_verifier import (
-    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, resolve_plan,
-    stage_maps, subsample)
+    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, plan_state_upto,
+    resolve_plan, stage_maps, subsample)
+from task_config import TaskConfig
+
+# The config names MoveIt collision objects; the offline scene names its
+# meshes. One explicit bridge, so a rename in either system fails loudly
+# here rather than quietly allowing contact it should not.
+CONFIG_OBJECT_TO_MESHES = {
+    "commode_lid": ("lid_closed", "lid_open"),
+    "commode_seat": ("seat_closed", "seat_open"),
+    "commode_body": ("body_static",),
+}
+
+
+def allowed_mesh_keys(cfg, surface):
+    """Scene mesh keys the task's contact_surface permits."""
+    keys = set()
+    for obj in cfg.contact_objects(surface):
+        mapped = CONFIG_OBJECT_TO_MESHES.get(obj)
+        if mapped is None:
+            print(f"    [WARN] contact object {obj!r} has no scene mesh "
+                  "mapping — treated as NOT allowed")
+            continue
+        keys.update(mapped)
+    return keys
+
+
+def contact_verdict(v, timeline, arm_joints, cfg, surface):
+    """Does contact stay inside what the config declares?
+
+    Two independent conditions, both from contact_links.yaml:
+      * only objects in contact_surface_objects[surface] may be touched
+      * only links in contact_link_groups[ik_frame] may do the touching
+
+    NOTE (Newton, 2026-08-08): the link groups are currently the FULL
+    glove-covered hand set for every ik_frame, so today the second
+    condition rarely bites and the OBJECT condition is doing the work.
+    The groups are to be narrowed; this reads them from the file, so it
+    sharpens automatically when they are — no code change needed.
+    """
+    allowed_objs = allowed_mesh_keys(cfg, surface)
+    allowed_links = set(cfg.contact_links())
+    bad_obj, bad_link, touched = {}, {}, set()
+    for jm in timeline:
+        for key, links in v.contact_report(jm).items():
+            touched.add(key)
+            if key not in allowed_objs:
+                bad_obj.setdefault(key, set()).update(links)
+                continue
+            stray = links - allowed_links
+            if stray:
+                bad_link.setdefault(key, set()).update(stray)
+    return {
+        "surface": surface,
+        "allowed_objects": sorted(allowed_objs),
+        "allowed_link_count": len(allowed_links),
+        "touched": sorted(touched),
+        "undeclared_objects": {k: sorted(x) for k, x in bad_obj.items()},
+        "stray_links": {k: sorted(x) for k, x in bad_link.items()},
+        "ok": not bad_obj and not bad_link,
+    }
 
 # Workspace copy if present, else the copy bundled in this repo (../plans).
-DEFAULT_PLAN = resolve_plan("hinge_area_right_ruckig_pro_only.json")
-ARM_JOINTS = [f"R_joint{i}" for i in range(1, 8)]
+DEFAULT_TASK = "hinge_area_right"
+
+
+def plan_for(task):
+    return resolve_plan(f"{task}_ruckig_pro_only.json")
+
+
+def side_of(plan):
+    """Which arm does this plan drive? Read it from the plan, never assume.
+
+    toplid_left is a LEFT-arm task while hinge_area_right is a right-arm
+    one, and the fixture geometry, home state and collision link filter all
+    depend on getting this right.
+    """
+    for st in plan["sub_trajectories"]:
+        for j in st["joint_names"]:
+            if j.startswith("R_joint"):
+                return "right"
+            if j.startswith("L_joint"):
+                return "left"
+    raise SystemExit("no arm joints in this plan")
 
 
 def _arg(flag, default):
@@ -58,13 +136,14 @@ def main() -> int:
     if "-h" in sys.argv or "--help" in sys.argv:
         print(__doc__)
         return 0
-    plan_path = _arg("--plan", str(DEFAULT_PLAN))
+    task = _arg("--task", DEFAULT_TASK)
+    plan_path = _arg("--plan", str(plan_for(task)))
     samples = int(_arg("--samples", 40))
     stroke_n = int(_arg("--stroke-targets", 20))
     margin_m = float(_arg("--margin", 10)) / 1000.0
 
     print("=" * 70)
-    print("C12  Controller-motion collision verification — hinge_area_right")
+    print(f"C12  Controller-motion collision verification — {task}")
     print(f"     plan: {plan_path}")
     print("     source: " + ("this repo's plans/ (the contract)"
                              if str(BUNDLED_PLANS) in str(plan_path)
@@ -74,21 +153,45 @@ def main() -> int:
     print("=" * 70)
 
     plan = load_plan(plan_path)
-    stages = arm_stages(plan)
-    print(f"  arm stages: {[s['stage_name'] for s in stages]}")
-    v = SegmentVerifier(fixture="commode_c", side="right")
+    cfg = TaskConfig.load(task)
+    surface, contact_stages = cfg.contact_window()
+    side = _arg("--side", side_of(plan))
+    pref = "R_" if side == "right" else "L_"
+    arm_joints = [f"{pref}joint{i}" for i in range(1, 8)]
+    stages = arm_stages(plan, prefix=f"{pref}joint")
+    print(f"  side: {side}   arm stages: "
+          f"{[s['stage_name'] for s in stages]}")
+    if surface:
+        print(f"  contact window: allow_collision(contact_surface="
+              f"{surface!r}) over {sorted(contact_stages)}")
+        print(f"    declared objects: {sorted(cfg.contact_objects(surface))}"
+              f" -> meshes {sorted(allowed_mesh_keys(cfg, surface))}")
+        print(f"    declared links:   {len(cfg.contact_links())} "
+              f"(currently the full hand set for every ik_frame)")
+    else:
+        print("  contact window: none — every stage must stay clear")
+    v = SegmentVerifier(fixture="commode_c", side=side,
+                        articulation=cfg.params.get(
+                            "commode_fixture_type"))
 
     verdicts = []
     for st in stages:
-        maps = stage_maps(st)
+        # State the task has ESTABLISHED by the time this stage runs — the
+        # pole above all, which carries the arm base. Merged UNDER every
+        # sample so the arm is verified where the task actually puts it.
+        base = plan_state_upto(plan, plan["sub_trajectories"].index(st))
+        maps = [dict(base, **m) for m in stage_maps(st)]
         name = st["stage_name"]
+        pole = next((f"{k}={v:.3f}" for k, v in base.items()
+                     if "sliding_plate" in k), "pole=SRDF home")
         t0 = time.perf_counter()
 
         dense = v.verify_timeline(subsample(maps, samples),
-                                  ARM_JOINTS, tag="dense")
+                                  arm_joints, tag="dense")
         mode_a = v.verify_timeline(
-            v.movej_timeline(maps[0], maps[-1], samples),
-            ARM_JOINTS, tag="modeA")
+            [dict(base, **m)
+             for m in v.movej_timeline(maps[0], maps[-1], samples)],
+            arm_joints, tag="modeA")
         sparse = None
         # by SIZE, not by stage name — see build_targets in C11
         if len(maps) > stroke_n:
@@ -97,7 +200,7 @@ def main() -> int:
             for a, b in zip(targets, targets[1:]):
                 timeline += v.movej_timeline(a, b, 4)[:-1]
             timeline.append(targets[-1])
-            sparse = v.verify_timeline(timeline, ARM_JOINTS,
+            sparse = v.verify_timeline(timeline, arm_joints,
                                        tag=f"sparse-{stroke_n}")
 
         ref = dense["min_clearance_m"]
@@ -105,7 +208,7 @@ def main() -> int:
         if sparse:
             rows.append((f"sparse-{stroke_n} chain", sparse))
         print(f"\n  {name}  ({st['num_waypoints']} wp, "
-              f"{time.perf_counter() - t0:.1f}s to verify)")
+              f"{time.perf_counter() - t0:.1f}s to verify)   [{pole}]")
         for label, rep in rows:
             mc = rep["min_clearance_m"]
             print(f"    {label:22s} min clearance "
@@ -124,14 +227,27 @@ def main() -> int:
         #     path does — i.e. it touches where the task touches, and no
         #     new collision regions appear.
         cand = sparse if sparse else mode_a
-        dense_frac = dense["collisions"] / dense["samples"]
-        cand_frac = cand["collisions"] / cand["samples"]
-        contact_stage = dense["collisions"] > 0
+        # A stage inside the allow_collision bracket is judged by the
+        # CONFIG CONTRACT — declared links may touch declared objects,
+        # nothing else may touch anything. Touch fraction was only ever a
+        # proxy; this is the rule the task itself states.
+        contact_stage = name in contact_stages
         if contact_stage:
-            safe = (cand["self_collisions"] == 0
-                    and cand_frac <= dense_frac * 1.5 + 0.05)
-            basis = (f"contact stage: touch fraction {cand_frac:.0%} vs "
-                     f"reference {dense_frac:.0%}")
+            timeline = (subsample(maps, samples) if sparse is None
+                        else [dict(base, **m) for m in
+                              subsample(maps, samples)])
+            cv = contact_verdict(v, timeline, arm_joints, cfg, surface)
+            safe = cv["ok"] and cand["self_collisions"] == 0
+            if cv["undeclared_objects"]:
+                basis = ("contact stage: touched UNDECLARED "
+                         f"{sorted(cv['undeclared_objects'])}")
+            elif cv["stray_links"]:
+                stray = sorted({x for v_ in cv["stray_links"].values()
+                                for x in v_})
+                basis = f"contact stage: links outside the group {stray[:4]}"
+            else:
+                basis = (f"contact stage: only {cv['surface']!r} objects "
+                         f"{cv['touched']} touched, all by declared links")
         else:
             safe = (cand["collisions"] == 0
                     and cand["self_collisions"] == 0

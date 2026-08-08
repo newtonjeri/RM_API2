@@ -11,7 +11,9 @@ Set RM_EMU_TIME_SCALE=1 for real-time motion durations.
 """
 
 import os
+import pathlib
 import sys
+import tempfile
 
 import os
 os.environ.setdefault("RM_HAND_DWELL_S", "0.1")
@@ -37,6 +39,8 @@ import test_single_arm_planned
 import test_single_arm_locked
 import test_pole_only
 import test_rehearsal_validate
+import test_frame_alignment
+import stage_runner
 
 SUITE = [
     ("C1 connect", test_dual_connect),
@@ -48,8 +52,55 @@ SUITE = [
     ("C3 chained", test_dual_chained),
     ("C4 free", test_dual_free),
     ("C6 single-arm", test_single_arm_planned),
-    ("C11 rehearsal", test_rehearsal_validate),
 ]
+
+# ── Phase 2: the frames must exist before any cleaning task can select
+#    them, exactly as on hardware (C14 then the task). Order matters.
+PHASE2_TASKS = ("hinge_area_right", "hinge_area_left", "toplid_right",
+                "toplid_left")
+
+
+def _c11_rehearsal() -> int:
+    """C11 under emulation, writing to a SCRATCH path.
+
+    The default save path is `src/rehearsal_<side>.json`, which holds the
+    real hardware capture — an emulated run overwrote it once. Emulated
+    output never lands where recorded hardware data lives.
+    """
+    argv0 = list(sys.argv)
+    sys.argv = [argv0[0], "--save",
+                str(pathlib.Path(tempfile.gettempdir()) / "emu_rehearsal.json")]
+    try:
+        return test_rehearsal_validate.main()
+    finally:
+        sys.argv = argv0
+
+
+def _c14_frames() -> int:
+    """C14 on both arms: write the glove/ik frames and verify the readback."""
+    rc = 0
+    for side in ("right", "left"):
+        os.environ["RM_ARM"] = side
+        test_frame_alignment.ARM_SIDE = side
+        argv0 = list(sys.argv)
+        sys.argv = [argv0[0], "--create-frames"]
+        try:
+            rc |= test_frame_alignment.main()
+        finally:
+            sys.argv = argv0
+    return rc
+
+
+def _phase2_task(task):
+    """One cleaning task end to end: stages serialized, chained movel."""
+    def run() -> int:
+        argv0 = list(sys.argv)
+        sys.argv = [argv0[0], "--task", task]
+        try:
+            return stage_runner.main()
+        finally:
+            sys.argv = argv0
+    return run
 
 
 def _flag_drill() -> int:
@@ -176,6 +227,9 @@ def main() -> int:
         print(f"\n{'#' * 68}\n# {name}  ({mod.__name__})\n{'#' * 68}")
         codes[name] = mod.main()
 
+    print(f"\n{'#' * 68}\n# C11 rehearsal  (scratch capture)\n{'#' * 68}")
+    codes["C11 rehearsal"] = _c11_rehearsal()
+
     print(f"\n{'#' * 68}\n# C2 arm-only drill  (--no-hands --no-pole)\n"
           f"{'#' * 68}")
     codes["C2 arm-only drill"] = _flag_drill()
@@ -192,10 +246,18 @@ def main() -> int:
           f"{'#' * 68}")
     codes["C8 locked drill"] = _locked_pole_drill()
 
+    # ── Phase 2, in the order hardware requires: frames, then tasks ──
+    print(f"\n{'#' * 68}\n# C14 glove frames  (both arms)\n{'#' * 68}")
+    codes["C14 frames"] = _c14_frames()
+    for task in PHASE2_TASKS:
+        print(f"\n{'#' * 68}\n# P2 {task}  (serialized stages + chained "
+              f"movel)\n{'#' * 68}")
+        codes[f"P2 {task}"] = _phase2_task(task)()
+
     print("\n" + "=" * 68)
     print("Emulated suite summary")
     for name, code in codes.items():
-        print(f"  {name:12s} exit {code}  ({'OK' if code == 0 else 'FAIL'})")
+        print(f"  {name:22s} exit {code}  ({'OK' if code == 0 else 'FAIL'})")
     print("=" * 68)
     return max(codes.values())
 

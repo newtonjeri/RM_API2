@@ -1,0 +1,47 @@
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-08 18:04:45
+========================================================================
+==============================================================================
+C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
+==============================================================================
+
+  hinge_area_right  [right]  stage 'execute_path'  2002 waypoints
+     targets |  movej max    mean |  movel max    mean   (mm)
+          10 |       92.6    18.5   |       92.6    17.4 
+          20 |       57.6    11.7   |       58.0    11.5 
+          40 |       22.1     4.9   |       22.1     2.6 
+          80 |       16.1     2.4   |       11.3     1.0 
+         160 |        3.9     0.8 OK|        2.4     0.3 OK
+         320 |        1.0     0.2 OK|        0.7     0.1 OK
+
+  toplid_right  [right]  stage 'execute_path'  1807 waypoints
+     targets |  movej max    mean |  movel max    mean   (mm)
+          10 |      126.6    47.6   |      122.7    46.8 
+          20 |       32.6     7.2   |       32.6     6.2 
+          40 |       25.7     4.3   |       26.6     2.9 
+          80 |        8.4     1.4   |        7.0     0.7 
+         160 |        2.2     0.4 OK|        2.2     0.3 OK
+         320 |        0.9     0.2 OK|        0.9     0.1 OK
+
+  toplid_left  [left]  stage 'execute_path'  1820 waypoints
+     targets |  movej max    mean |  movel max    mean   (mm)
+          10 |      136.7    49.1   |      133.8    49.0 
+          20 |       37.8     8.7   |       37.8     6.9 
+          40 |       19.7     4.7   |       19.7     3.0 
+          80 |        7.3     1.5   |        4.2     0.7 OK
+         160 |        2.4     0.5 OK|        2.4     0.3 OK
+         320 |        0.9     0.2 OK|        1.0     0.1 OK
+
+==============================================================================
+  TARGETS NEEDED to stay within 5 mm of the planned path
+  --------------------------------------------------------------------------
+  hinge_area_right     execute_path     movej:   160   movel:   160
+  toplid_right         execute_path     movej:   160   movel:   160
+  toplid_left          execute_path     movej:   160   movel:    80
+  --------------------------------------------------------------------------
+  movel needs fewer targets wherever the surface is close to flat:
+  a straight Cartesian segment already IS the path there, while a
+  joint-linear move bows away from it between the same two points.

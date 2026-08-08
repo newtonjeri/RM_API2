@@ -58,7 +58,20 @@ try:
         rm_force_type_e as _force_e,
         rm_inverse_kinematics_params_t as _ik_params_t,
     )
-    _ALGO = _RealAlgo(_arm_model_e.RM_MODEL_RM_75_E, _force_e.RM_MODEL_RM_B_E)
+    # The REAL ctypes structs. The offline Algo is a C library and will
+    # not accept a stand-in, so the emulator must hand out the genuine
+    # article for these pure-data types — and its own tool-frame store
+    # reads the same fields either way.
+    from Robotic_Arm.rm_ctypes_wrap import (
+        rm_pose_t as _RealPose, rm_position_t as _RealPos,
+        rm_euler_t as _RealEuler, rm_frame_t as _RealFrame,
+    )
+    # RM75-6FB carries the integrated six-axis force sensor. Using the
+    # BASE model here made the emulated arm 17.2 mm short at the wrist
+    # — the same F15 error the hardware capture exposed, and C14's
+    # model check catches it here too.
+    _ALGO = _RealAlgo(_arm_model_e.RM_MODEL_RM_75_E,
+                      _force_e.RM_MODEL_RM_ISF_E)
     _ALGO.handle = None          # offline: no controller handle
 except Exception as _exc:        # pragma: no cover - platform without the .so
     _ALGO = None
@@ -66,7 +79,7 @@ except Exception as _exc:        # pragma: no cover - platform without the .so
           "pose feedback will be zeros and rm_movej_p will be rejected")
 
 
-def _fk_pose(joints_deg):
+def _fk_pose(joints_deg, tool=None):
     """FK via RealMan's own solver: [x,y,z, rx,ry,rz] (m / rad).
 
     Arm-base frame with the library's default mounting/tool config — NOT
@@ -74,6 +87,18 @@ def _fk_pose(joints_deg):
     """
     if _ALGO is None:
         return [0.0] * 6
+    if tool:
+        try:
+            from Robotic_Arm.rm_ctypes_wrap import (
+                rm_frame_t, rm_pose_t, rm_position_t, rm_euler_t)
+            f = rm_frame_t()
+            f.frame_name = b"emu"
+            f.pose = rm_pose_t()
+            f.pose.position = rm_position_t(*[float(v) for v in tool[:3]])
+            f.pose.euler = rm_euler_t(*[float(v) for v in tool[3:6]])
+            _ALGO.rm_algo_set_toolframe(f)
+        except Exception:
+            pass
     return list(_ALGO.rm_algo_forward_kinematics(list(joints_deg), 1))[:6]
 
 
@@ -300,6 +325,14 @@ class EmuController:
         # step the hardware demands after a sudden stop.
         self.joint_err_flags = [0] * 7
         self.motion_locked = False
+        # Tool frames as the controllers hold them: Arm_Tip always exists,
+        # the left arm additionally ships with the hand-taught 'Hand'.
+        self.tool_frames = {"Arm_Tip": {"pose": [0.0] * 6, "payload": 0.0}}
+        if side == "left":
+            self.tool_frames["Hand"] = {
+                "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0],
+                "payload": 0.706}
+        self.active_tool = "Hand" if side == "left" else "Arm_Tip"
         # Web GUI screenshots (2026-05-07) show the arms shipped with this
         # OFF, so default to off and let the tests turn it on.
         self.self_collision = os.environ.get("RM_EMU_SELF_COLLISION") == "1"
@@ -325,6 +358,40 @@ class EmuController:
             self.fail_next_motion = False
             return True
         return False
+
+    def _active_tool_pose(self):
+        f = self.tool_frames.get(self.active_tool)
+        return f.get("pose") if f else None
+
+    def movel_chain(self, n_segments: int, v: int, block: int) -> int:
+        """Execute a queued movel chain as ONE trajectory, ONE event.
+
+        Cartesian geometry is not modelled — the emulator has no IK — so
+        the joints are left alone. What IS modelled is the part the
+        dispatcher depends on: a chain takes roughly n segments' worth of
+        time, preempts an in-flight pole exactly as any planned move does
+        (F9), and completes with a single device-0 arrival event.
+        """
+        with self._lock:
+            if self.motion_locked:
+                return 1
+            if self.reject_next_dispatch:
+                self.reject_next_dispatch = False
+                return 1
+        time.sleep(_scaled(self.command_latency_s))
+        with self._lock:
+            self._truncate_lift_locked()
+            fail = self._consume_fail_flag()
+        dur = _scaled(0.25 * n_segments * (20.0 / max(1, int(v))))
+
+        def run():
+            time.sleep(dur)
+            self._emit(0, ok=not fail)
+        if block:
+            run()
+        else:
+            threading.Thread(target=run, daemon=True).start()
+        return 0
 
     # ── arm motion ──
     def movej(self, target_deg, v: int, block: int) -> int:
@@ -470,7 +537,7 @@ class EmuController:
         # controller refuses those, so FK-verify the solution against the
         # request before moving (2 mm / ~0.6 deg tolerance).
         import math as _m
-        fk = _fk_pose(target_deg)
+        fk = _fk_pose(target_deg, self._active_tool_pose())
         if _m.dist(fk[:3], list(pose6[:3])) > 0.002 \
                 or any(abs((a - b + _m.pi) % (2 * _m.pi) - _m.pi) > 0.01
                        for a, b in zip(fk[3:6], pose6[3:6])):
@@ -480,7 +547,8 @@ class EmuController:
 
     def current_pose(self):
         """TCP pose = FK(current joints) via RealMan's solver."""
-        return _fk_pose(self.current_joints())
+        return _fk_pose(self.current_joints(),
+                        self._active_tool_pose())
 
     def current_joints_locked(self):
         # caller holds self._lock
@@ -868,6 +936,95 @@ class RoboticArm:
             return 1
         return self._ctrl.movej(list(joint), v, block)
 
+    # ── Cartesian moves + tool frames (Phase 2 cleaning paths) ──
+    # `trajectory_connect` IS emulated here, unlike movej: the cleaning
+    # path is one chain of 27-43 segments and its whole completion model
+    # rests on the chain semantics — connect=1 queues and NEVER completes,
+    # the closing connect=0 executes and yields exactly ONE arrival event.
+    # A dispatcher that waits on a connect=1 waits forever, so the
+    # emulator has to be able to reproduce that.
+    MAX_QUEUE = int(os.environ.get("RM_EMU_MAX_QUEUE", "50"))
+
+    def rm_movel(self, pose, v, r, connect, block):
+        if not (1 <= int(v) <= 100) or not (0 <= int(r) <= 100):
+            return 1
+        if self._ctrl.motion_locked:
+            return 1
+        q = getattr(self, "_movel_queue", None)
+        if q is None:
+            q = self._movel_queue = []
+        if int(connect) == 1:
+            if len(q) >= self.MAX_QUEUE:
+                return 1            # controller refuses a deeper queue
+            q.append(pose)
+            return 0                # queued: no motion, no event
+        # closing segment: the whole chain executes as ONE trajectory
+        n = len(q) + 1
+        self._movel_queue = []
+        return self._ctrl.movel_chain(n, v, block)
+
+    def rm_change_tool_frame(self, name):
+        name = name.decode() if isinstance(name, bytes) else str(name)
+        if name not in self._ctrl.tool_frames:
+            return 1
+        self._ctrl.active_tool = name
+        return 0
+
+    def rm_get_current_tool_frame(self):
+        name = self._ctrl.active_tool
+        f = self._ctrl.tool_frames.get(name, {})
+        return 0, {"name": name, "pose": f.get("pose", [0.0] * 6),
+                   "payload": f.get("payload", 0.0),
+                   "x": 0.0, "y": 0.0, "z": 0.0}
+
+    def rm_get_total_tool_frame(self):
+        return {"return_code": 0,
+                "tool_names": list(self._ctrl.tool_frames),
+                "len": len(self._ctrl.tool_frames)}
+
+    def rm_get_given_tool_frame(self, name):
+        name = name.decode() if isinstance(name, bytes) else str(name)
+        f = self._ctrl.tool_frames.get(name)
+        if f is None:
+            return 1, {}
+        return 0, {"name": name, "pose": f["pose"],
+                   "payload": f.get("payload", 0.0),
+                   "x": 0.0, "y": 0.0, "z": 0.0}
+
+    def rm_set_manual_tool_frame(self, frame):
+        name = frame.frame_name.decode() if isinstance(
+            frame.frame_name, bytes) else str(frame.frame_name)
+        if not name or len(name) > 11:
+            return 1
+        if name in self._ctrl.tool_frames:
+            return 1                # CREATE only — the real ret=1 (F17)
+        if len(self._ctrl.tool_frames) >= 10:
+            return 1                # rm_frame_name_t*10
+        p, e = frame.pose.position, frame.pose.euler
+        self._ctrl.tool_frames[name] = {
+            "pose": [p.x, p.y, p.z, e.rx, e.ry, e.rz],
+            "payload": float(frame.payload)}
+        return 0
+
+    def rm_update_tool_frame(self, frame):
+        name = frame.frame_name.decode() if isinstance(
+            frame.frame_name, bytes) else str(frame.frame_name)
+        if name not in self._ctrl.tool_frames:
+            return 1
+        p, e = frame.pose.position, frame.pose.euler
+        self._ctrl.tool_frames[name] = {
+            "pose": [p.x, p.y, p.z, e.rx, e.ry, e.rz],
+            "payload": float(frame.payload)}
+        return 0
+
+    def rm_delete_tool_frame(self, name):
+        name = name.decode() if isinstance(name, bytes) else str(name)
+        if name == self._ctrl.active_tool or name not in \
+                self._ctrl.tool_frames:
+            return 1
+        del self._ctrl.tool_frames[name]
+        return 0
+
     def rm_set_lift_height(self, speed, height, block):
         if not (1 <= int(speed) <= 100):
             return 1
@@ -882,6 +1039,11 @@ class RoboticArm:
         # Open-loop jog: run toward the travel end at |speed|%.
         target = self._ctrl.lift_hw_max if speed > 0 else 0
         return self._ctrl.set_lift_height(abs(speed), target, 0)
+
+    def rm_get_install_pose(self):
+        """Mounting angle, as ONE dict (not the (ret, dict) tuple
+        most getters use) — mirroring the real SDK signature."""
+        return {"return_code": 0, "x": 0.0, "y": 90.0, "z": 0.0}
 
     def rm_set_arm_stop(self):
         return self._ctrl.stop_arm()
@@ -1120,6 +1282,28 @@ def install():
         RM_DUAL_MODE_E = 1
         RM_TRIPLE_MODE_E = 2
 
+    # ── Cartesian / frame structs, mirroring the ctypes layout the tests
+    #    populate field-by-field (position/euler, frame_name/pose/payload).
+    class _XYZ:
+        def __init__(self, x=0.0, y=0.0, z=0.0):
+            self.x, self.y, self.z = float(x), float(y), float(z)
+
+    class _RPY:
+        def __init__(self, rx=0.0, ry=0.0, rz=0.0):
+            self.rx, self.ry, self.rz = float(rx), float(ry), float(rz)
+
+    class _Pose:
+        def __init__(self, position=None, euler=None):
+            self.position = position or _XYZ()
+            self.euler = euler or _RPY()
+
+    class _Frame:
+        def __init__(self):
+            self.frame_name = b""
+            self.pose = _Pose()
+            self.payload = 0.0
+            self.x = self.y = self.z = 0.0
+
     shared = {
         "RoboticArm": RoboticArm,
         "rm_thread_mode_e": _ThreadMode,
@@ -1131,9 +1315,22 @@ def install():
         "rm_realtime_push_config_t": _KwargsStruct,
         "rm_peripheral_read_write_params_t": _KwargsStruct,
         "rm_udp_custom_config_t": _KwargsStruct,
+        # Cartesian types — the cleaning path builds rm_pose_t for movel,
+        # and rm_frame_t for the C14 tool-frame writer.
+        "rm_position_t": _RealPos if _ALGO else _XYZ,
+        "rm_euler_t": _RealEuler if _ALGO else _RPY,
+        "rm_pose_t": _RealPose if _ALGO else _Pose,
+        "rm_frame_t": _RealFrame if _ALGO else _Frame,
         "rm_get_arm_event_call_back": rm_get_arm_event_call_back,
         "rm_api_version": (lambda: "emu-1.1.6"),
         "rm_realtime_arm_state_call_back": rm_realtime_arm_state_call_back,
+        # The OFFLINE solver is a local library, not the controller —
+        # captured before install() swapped the modules out. Exposing
+        # the real one keeps FK/IK checks meaningful under emulation.
+        "Algo": _RealAlgo,
+        "rm_robot_arm_model_e": _arm_model_e,
+        "rm_force_type_e": _force_e,
+        "rm_inverse_kinematics_params_t": _ik_params_t,
     }
     for name, val in shared.items():        # real SDK star-imports the wrap
         setattr(ri, name, val)

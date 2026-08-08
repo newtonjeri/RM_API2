@@ -90,7 +90,7 @@ class SegmentVerifier:
     """Robot-vs-fixture clearance + self-collision for joint timelines."""
 
     def __init__(self, fixture: str = "commode_c", side: str = "right",
-                 quiet: bool = False):
+                 quiet: bool = False, articulation: str = None):
         from butterfli_workspace.urdf_kinematics import UrdfModel
         from butterfli_workspace.collision import (
             RobotCollisionModel, PosedRobotCollision, build_fixture_manager)
@@ -106,8 +106,26 @@ class SegmentVerifier:
         import numpy as np
         from cleaning_path_gen.server import scene_manifest_cached
         manifest = scene_manifest_cached(fixture)
+        # The commode is ARTICULATED: scene.yaml gives lid and seat a joint
+        # with closed=0 deg and open=-110 deg, and the manifest exposes BOTH
+        # posed variants. Only one exists at a time. Every commode task
+        # declares `commode_fixture_type: closed`, so checking against
+        # lid_open / seat_open collides the arm with geometry rotated 110
+        # deg out of the way — which is what put phantom contacts in
+        # move_to_pre_start and move_to_rest, stages that run OUTSIDE the
+        # allow_collision bracket and must be clear.
+        keys = list(manifest["meshes"])
+        if articulation:
+            other = "open" if articulation == "closed" else "closed"
+            keys = [k for k in keys if not k.endswith(f"_{other}")]
+            if not quiet:
+                dropped = set(manifest["meshes"]) - set(keys)
+                print(f"  [verifier] articulation {articulation!r}: using "
+                      f"{sorted(keys)}, ignoring {sorted(dropped)}")
         self.fixture_mgrs = {}
         for key, md in manifest["meshes"].items():
+            if key not in keys:
+                continue
             mesh = trimesh.Trimesh(
                 np.asarray(md["vertices"], dtype=float),
                 np.asarray(md["faces"], dtype=np.int64), process=False)
@@ -151,6 +169,34 @@ class SegmentVerifier:
             d = self.posed._mgr.min_distance_other(mgr)
             worst = min(worst, float(d))
         return worst
+
+    def contact_report(self, joint_map: dict) -> dict:
+        """{fixture mesh key -> set of ROBOT LINKS touching it}.
+
+        The task sequence brackets its cleaning with
+        `allow_collision(contact_surface=...)` / `forbid_collision`, so
+        "is anything in collision" is the wrong question there — contact
+        is the job. The answerable question is the one contact_links.yaml
+        poses: WHICH links touch WHICH objects. FCL already knows; the
+        objects are registered as `link#geom_index`, so the link name
+        falls out of the contact pair.
+        """
+        full = dict(self.home)
+        full.update(joint_map)
+        self.posed.set_pose(full)
+        out = {}
+        for key, mgr in self.fixture_mgrs.items():
+            hit, data = self.posed._mgr.in_collision_other(
+                mgr, return_data=True)
+            if not hit:
+                continue
+            links = set()
+            for c in data:
+                for nm in getattr(c, "names", ()):
+                    if "#" in nm:                 # ours: 'link#geom'
+                        links.add(nm.split("#", 1)[0])
+            out[key] = links
+        return out
 
     def self_collision(self, arm_joints_deg) -> bool:
         """rm_algo verdict for the 7 ARM joints (True = collision)."""
@@ -215,6 +261,29 @@ def stage_maps(stage):
     """All waypoints of a stage as joint maps (radians, URDF names)."""
     names = stage["joint_names"]
     return [dict(zip(names, wp["positions"])) for wp in stage["waypoints"]]
+
+
+def plan_state_upto(plan, stage_index):
+    """Joint state established by every stage BEFORE `stage_index`.
+
+    The task sequence moves the pole and the hand in their own stages, and
+    the pole is PRISMATIC AND CARRIES THE ARM BASE — hinge_area_right runs
+    `move_pole_to_quarter_height` (0.075 m) before the stroke, while the
+    SRDF home state has the pole at 0.29 m. Verifying an arm stage against
+    the home state therefore placed the whole arm 215 mm too high relative
+    to the fixture, and every clearance figure computed that way was wrong
+    (found 2026-08-08 while validating the config-derived Cartesian path).
+
+    So: the base state for an arm stage is the SRDF home overridden by the
+    final value of each joint any earlier stage commanded.
+    """
+    state = {}
+    for st in plan["sub_trajectories"][:stage_index]:
+        if not st.get("waypoints"):
+            continue
+        last = st["waypoints"][-1]["positions"]
+        state.update(dict(zip(st["joint_names"], last)))
+    return state
 
 
 def subsample(seq, n):

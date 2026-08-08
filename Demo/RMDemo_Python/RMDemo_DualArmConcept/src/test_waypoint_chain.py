@@ -39,7 +39,12 @@ from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
 
 ARM_SIDE = os.environ.get("RM_ARM", "left").lower()
 STEP_DEG = 4.0                # per-segment J1/J3 offset — small, free space
-DEPTHS = (2, 5, 10, 20)
+# Depth must cover what the real tasks need, not a round number: the
+# cleaning paths queue EVERY segment (Newton, 2026-08-08) — 43 for each
+# hinge task, 27 for each toplid. Probing only to 20 left the depth the
+# dispatcher actually relies on unverified.
+DEPTHS = (2, 5, 10, 20, 27, 43, 60)
+TASK_DEPTHS = {27: "toplid_{left,right}", 43: "hinge_area_{left,right}"}
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
 N_CHECKS = 6
@@ -170,6 +175,7 @@ def main() -> int:
         print("\n  W2 — queue depth")
         max_ok = 0
         for depth in DEPTHS:
+            need = TASK_DEPTHS.get(depth)
             if not _rehome(robot, monitor, arm.handle_id, ready):
                 break
             targets = [_zig(ready, i) for i in range(depth - 1)] \
@@ -180,11 +186,24 @@ def main() -> int:
             done = "completed" if dur else "NOT completed"
             print(f"    depth {depth:2d}: rejected at {rejected or 'none'}, "
                   f"{done}"
-                  + (f" in {dur:.2f}s" if dur else ""))
+                  + (f" in {dur:.2f}s" if dur else "")
+                  + (f"   <-- needed by {need}" if need else ""))
             if not rejected and dur:
                 max_ok = depth
-        result("PASS" if max_ok else "FAIL", "queue depth measured",
-               f"deepest clean chain: {max_ok} segments")
+        # Phase 2 queues every segment of a cleaning path in one chain, so
+        # the deepest task depth is the number that matters.
+        need_max = max(TASK_DEPTHS)
+        if max_ok >= need_max:
+            result("PASS", "queue depth measured",
+                   f"deepest clean chain: {max_ok} segments — covers all "
+                   f"tasks (deepest needs {need_max})")
+        elif max_ok:
+            result("FAIL", "queue depth measured",
+                   f"deepest clean chain: {max_ok} segments, but "
+                   f"{TASK_DEPTHS[need_max]} needs {need_max} — the "
+                   "dispatcher must batch")
+        else:
+            result("FAIL", "queue depth measured", "no chain completed")
 
         # ── W3: blend r=0 vs r=50 on the same corners ──
         print("\n  W3 — blend: r=0 vs r=50, same 3-corner path")
