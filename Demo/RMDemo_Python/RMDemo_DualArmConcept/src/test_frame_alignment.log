@@ -384,3 +384,183 @@ current c api version:  1.1.6
   [INFO] left: run mode restored to REAL
 
   Summary: 4 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 16:50:18
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.9800000190734863, -94.1259994506836, -5.9720001220703125, 78.01499938964844, 3.003000020980835, 100.11499786376953, 171.66900634765625], "controller_pose": [0.434552, -0.01105, -0.10919, -3.082, -0.112, 0.048], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [0.10919257998466492, -0.011053684167563915, 0.43455737829208374, 0.4680497646331787, -1.4480606317520142, 2.7358357906341553]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  543.7 mm
+  [FAIL] controller pose vs offline FK  (544 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 16:50:18
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [-2.319999933242798, -93.4530029296875, -0.9020000100135803, 80.4219970703125, -1.6890000104904175, 99.73100280761719, 4.014999866485596], "controller_pose": [0.438837, -0.002187, 0.142214, -3.077, 0.063, 3.053], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [-0.14221908152103424, -0.0021798238158226013, 0.4388379454612732, 1.0169155597686768, 1.4621943235397339, 0.9500089883804321]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  581.1 mm
+  [FAIL] controller pose vs offline FK  (581 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:39:02
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.9470000267028809, -79.38800048828125, 0.8370000123977661, 78.02899932861328, -0.5419999957084656, 93.72899627685547, 171.6719970703125], "controller_pose": [0.447248, -0.012812, -0.162986, -3.125, 0.039, 0.16], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [0.1629847288131714, -0.012822002172470093, 0.447256863117218, 1.8250139951705933, -1.4060969352722168, 1.3290525674819946]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  610.2 mm
+  [FAIL] controller pose vs offline FK  (610 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:39:21
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [-2.305000066757202, -77.96900177001953, -1.24399995803833, 80.92900085449219, 0.05000000074505806, 83.63400268554688, 3.631999969482422], "controller_pose": [0.513095, -0.002131, 0.078787, -3.101, 0.062, 3.059], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [-0.07877859473228455, -0.0021272157318890095, 0.5131030082702637, 0.9581041932106018, 1.4673762321472168, 0.9154720902442932]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  591.9 mm
+  [FAIL] controller pose vs offline FK  (592 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:40:13
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [-2.303999900817871, -77.97200012207031, -1.2450000047683716, 80.92900085449219, 0.04899999871850014, 83.63400268554688, 3.632999897003174], "controller_pose": [0.513097, -0.002138, 0.078781, -3.101, 0.062, 3.059], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [-0.07879312336444855, -0.0021351738832890987, 0.5130987167358398, 0.957880437374115, 1.4673187732696533, 0.9152467250823975]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  591.9 mm
+  [FAIL] controller pose vs offline FK  (592 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    tool frame glove1   at (50.0, 0.0, 160.3) mm  payload 0.0 kg  ret=1
+    tool frame glove2   at (13.5, 0.0, 180.3) mm  payload 0.0 kg  ret=1
+    tool frame glove3   at (75.0, 7.0, 185.3) mm  payload 0.0 kg  ret=1
+    tool frame glove4   at (55.0, 7.0, 220.3) mm  payload 0.0 kg  ret=1
+    tool frame tip      at (15.0, 5.0, 245.3) mm  payload 0.0 kg  ret=1
+    active tool frame restored to 'Arm_Tip' (ret=0, now 'Arm_Tip')
+  [FAIL] glove tool frames created  (created []; FAILED ['glove1(ret=1)', 'glove2(ret=1)', 'glove3(ret=1)', 'glove4(ret=1)', 'tip(ret=1)'])
+  [INFO] right: run mode restored to REAL
+
+  Summary: 3 PASS, 2 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 18:41:16
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.9440000057220459, -79.38500213623047, 0.8399999737739563, 78.02899932861328, -0.5389999747276306, 93.72899627685547, 171.6699981689453], "controller_pose": [0.447237, -0.012823, -0.162985, -3.125, 0.039, 0.159], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "install_pose": "unavailable: ValueError('too many values to unpack (expected 2)')", "offline_fk": [0.16299539804458618, -0.012797395698726177, 0.4472493529319763, 1.8251922130584717, -1.405998706817627, 1.3288880586624146]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  610.2 mm
+  [FAIL] controller pose vs offline FK  (610 mm apart even after mirroring the controller's mounting angle, work frame and tool frame offline — the ARM MODEL itself disagrees (check RM_FORCE_MODEL: the variant sets the wrist length))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    tool frame glove1   at (-50.0, 0.0, 155.3) mm  payload 0.706 kg  ret=1
+    tool frame glove2   at (-20.0, 0.0, 180.3) mm  payload 0.706 kg  ret=1
+    tool frame glove3   at (-75.0, 7.0, 185.3) mm  payload 0.706 kg  ret=1
+    tool frame glove4   at (-55.0, 7.0, 220.3) mm  payload 0.706 kg  ret=1
+    tool frame tip      at (-15.0, 5.0, 245.3) mm  payload 0.706 kg  ret=1
+    active tool frame restored to 'Hand' (ret=0, now 'Hand')
+  [FAIL] glove tool frames created  (created []; FAILED ['glove1(ret=1)', 'glove2(ret=1)', 'glove3(ret=1)', 'glove4(ret=1)', 'tip(ret=1)'])
+  [INFO] left: run mode restored to REAL
+
+  Summary: 3 PASS, 2 FAIL, 0 SKIP
