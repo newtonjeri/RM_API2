@@ -141,6 +141,32 @@ EMU_RIGHT_IP = os.environ.get("RM_RIGHT_IP", "192.168.1.103")
 EMU_HOST_IPS = {os.environ.get("RM_HOST_IP", "192.168.1.239")}
 
 
+def _emu_local_ips():
+    """Addresses this machine would actually use to reach the arms.
+
+    The tests no longer hard-code a push target: dual_arm_common.host_ip_for
+    asks the kernel which local address routes to the arm. The emulator must
+    accept the same answers, or the trap below would fire on a CORRECT
+    address whenever the suite runs off the lab laptop. Anything that is
+    genuinely not this host is still rejected — which is the point.
+    """
+    import socket
+    found = set()
+    for peer in (EMU_LEFT_IP, EMU_RIGHT_IP, "192.168.1.1"):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect((peer, 1))
+                ip = s.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                found.add(ip)
+        except Exception:
+            pass
+    return found
+
+
+EMU_HOST_IPS |= _emu_local_ips()
+
+
 def emu_set_host_ips(*ips):
     global EMU_HOST_IPS
     EMU_HOST_IPS = set(ips)

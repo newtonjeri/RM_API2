@@ -19,8 +19,8 @@ import threading
 import time
 
 from dual_arm_common import (
-    handle_cli,
-    ARM_TIMEOUT_S, DEV_JOINT, HOST_IP, LEFT_IP, ROBOT_PORT, UDP_PORT,
+    handle_cli, host_ip_for,
+    ARM_TIMEOUT_S, DEV_JOINT, LEFT_IP, ROBOT_PORT, UDP_PORT,
     ArrivalMonitor,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
@@ -29,7 +29,10 @@ from Robotic_Arm.rm_ctypes_wrap import (
     rm_realtime_push_config_t, rm_udp_custom_config_t,
 )
 
-# HOST_IP / UDP_PORT come from dual_arm_common (env: RM_HOST_IP / RM_UDP_PORT)
+# The UDP push target is resolved from the route to the arm (the OS
+# knows this machine's address better than the operator does);
+# RM_HOST_IP pins it. See dual_arm_common.host_ip_for().
+HOST_IP = host_ip_for(LEFT_IP)
 UDP_WATCHDOG_S = 2.0         # frames must arrive within this window
 # A silent UDP stream is a FAIL-TO-RUN by default: a wrong HOST_IP is
 # accepted by the controller (ret 0) and simply delivers nothing, which

@@ -42,6 +42,41 @@ for sub in ("butterfli_workspace", "cleaning_path_gen"):
 URDF = WS / "butterfli_workspace" / "urdf" / "butterfli.urdf"
 SRDF = (WS / "butterfli_moveit_config" / "config" / "butterfli_alix.srdf")
 
+# The offline rm_algo must be told WHICH RM75 variant it is modelling — the
+# force-sensor version changes the wrist length, and therefore every FK
+# result and the self-collision geometry.
+#
+# MEASURED 2026-08-08 against both controllers (C14 capture, joints ~0):
+#   controller Arm_Tip  z = 0.867699 m   (right, tool=Arm_Tip, offset 0)
+#   controller Arm_Tip  z = 0.867698 m   (left,  via tool 'Hand' z=0.259999)
+#   rm_algo ISF         z = 0.867700 m   <-- matches to 1 um
+#   rm_algo B (no F/T)  z = 0.850500 m   <-- 17.2 mm SHORT (was used here)
+# RM75-6FB carries the integrated six-axis force sensor, so ISF is correct.
+# RM_FORCE_MODEL overrides it if a variant is ever swapped.
+FORCE_MODEL_NAME = os.environ.get("RM_FORCE_MODEL", "RM_MODEL_RM_ISF_E")
+
+
+BUNDLED_PLANS = pathlib.Path(__file__).resolve().parent.parent / "plans"
+
+
+def resolve_plan(name: str) -> pathlib.Path:
+    """Locate a saved orchestrator plan, workspace first, bundle second.
+
+    The plans live in the ROS workspace, which exists on the dev machine
+    but not necessarily on the lab laptop — and the CAPTURE half of C11
+    runs there. A copy therefore travels in this repo under ../plans/.
+
+    Order: the workspace copy wins when present (it is the authoritative,
+    freshest one); the bundled copy is the fallback so a machine with no
+    workspace can still capture. Callers print which one was used —
+    silently switching plan sources would be a nasty way to get two
+    different clearance maps.
+    """
+    ws = WS / "Resource" / "plans" / "commode_c" / "hardware" / name
+    if ws.exists():
+        return ws
+    return BUNDLED_PLANS / name
+
 
 def _arm_link_filter(side: str):
     """Right/left arm + its hand + glove — the moving geometry."""
@@ -85,7 +120,11 @@ class SegmentVerifier:
 
     @staticmethod
     def _load_algo():
-        """RealMan's own self-collision check (offline lib), optional."""
+        """RealMan's own solver/self-collision check (offline lib).
+
+        Shared by every offline consumer so the modelled arm variant is
+        defined in exactly ONE place — see FORCE_MODEL_NAME above.
+        """
         try:
             rm = pathlib.Path(__file__).resolve().parents[4] / "Python"
             if str(rm) not in sys.path:
@@ -93,7 +132,7 @@ class SegmentVerifier:
             from Robotic_Arm.rm_robot_interface import (
                 Algo, rm_robot_arm_model_e, rm_force_type_e)
             algo = Algo(rm_robot_arm_model_e.RM_MODEL_RM_75_E,
-                        rm_force_type_e.RM_MODEL_RM_B_E)
+                        getattr(rm_force_type_e, FORCE_MODEL_NAME))
             algo.handle = None
             return algo
         except Exception:

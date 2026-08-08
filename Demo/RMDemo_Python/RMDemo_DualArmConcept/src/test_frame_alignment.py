@@ -7,8 +7,12 @@ cleaning point lands offset — the worst failure mode, because it looks
 like it works.
 
 OFFLINE HALF ALREADY SOLVED (frame_alignment_offline.py, 2026-08-08):
-URDF `*_ConnectorLink` == RealMan `Arm_Tip` + a constant (0, 0, 32.5 mm),
-zero rotation, both arms, all configurations. The GUI's old hand-entered
+URDF `*_ConnectorLink` == RealMan `Arm_Tip` + a constant (0, 0, 15.3 mm),
+zero rotation, both arms, all configurations. (Was published as 32.5 mm
+on 2026-08-08 and CORRECTED the same day: the offline rm_algo had been
+configured as RM_MODEL_RM_B_E, the variant with no force sensor, whose
+wrist is 17.2 mm short. The C14 hardware capture exposed it — see
+segment_verifier.FORCE_MODEL_NAME.) The GUI's old hand-entered
 tool frame (-35, 10, 260) matches NONE of the derived frames — replace it
 with the generated ones (--create-frames) rather than trusting it.
 
@@ -32,11 +36,11 @@ countdown and error gate apply.
 --create-frames RECREATES THE URDF GLOVE/IK FRAMES IN THE CONTROLLER'S
 TREE (Newton's C14 design). The offline half (frame_alignment_offline.py)
 proved URDF `*_ConnectorLink` == RealMan `Arm_Tip` + a CONSTANT
-(0, 0, 32.5 mm) offset with ZERO rotation on both arms, so each xacro
-frame becomes a controller tool frame at (xacro offset + 32.5 mm Z),
+(0, 0, 15.3 mm) offset with ZERO rotation on both arms, so each xacro
+frame becomes a controller tool frame at (xacro offset + 15.3 mm Z),
 relative to Arm_Tip, via rm_set_manual_tool_frame:
 
-    glove1..glove4, tip     (e.g. right glove4 = 55, 7, 237.5 mm)
+    glove1..glove4, tip     (e.g. right glove4 = 55, 7, 220.3 mm)
 
 The payload of the CURRENT tool frame is copied onto the new frames (so
 force compensation is unchanged), each frame is read back to verify, and
@@ -82,14 +86,42 @@ def result(tag: str, name: str, detail: str = ""):
     print(f"  [{tag}] {name}{suffix}")
 
 
-def _offline_fk(joints_deg):
-    """FK through the offline rm_algo lib (arm-base frame, default tool)."""
+def _offline_fk(joints_deg, install=None, tool=None, work=None):
+    """FK through the offline rm_algo lib, CONFIGURED LIKE THE CONTROLLER.
+
+    `rm_get_current_arm_state()["pose"]` is reported through the arm's
+    mounting angle, its active work frame and its active tool frame. A
+    bare offline FK has none of those, so comparing the two directly is
+    meaningless — the 2026-08-08 run reported 868 mm / 1128 mm "errors"
+    that were nothing but the 90 deg mounting rotation plus the Hand tool
+    offset. rm_algo exposes the same three settings, so mirror them and
+    the comparison becomes a genuine model check.
+    """
     try:
         from Robotic_Arm.rm_robot_interface import (
             Algo, rm_robot_arm_model_e, rm_force_type_e)
+        from Robotic_Arm.rm_ctypes_wrap import (
+            rm_frame_t, rm_pose_t, rm_position_t, rm_euler_t)
+        # ISF, not B: measured against both controllers 2026-08-08 — the
+        # base model is 17.2 mm short at the wrist (see segment_verifier).
+        model = os.environ.get("RM_FORCE_MODEL", "RM_MODEL_RM_ISF_E")
         algo = Algo(rm_robot_arm_model_e.RM_MODEL_RM_75_E,
-                    rm_force_type_e.RM_MODEL_RM_B_E)
+                    getattr(rm_force_type_e, model))
         algo.handle = None
+        if install:
+            algo.rm_algo_set_angle(*[float(v) for v in install])
+        for setter, spec in ((algo.rm_algo_set_toolframe, tool),
+                             (algo.rm_algo_set_workframe, work)):
+            if not isinstance(spec, dict):
+                continue
+            pose = list(spec.get("pose") or [0.0] * 6)
+            f = rm_frame_t()
+            f.frame_name = str(spec.get("name", ""))[:11].encode()
+            f.pose = rm_pose_t()
+            f.pose.position = rm_position_t(*[float(v) for v in pose[:3]])
+            f.pose.euler = rm_euler_t(*[float(v) for v in pose[3:6]])
+            f.payload = float(spec.get("payload", 0.0))
+            setter(f)
         return list(algo.rm_algo_forward_kinematics(list(joints_deg), 1))[:6]
     except Exception:
         return None
@@ -109,8 +141,18 @@ def _capture(robot, label):
             cap[name] = frame if ret == 0 else f"ret={ret}"
         except Exception as exc:
             cap[name] = f"unavailable: {exc!r}"
-    cap["offline_fk"] = (_offline_fk(cap["joints_deg"])
-                         if cap["joints_deg"] else None)
+    try:
+        ret, ip_ = robot.rm_get_install_pose()
+        cap["install_pose"] = ([ip_.get("x"), ip_.get("y"), ip_.get("z")]
+                               if ret == 0 else f"ret={ret}")
+    except Exception as exc:
+        cap["install_pose"] = f"unavailable: {exc!r}"
+    cap["offline_fk"] = (_offline_fk(
+        cap["joints_deg"],
+        install=(cap["install_pose"]
+                 if isinstance(cap["install_pose"], list) else None),
+        tool=cap.get("tool_frame"), work=cap.get("work_frame"))
+        if cap["joints_deg"] else None)
     print(f"  C14CAP {json.dumps(cap, default=str)}")
     return cap
 
@@ -119,24 +161,37 @@ def _create_glove_frames(robot):
     """Write the URDF glove/ik frames as controller tool frames.
 
     Offsets come from frame_alignment_offline (xacro offsets composed with
-    the proven constant Arm_Tip->ConnectorLink 32.5 mm Z). Returns the
+    the proven constant Arm_Tip->ConnectorLink 15.3 mm Z). Returns the
     (tag, name, detail) triple for result()."""
     import numpy as np
     from frame_alignment_offline import GLOVE_FRAMES, _euler_zyx_to_R
     from Robotic_Arm.rm_ctypes_wrap import rm_frame_t, rm_pose_t, \
         rm_position_t, rm_euler_t
 
-    # keep the active frame + its payload; restore the frame afterwards
+    # keep the active frame + its payload; restore the frame afterwards.
+    # rm_frame_t.to_dictionary() emits the ctypes field `frame_name` under
+    # the key "name" — reading "frame_name" silently yields None and the
+    # restore below is then skipped (that is what happened on the
+    # 2026-08-08 run: both arms were left on the last frame written).
     try:
         ret, cur = robot.rm_get_current_tool_frame()
-        original = cur.get("frame_name") if ret == 0 else None
+        original = (cur.get("name") or cur.get("frame_name")) \
+            if ret == 0 else None
         payload = float(cur.get("payload", 0.0)) if ret == 0 else 0.0
     except Exception as exc:
         return ("FAIL", "glove tool frames created",
                 f"cannot read the current tool frame: {exc!r}")
+    if not original:
+        return ("FAIL", "glove tool frames created",
+                f"cannot identify the active tool frame (ret={ret}, "
+                f"keys={sorted(cur) if ret == 0 else '-'}) — refusing to "
+                "write frames we could not restore from")
 
     residual = np.eye(4)
-    residual[2, 3] = 0.0325            # Arm_Tip -> ConnectorLink (proven)
+    # Arm_Tip -> ConnectorLink, measured with the ISF (six-axis force)
+    # arm model that matches both controllers to 1 um. Do NOT hard-code a
+    # value derived from a different rm_force_type_e variant.
+    residual[2, 3] = 0.0153
     created, failed = [], []
     for name, (xyz, rpy) in GLOVE_FRAMES[ARM_SIDE].items():
         T = np.eye(4)
@@ -157,18 +212,26 @@ def _create_glove_frames(robot):
         print(f"    tool frame {name:8s} at "
               f"({T[0, 3] * 1000:.1f}, {T[1, 3] * 1000:.1f}, "
               f"{T[2, 3] * 1000:.1f}) mm  payload {payload} kg  ret={ret}")
-    if original:
-        try:
-            rret = robot.rm_change_tool_frame(original)
-            print(f"    active tool frame restored to {original!r} "
-                  f"(ret={rret})")
-        except Exception as exc:
-            failed.append(f"restore({exc!r})")
+    # Restore, then READ BACK — never report a restore we did not verify.
+    restored = None
+    try:
+        rret = robot.rm_change_tool_frame(original)
+        vret, now = robot.rm_get_current_tool_frame()
+        restored = (now.get("name") or now.get("frame_name")) \
+            if vret == 0 else None
+        print(f"    active tool frame restored to {original!r} "
+              f"(ret={rret}, now {restored!r})")
+    except Exception as exc:
+        failed.append(f"restore({exc!r})")
+    if restored != original:
+        failed.append(f"restore-verify(active={restored!r}, "
+                      f"want={original!r})")
     if failed:
         return ("FAIL", "glove tool frames created",
                 f"created {created}; FAILED {failed}")
     return ("PASS", "glove tool frames created",
-            f"{', '.join(created)}; active frame restored")
+            f"{', '.join(created)}; active frame verified back on "
+            f"{original!r}")
 
 
 def main() -> int:
@@ -260,9 +323,10 @@ def main() -> int:
                    "default mounting/tool, as rm_algo assumes")
         else:
             result("FAIL", "controller pose vs offline FK",
-                   f"{worst * 1000:.0f} mm apart — a work/tool frame offset "
-                   "IS configured on the controller; the URDF comparison "
-                   "must account for it (this may be the 59 mm)")
+                   f"{worst * 1000:.0f} mm apart even after mirroring the "
+                   "controller's mounting angle, work frame and tool frame "
+                   "offline — the ARM MODEL itself disagrees (check "
+                   "RM_FORCE_MODEL: the variant sets the wrist length)")
 
         complete = all(c["joints_deg"] and c["controller_pose"] for c in caps)
         result("PASS" if complete else "FAIL", "capture complete",

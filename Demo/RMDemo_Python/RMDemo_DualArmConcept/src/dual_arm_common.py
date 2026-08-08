@@ -34,6 +34,7 @@ left in modbus mode, call rm_close_modbus_mode(1) first.
 import math
 import os
 import pathlib
+import socket
 import sys
 import threading
 import time
@@ -56,6 +57,36 @@ ROBOT_PORT = int(os.environ.get("RM_ROBOT_PORT", "8080"))
 HOST_IP    = os.environ.get("RM_HOST_IP", "192.168.1.239")  # lab laptop
 # (the robot's main onboard host is 192.168.1.235 — butterfli_hw xacro)
 UDP_PORT   = int(os.environ.get("RM_UDP_PORT", "8095"))
+
+
+def host_ip_for(arm_ip: str) -> str:
+    """THIS machine's address on the route to `arm_ip` — the UDP push target.
+
+    The realtime state feed is a PUSH: `rm_set_realtime_push` hands the
+    controller an IP:port and it fires frames there, deriving nothing from
+    the TCP session. A WRONG address is accepted with ret=0 and pushed into
+    the void, which looks exactly like "the arm never moved" — so getting
+    it right matters more than the one-line API suggests.
+
+    Rather than make the operator know their own address, ask the kernel
+    which local address it would use to reach this particular arm. The UDP
+    `connect()` sends no packets; it only resolves the route. Correct
+    per-arm, and it survives switching interfaces or laptops.
+
+    RM_HOST_IP still wins when set (a pinned value for odd routing setups).
+    """
+    pinned = os.environ.get("RM_HOST_IP")
+    if pinned:
+        return pinned
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((arm_ip, 1))
+            local = s.getsockname()[0]
+        if local and not local.startswith("127."):
+            return local
+    except Exception:
+        pass
+    return HOST_IP
 
 ARM_SPEED_PCT  = 20           # movej speed percentage, conservative
 LIFT_SPEED_PCT = 50           # measured ~56.4 phys mm/s (LiftBenchmark map)

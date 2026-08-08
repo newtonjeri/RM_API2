@@ -1,0 +1,47 @@
+# Bundled orchestrator plans
+
+Copies of saved plans from the ROS workspace, checked in so the tests can
+run on a machine that has **no ROS workspace** — specifically the lab
+laptop, where the C11 capture runs.
+
+| file | source | generated |
+|---|---|---|
+| `hinge_area_right_ruckig_pro_only.json` | `butterfli-ai-ros-jazzy/Resource/plans/commode_c/hardware/` | 2026-08-01 00:13:34, `cleaning_path_mode: ruckig_pro_only` |
+
+## Why only the plan, and not the rest
+
+The two halves of C11 need different things:
+
+| half | needs | runs on |
+|---|---|---|
+| **capture** (`test_rehearsal_validate.py`) | this JSON + the SDK | lab laptop |
+| **analysis** (`--replay`) | the full workspace — `butterfli.urdf`, SRDF, commode meshes via `scene_manifest_cached` | dev machine |
+
+The workspace can't travel in this repo, but it doesn't have to: the
+capture only reads joint positions out of the plan, and the machine that
+does the geometry is the one that already has the workspace.
+
+## Resolution order
+
+`segment_verifier.resolve_plan()`, used by `test_rehearsal_validate.py`
+and `run_hinge_verify.py`:
+
+1. `--plan PATH` if given
+2. the **workspace** copy (`$BUTTERFLI_WS/Resource/plans/commode_c/hardware/`)
+   — authoritative and freshest, so it wins whenever it exists
+3. this **bundled** copy
+
+Both scripts print which source they used. That matters: two different
+plan files would silently produce two different clearance maps, and the
+C11 residual is only valid for the plan C12 verified.
+
+## Refreshing
+
+Re-plan in the workspace, then copy the file here and say so in the
+commit — the C12 clearance map and the C11 residual are both tied to a
+specific plan, and both must be re-run when it changes.
+
+```bash
+cp ~/butterfli_ws/src/butterfli-ai-ros-jazzy/Resource/plans/commode_c/hardware/\
+hinge_area_right_ruckig_pro_only.json plans/
+```

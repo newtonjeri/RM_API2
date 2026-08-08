@@ -34,7 +34,7 @@ import sys
 
 import numpy as np
 
-from segment_verifier import WS  # workspace path + sys.path setup
+from segment_verifier import WS, FORCE_MODEL_NAME  # ws path + arm variant
 
 RM_PY = pathlib.Path(__file__).resolve().parents[4] / "Python"
 if str(RM_PY) not in sys.path:
@@ -115,8 +115,10 @@ def main() -> int:
         Algo, rm_robot_arm_model_e, rm_force_type_e)
     model = UrdfModel.from_file(str(URDF))
     algo = Algo(rm_robot_arm_model_e.RM_MODEL_RM_75_E,
-                rm_force_type_e.RM_MODEL_RM_B_E)
+                getattr(rm_force_type_e, FORCE_MODEL_NAME))
     algo.handle = None
+    print(f"  rm_algo variant: {FORCE_MODEL_NAME}  (hardware-matched — the "
+          "force-sensor version sets the wrist length)")
 
     print("=" * 70)
     print(f"C14-offline  URDF {side} ConnectorLink  vs  rm_algo Arm_Tip")

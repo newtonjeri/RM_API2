@@ -36,10 +36,11 @@ import sys
 import time
 
 from segment_verifier import (
-    WS, SegmentVerifier, arm_stages, load_plan, stage_maps, subsample)
+    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, resolve_plan,
+    stage_maps, subsample)
 
-DEFAULT_PLAN = (WS / "Resource" / "plans" / "commode_c" / "hardware"
-                / "hinge_area_right_ruckig_pro_only.json")
+# Workspace copy if present, else the copy bundled in this repo (../plans).
+DEFAULT_PLAN = resolve_plan("hinge_area_right_ruckig_pro_only.json")
 ARM_JOINTS = [f"R_joint{i}" for i in range(1, 8)]
 
 
@@ -65,6 +66,9 @@ def main() -> int:
     print("=" * 70)
     print("C12  Controller-motion collision verification — hinge_area_right")
     print(f"     plan: {plan_path}")
+    print("     source: " + ("BUNDLED copy in this repo"
+                             if str(BUNDLED_PLANS) in str(plan_path)
+                             else "ROS workspace"))
     print(f"     samples/segment: {samples}   stroke targets: {stroke_n}   "
           f"margin: {margin_m * 1000:.0f} mm")
     print("=" * 70)

@@ -16,6 +16,7 @@ from log_utils import setup_log as _setup_log
 _log_path = _setup_log(__file__)
 
 import os as _os
+import pathlib as _pathlib
 _os.environ.setdefault("RM_HAND_DWELL_S", "0.05")
 # the canfd stream runs in real wall time, unlike the mocks
 _os.environ.setdefault("RM_CANFD_ARM_S", "0.05")
@@ -571,6 +572,7 @@ def main() -> int:
         "print(json.dumps({'left': dac.LEFT_IP, 'right': dac.RIGHT_IP, "
         "'port': dac.ROBOT_PORT, 'host': dac.HOST_IP, 'udp': dac.UDP_PORT, "
         "'c5host': c5.HOST_IP, 'c5udp': c5.UDP_PORT, "
+        "'route': dac.host_ip_for(dac.LEFT_IP), "
         "'emul': rm_emulator.EMU_LEFT_IP, 'emur': rm_emulator.EMU_RIGHT_IP, "
         "'emuhosts': sorted(rm_emulator.EMU_HOST_IPS), 'r_full': dac.lift_hw_mm('right', 0.30), 'l_full': dac.lift_hw_mm('left', 0.30)}))"
     )
@@ -592,11 +594,14 @@ def main() -> int:
               cfg["left"] == "192.168.1.10" and cfg["right"] == "192.168.1.103"
               and cfg["port"] == 8080 and cfg["host"] == "192.168.1.239"
               and cfg["udp"] == 8095)
-        check("C5 shares the common config",
-              cfg["c5host"] == cfg["host"] and cfg["c5udp"] == cfg["udp"])
+        # C5's push target is RESOLVED from the route to the arm, not
+        # copied from the HOST_IP constant — so it must track host_ip_for.
+        check("C5 resolves its push target from the route",
+              cfg["c5host"] == cfg["route"] and cfg["c5udp"] == cfg["udp"])
         check("emulator defaults match the tests",
               cfg["emul"] == cfg["left"] and cfg["emur"] == cfg["right"]
-              and cfg["emuhosts"] == [cfg["host"]])
+              and cfg["host"] in cfg["emuhosts"]
+              and cfg["route"] in cfg["emuhosts"])
 
         ov = run_probe({"RM_LEFT_IP": "10.9.9.1", "RM_RIGHT_IP": "10.9.9.2",
                         "RM_ROBOT_PORT": "9080", "RM_HOST_IP": "10.9.9.100",
@@ -605,11 +610,13 @@ def main() -> int:
               ov["left"] == "10.9.9.1" and ov["right"] == "10.9.9.2"
               and ov["port"] == 9080 and ov["host"] == "10.9.9.100"
               and ov["udp"] == 9002)
-        check("env overrides reach C5",
+        check("env overrides reach C5 (RM_HOST_IP still pins it)",
               ov["c5host"] == "10.9.9.100" and ov["c5udp"] == 9002)
         check("env overrides reach the emulator",
               ov["emul"] == "10.9.9.1" and ov["emur"] == "10.9.9.2"
-              and ov["emuhosts"] == ["10.9.9.100"])
+              # superset: the emulator also accepts whatever address
+              # actually routes to the arms, matching host_ip_for
+              and "10.9.9.100" in ov["emuhosts"])
         check("default gearing: both 1to1, full -> 300",
               cfg["l_full"] == 300 and cfg["r_full"] == 300)
         gv = run_probe({"RM_RIGHT_LIFT_GEAR": "2to3"})
@@ -660,6 +667,57 @@ def main() -> int:
     per = {k: sum(1 for d in dev if d[3] == k) for k in (0, 1)}
     check("lopsided capture still attributes to every stage",
           per[0] >= 1 and per[1] >= 1)
+
+    # ── F1j. The C11 capture runs where there is NO ROS workspace ───────
+    print("\nF1j. Plan resolution (lab laptop has no workspace)")
+    import segment_verifier as sv
+
+    bundled = sv.BUNDLED_PLANS / "hinge_area_right_ruckig_pro_only.json"
+    check("plan is bundled in the repo", bundled.exists(),
+          f"{bundled.stat().st_size // 1024} KB" if bundled.exists()
+          else "MISSING — the lab machine cannot capture")
+    ws_plan = (sv.WS / "Resource" / "plans" / "commode_c" / "hardware"
+               / "hinge_area_right_ruckig_pro_only.json")
+    got = sv.resolve_plan("hinge_area_right_ruckig_pro_only.json")
+    check("workspace copy wins when present" if ws_plan.exists()
+          else "falls back to the bundled copy",
+          got == (ws_plan if ws_plan.exists() else bundled))
+    # The capture half must build its targets with NO workspace at all.
+    _saved_ws = sv.WS
+    try:
+        sv.WS = _pathlib.Path("/nonexistent/no/workspace")
+        check("resolver falls back when the workspace is absent",
+              sv.resolve_plan("hinge_area_right_ruckig_pro_only.json")
+              == bundled)
+    finally:
+        sv.WS = _saved_ws
+    plan = sv.load_plan(bundled)
+    stages = sv.arm_stages(plan, prefix="R_joint")
+    check("bundled plan yields the 4 arm stages",
+          [s["stage_name"] for s in stages]
+          == ["move_to_pre_start", "move_to_start", "execute_path",
+              "move_to_rest"])
+    check("bundled plan waypoints are radians, 7 joints",
+          len(stages[0]["joint_names"]) == 7
+          and all(abs(v) < 7 for v in stages[0]["waypoints"][0]["positions"]))
+
+    # ── F1i. UDP push target is resolved, not guessed ───────────────────
+    print("\nF1i. UDP push target resolution")
+    _os.environ.pop("RM_HOST_IP", None)
+    auto = dac.host_ip_for(dac.LEFT_IP)
+    # A wrong push target is accepted by the controller with ret=0 and
+    # silently delivers nothing, so this must never quietly yield loopback.
+    check("route lookup yields a real local address",
+          isinstance(auto, str) and auto.count(".") == 3
+          and not auto.startswith("127."))
+    _os.environ["RM_HOST_IP"] = "10.9.9.99"
+    try:
+        check("RM_HOST_IP pins the push target",
+              dac.host_ip_for(dac.LEFT_IP) == "10.9.9.99")
+    finally:
+        _os.environ.pop("RM_HOST_IP", None)
+    check("unroutable arm still yields an address (falls back)",
+          bool(dac.host_ip_for("203.0.113.7")))
 
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)

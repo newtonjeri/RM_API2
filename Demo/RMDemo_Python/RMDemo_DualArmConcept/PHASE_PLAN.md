@@ -15,8 +15,9 @@ C15/C16 hardware sessions overturned the arm–pole synchronization design.*
 | **What changed** | Arm–pole *synchronization* cannot be done with planned moves. Proven model-free on both arms (C16). Sync moves to **CANFD passthrough**; everything else stays on planned moves. |
 | **Hardware state** | Both arms **V1.7.4**, algo 1.5.9, lifts 1:1 true mm over **0–315 mm**. Firmware mismatch resolved. |
 | **Vendor verdict** | **RealMan CONFIRMED the defect (2026-08-08, WeChat)**: "conflict between the third-generation controller's control of the hoist's movement and the arm's movement … documented problem, engineers working on it, no completion date. Temporary solution: blocking mode for the hoist." Their workaround IS serialization — matching C16. **Planned-backend sync is now LOCKED in code** (`RM_UNLOCK_PLANNED_SYNC=1` exists solely for post-fix re-tests); sync runs on **canfd only**. |
-| **Offline work** | **Complete.** WP1 + WP2/C12 (clearance map: all stages OK), C14 offline (trees identical, one 32.5 mm constant), R8, and the C10/C11 test drafts. Dry run **102/102**. |
-| **Biggest open risk** | ~~C14~~ — resolved offline; the old "59 mm discrepancy" was a hand-taught GUI tool frame plus the then-unknown 32.5 mm constant. Now: **R1b — the canfd sync backend has never run on hardware** (C17). Everything else that blocks Phase 2 is a hardware confirmation of an offline result, not an open question. |
+| **Offline work** | **Complete.** WP1 + WP2/C12 (clearance map: all stages OK), C14 offline (trees identical, one **15.3 mm** constant), R8, C10/C11 tests. Dry run **105/105**, emulated suite 13/13. |
+| **2026-08-08 hardware session** | **C17 PASSED on BOTH arms (7/7 each)** — canfd sync works: pole and arm move together, both complete, no faults, dispatch skew < 17 ms. R1b closed, the architecture is confirmed end to end. **C10 PASSED (7/7)**: 20-segment chains accepted, blending real (r=50 saves 0.64 s), and a mid-chain bad target fails *that segment only* while the chain completes — the dispatcher must check every return code. |
+| **Biggest open risk** | **C14 tool frames were written with a 17.2 mm error** and the active tool frame was not restored (both bugs found + fixed 2026-08-08 — see F15). Re-write the frames and confirm the active frame before any Cartesian work. C11 is unaffected (joint-space only) and can run first. |
 
 ---
 
@@ -104,6 +105,7 @@ around planned arm motion.
 | F11 | Self-collision detection is **whole-arm, at planning time**; the arms shipped with it OFF | Tests enable it at connect (`RM_SELF_COLLISION=0` opts out). Distinct from the GUI's "Collision Protection Level" 0–8 contact threshold |
 | **F12** | **Pole speed model corrected.** Drive constants (1250 rpm, RR 0.005) give **100 % = 104.2 mm/s, k = 1.042 mm/s per %**. butterfli_hw's 1.85 implied 2220 rpm — above the drive ceiling; its ×1.5 hw→physical conversion inflated every velocity. The profile is **acceleration-limited**, so short strokes never reach cruise | `lift_travel_time_s()` models a trapezoid/triangle. Validated arm-idle: 140 mm @ 50 % predicts 3.49 s vs **3.47 s measured**; C15 Phase A within ±7 % across 10–100 % on both arms |
 | **F13** | `rm_clear_system_err()` **returns 0 without clearing joint error 16384**. Per-joint clear (`rm_set_joint_clear_err`) or the GUI's per-joint button is required | Our `--clear-errors` is insufficient for this fault class — a known gap, and question 4 to RealMan |
+| **F15** | **The offline `rm_algo` was constructed as the WRONG arm variant.** `rm_force_type_e.RM_MODEL_RM_B_E` is the base RM75 with no wrist force sensor and is **17.2 mm short**. Measured against both controllers (C14 capture, joints≈0): controller Arm_Tip z = 0.867699 (right) / 0.867698 (left); `RM_MODEL_RM_ISF_E` = 0.867700 — agreement to 1 µm | The `Arm_Tip → ConnectorLink` constant is **15.3 mm, not 32.5 mm**; the tool frames written on 2026-08-08 are 17.2 mm too long and must be rewritten. Variant now set in ONE place (`segment_verifier.FORCE_MODEL_NAME`, env `RM_FORCE_MODEL`). Two related traps: `rm_get_current_arm_state()["pose"]` is reported through the **mounting angle + work frame + tool frame** (the "868 mm mismatch" was the 90° mounting rotation, not a fault), and `rm_frame_t.to_dictionary()` keys the name as **`name`**, not `frame_name` — reading the wrong key silently skipped the tool-frame restore |
 | F14 | Right arm `ready→zero` takes **6.72 s** vs left **3.72 s** at the same 20 %, identical joint deltas, same firmware | Per-arm motion config differs; any arm-duration estimate is per-arm. Unexplained |
 
 ---
@@ -124,9 +126,9 @@ Legend: ✅ passed · 🟡 partial · ⛔ blocked · ⬜ not started ·
 | C8 | `test_pole_only` | Pole acceptance + fault diagnosis + recovery | yes | ✅ | **7 PASS / 1 SKIP, both arms, 2026-08-07** (was never-run; now closed) |
 | C15 | `test_pole_speed` | Is the pole slow at low speed, or slowed by arm motion? | yes | ✅ | **Phase A 16/16 both arms** — no speed floor; Phase B measured 2.5–3.5× coupling |
 | C16 | `test_arm_pole_baseline` | Concurrency with **no models applied** to either device | yes | 🔵 | **Delivered F9.** Phase 0 (singles) passes; every concurrent cell fails. This test *reporting failure* is the successful outcome |
-| C9 | `test_single_arm_locked` | Full concept sequence incl. arm+pole sync, one arm | yes | 🟡 | Arm+hand path ✅. `planned` backend fails by controller design (F9) and is now **LOCKED** (vendor-confirmed); **`canfd` backend implemented + emulator-verified, awaiting hardware (C17)** |
-| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | 🟡 | Arm-only 6/6. Sync steps blocked on the same F9 issue |
-| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | 🟡 | Arm-only 4P/1F — **1.6 s gate-latency anomaly still unexplained** (R5) |
+| C9 | `test_single_arm_locked` | Full concept sequence incl. arm+pole sync, one arm | yes | ✅ **closed by C17 2026-08-08** (they share the canfd path; both arms 7/7 with `--no-hands`). Remaining nice-to-have: one run WITH hands for the full sequence. The `planned` backend stays LOCKED (F9, vendor-confirmed) |
+| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | 🟡 Arm-only 6/6. Sync steps were blocked by F9 — **now unblocked by the canfd backend (C17)**; needs one re-run to close |
+| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | 🟡 Arm-only 4P/1F — **1.6 s gate-latency anomaly still unexplained** (R5). Sync steps now unblocked by canfd; needs one re-run to close |
 | C4 | `test_dual_free` | Free-running mode, independent completion | no | 🟡 | Arm-only 4/4; sync untested |
 
 **Honest read:** every gate that does not involve *simultaneous* arm+pole
@@ -141,10 +143,10 @@ None of C1–C16 sends a target that came from MoveIt. These close that gap.
 | ID | Test | Question | Blocking? | STATUS |
 |---|---|---|---|---|
 | C12 | **Segment collision verifier** (offline) | Predict the controller's motion per segment, FCL-sweep vs the commode meshes at scene pose + `rm_algo` self-collision | yes | ✅ **2026-08-08** — `segment_verifier.py` (WP1) + `run_hinge_verify.py` (WP2) ran on the real saved `hinge_area_right` plan. **Clearance map: all 4 arm stages OK** — transits keep 19.9 mm (Mode A = MoveIt reference exactly); the stroke + retreat are *contact stages* (MoveIt's own path touches by design), judged by touch-fraction vs reference (48 % vs 40 %, 12 % vs 25 %); zero self-collisions. **Mode B not needed for this task.** Residual: joint-linear movel approximation → calibrated by C11 |
-| C14 | **Frame alignment** | URDF `*_ConnectorLink` vs RealMan `Arm_Tip` (Newton's design); recreate the glove/ik frames in the controller tree | yes | 🟡 **offline half ✅ 2026-08-08**: the trees are kinematically IDENTICAL (0.000° rotation, zero spread over 5 configs, both arms) with one constant offset — **ConnectorLink = Arm_Tip + (0, 0, 32.5 mm)**. Compensated tool-frame table generated (`frame_alignment_offline.py`); hardware half = `test_frame_alignment.py --create-frames` writes glove1–4 + tip via `rm_set_manual_tool_frame` (payload copied, active frame restored) then verifies the controller pose |
-| C10 | Chained-target execution (hardware) | `connect=1` queue depth, one arrival event vs N, blend-% reference, mid-chain failure behaviour, `rm_moves` spline | yes | ⬜ Gates Mode B |
+| C14 | **Frame alignment** | URDF `*_ConnectorLink` vs RealMan `Arm_Tip` (Newton's design); recreate the glove/ik frames in the controller tree | yes | 🟡 **offline ✅, hardware half must be REDONE.** The trees are kinematically identical (0.000°, zero spread, both arms) — but the constant is **15.3 mm, not 32.5 mm**: the offline solver had been built as `RM_MODEL_RM_B_E` (no force sensor, 17.2 mm short). See F15. The frames written 2026-08-08 are 17.2 mm too long AND the active tool frame was not restored (`to_dictionary()` keys the name as `name`, not `frame_name`). Both bugs fixed; re-run `--create-frames` and confirm the active frame |
+| C10 | Chained-target execution (hardware) | `connect=1` queue depth, one arrival event vs N, blend-% reference, mid-chain failure behaviour, `rm_moves` spline | yes | ✅ **PASSED 2026-08-08, 7/7** (right arm). Depths 2/5/10/20 all accepted, none rejected. Blend is real: r=50 runs 2.53 s vs r=0 3.16 s on the same 3-corner path. **Mid-chain invalid target returns ret=1 for THAT SEGMENT ONLY and the chain still completes** — the dispatcher must check every return code, not just the closing one. `rm_moves` spline accepted. Mode B is unblocked |
 | C11 | Rehearsal-validation loop (hardware) | SIM-execute → UDP capture → FCL; does the capture match the C12 predictor? | yes | 🟡 **test written 2026-08-08** — `test_rehearsal_validate.py`, split into a **capture** half (SIM, no physical motion) and an **`--replay` analysis** half that runs anywhere, so the lab session is only the capture. Analysis proven offline on a synthetic capture. Produces a **per-stage residual** (joint deg, tool mm, clearance optimism) → the FCL margin C12 must carry. Awaiting a hardware capture |
-| C17 | **CANFD sync** (hardware) | Does the shipped `RM_SYNC_BACKEND=canfd` path reproduce `bench_sync` — arm streamed while the pole runs, both complete, no faults? | yes | ⬜ **replaces the old "C9-sync" gate** |
+| C17 | **CANFD sync** (hardware) | Does the shipped `RM_SYNC_BACKEND=canfd` path reproduce `bench_sync` — arm streamed while the pole runs, both complete, no faults? | yes | ✅ **PASSED BOTH ARMS 2026-08-08, 7/7 each.** Sync steps: lift 5.96 s / arm 4.01 s, dispatch skew 6–17 ms (budget 50), pole outlasts the arm by +1.90 s, arrival event for every device, zero latched faults. **R1b closed — the architecture is confirmed end to end** |
 | C13 | Fence characterization | What the fence bounds (TCP vs body), reject-vs-stop | **no** | ⬜ Dropped from blocking — safety rests on primitives + offline FCL |
 
 ### 4.3 Approval rule
@@ -297,33 +299,61 @@ task — the strongest possible A/B evidence for the architecture.
 | **1C** | WP1+WP2 (C12), draft C14/C17 tests | no | ⬜ next |
 | **2** | WP3–WP6, hinge task | partly | 5 working days after 1B closes |
 
-### 7.1 Remaining 1B session (~1 h) — every script now exists
+### 7.1 Remaining 1B session (~30 min) — after the 2026-08-08 session
+
+C17, C10 and the C14 capture are **done**. What is left:
 
 ```bash
-# 1. the new sync path — replaces the old planned-sync gate
-RM_ARM=left  python3 test_single_arm_locked.py --mode REAL --no-hands   # C17 (canfd default)
-RM_ARM=right python3 test_single_arm_locked.py --mode REAL --no-hands
-# (planned-backend A/B is LOCKED per the vendor confirmation — do NOT run it
-#  until RealMan ships a fix; then: RM_UNLOCK_PLANNED_SYNC=1 RM_SYNC_BACKEND=planned ...)
-# 2. full sequence, then dual-arm
-RM_ARM=left python3 test_single_arm_locked.py --mode REAL              # C9 full
-python3 test_dual_locked.py  --mode REAL                               # C2
-python3 test_dual_chained.py --mode REAL                               # C3
-# 3. bridge gates
-RM_ARM=right python3 test_frame_alignment.py --mode REAL                # C14 verify
-RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames  # C14 write
-python3 test_waypoint_chain.py --mode REAL                             # C10
-RM_ARM=right python3 test_rehearsal_validate.py                        # C11 capture (SIM)
+cd RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src
+
+# 1. C14 — what tool frame is ACTIVE right now? (read-only, nothing moves)
+RM_ARM=left  python3 test_frame_alignment.py --mode REAL
+RM_ARM=right python3 test_frame_alignment.py --mode REAL
+#    read tool_frame.name in the C14CAP line. The 2026-08-08 run failed to
+#    restore it (F15), so the arms may be sitting on 'tip'.
+
+# 2. C14 — rewrite the frames with the CORRECTED 15.3 mm constant
+RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames
+RM_ARM=left  python3 test_frame_alignment.py --mode REAL --create-frames
+#    now verifies the restore by read-back and refuses to write if it
+#    cannot identify what to restore to.
+
+# 3. C11 — one SIM capture (no physical motion, no RM_HOST_IP needed)
+RM_ARM=right python3 test_rehearsal_validate.py
+
+# 4. C2 / C3 — sync steps, now unblocked by canfd
+python3 test_dual_locked.py  --mode REAL
+python3 test_dual_chained.py --mode REAL
+```
+
+Then, on any machine with the ROS workspace:
+
+```bash
+python3 test_rehearsal_validate.py --replay rehearsal_right.json
+python3 run_hinge_verify.py --margin <the number it prints>
 ```
 
 Stop at the first red gate — later gates assume earlier ones.
 
 **C11 is a capture, not a verdict.** It runs in SIMULATION (no physical
 motion) and writes `rehearsal_right.json`; the verdict comes from
-`python3 test_rehearsal_validate.py --replay rehearsal_right.json`, which
-needs no hardware and can run on the dev machine after the session. Its
-output is the **FCL margin** to re-run C12 with:
-`run_hinge_verify.py --margin <N>`.
+`--replay`, which needs no hardware. Its output is the **FCL margin** C12
+must then carry.
+
+**Portability:** the plan JSON lives in the ROS workspace, which the lab
+laptop may not have — so a copy is bundled at `plans/` and
+`segment_verifier.resolve_plan()` prefers the workspace, falls back to the
+bundle, and both scripts PRINT which source they used. Only the plan needs
+to travel: the capture half reads joint positions and nothing else, while
+the analysis half (URDF, SRDF, commode meshes) runs on the machine that
+already has the workspace.
+
+**The UDP push target is no longer an operator input.** `host_ip_for()`
+asks the kernel which local address routes to that arm, so C5 and C11 work
+from any machine or interface without `RM_HOST_IP` (which still pins it if
+routing is unusual). This matters because a wrong target is accepted with
+`ret=0` and delivers nothing — indistinguishable from "the arm never
+moved".
 
 ---
 
@@ -374,14 +404,17 @@ from the **wrist 6-axis sensor** (`tool_zero_force_data`), not the hand.
 - [x] WP4 / C11 draft: `test_rehearsal_validate.py` — SIM capture +
       `--replay` analysis; per-stage residual → the C12 FCL margin
 
-**Hardware, when available (all scripts exist — see §7.1):**
-- [ ] C17 — canfd sync, both arms
-- [ ] C14 — write the derived glove frames, verify a pose
-- [ ] C10 — waypoint chaining
+**Hardware — the remaining ~30 min (see §7.1):**
+- [x] C17 — canfd sync, **both arms 7/7, 2026-08-08**
+- [x] C10 — waypoint chaining, **7/7, 2026-08-08**
+- [ ] C14 — read the active tool frame, then rewrite the frames at 15.3 mm
 - [ ] C11 — one SIM capture; the verdict is produced offline afterwards
+- [ ] C2 / C3 — re-run now that the sync steps work on canfd
 
 **Next build (no hardware needed):** WP3 — the MTC task builder for
-`hinge_area_right`, the first piece of Phase 2 proper.
+`hinge_area_right`, the first piece of Phase 2 proper. It is not blocked
+by any of the above: C12 has already declared the sparse-target execution
+collision-safe, and C11 only tightens the margin it is checked against.
 
 **External:**
 - [x] RealMan replied (2026-08-08): defect confirmed, no ETA, blocking-mode

@@ -52,12 +52,13 @@ import threading
 import time
 
 from dual_arm_common import (
-    handle_cli, parse_mode_arg, countdown,
-    ARM_TIMEOUT_S, DEV_JOINT, HOST_IP, LEFT_IP, RIGHT_IP, ROBOT_PORT,
+    handle_cli, parse_mode_arg, countdown, host_ip_for,
+    ARM_TIMEOUT_S, DEV_JOINT, LEFT_IP, RIGHT_IP, ROBOT_PORT,
     UDP_PORT, ArrivalMonitor,
 )
 from segment_verifier import (
-    WS, SegmentVerifier, arm_stages, load_plan, stage_maps, subsample)
+    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, resolve_plan, stage_maps,
+    subsample)
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import (
     rm_thread_mode_e, rm_realtime_arm_state_callback_ptr,
@@ -66,12 +67,15 @@ from Robotic_Arm.rm_ctypes_wrap import (
 
 ARM_SIDE = os.environ.get("RM_ARM", "right").lower()
 ARM_IP = RIGHT_IP if ARM_SIDE == "right" else LEFT_IP
+# Asked of the kernel, not of the operator — see host_ip_for().
+HOST_IP = host_ip_for(ARM_IP)
 PREF = "R_" if ARM_SIDE == "right" else "L_"
 ARM_JOINTS = [f"{PREF}joint{i}" for i in range(1, 8)]
 CONNECTOR = f"{PREF}ConnectorLink"
 
-DEFAULT_PLAN = (WS / "Resource" / "plans" / "commode_c" / "hardware"
-                / "hinge_area_right_ruckig_pro_only.json")
+# Workspace copy if present, else the copy bundled in this repo — the
+# capture half must work on a machine with no ROS workspace.
+DEFAULT_PLAN = resolve_plan("hinge_area_right_ruckig_pro_only.json")
 DEFAULT_SAVE = pathlib.Path(__file__).resolve().parent / \
     f"rehearsal_{ARM_SIDE}.json"
 
@@ -267,8 +271,11 @@ def capture(mode, plan_path, stroke_n, speed_pct, save_path):
         if n0 == 0:
             result("FAIL", "UDP capture channel live",
                    f"0 frames from {HOST_IP}:{UDP_PORT}")
-            print("  [FATAL] Without the capture there is no rehearsal. "
-                  "Check RM_HOST_IP is THIS machine on the arm LAN.")
+            print(f"  [FATAL] Without the capture there is no rehearsal. "
+                  f"The push target {HOST_IP} was resolved from the route "
+                  f"to {ARM_IP}; if that is not this machine's address on "
+                  "the arm LAN, pin it with RM_HOST_IP, and check "
+                  f"UDP {UDP_PORT} is free and not firewalled.")
             return None
         result("PASS", "UDP capture channel live", f"{n0} frames in {UDP_WATCHDOG_S:.0f}s")
 
@@ -482,7 +489,10 @@ def main() -> int:
 
     print("=" * 70)
     print("C11  Rehearsal validation — capture the controller, calibrate C12")
-    print(f"     side={ARM_SIDE}  plan={pathlib.Path(plan_path).name}")
+    print(f"     side={ARM_SIDE}  plan={plan_path}")
+    print("     plan source: " + ("BUNDLED copy in this repo"
+                                  if str(BUNDLED_PLANS) in str(plan_path)
+                                  else "ROS workspace"))
     if replay:
         print(f"     REPLAY {replay} — analysis only, no hardware")
     else:
