@@ -1024,6 +1024,106 @@ def main() -> int:
           all(cfgs[t].params.get("commode_fixture_type") == "closed"
               for t in TASKS))
 
+    # ── P6. Speed limits: v% is a percentage OF THESE ───────────────────
+    print("\nP6. Controller speed limits")
+    import speed_limits as _sl
+
+    class _LimRobot:
+        def __init__(self):
+            self.set = {}
+
+        def rm_get_arm_max_line_speed(self):
+            return 0, 0.250
+
+        def rm_get_arm_max_line_acc(self):
+            return 0, 1.600
+
+        def rm_get_arm_max_angular_speed(self):
+            return 0, 0.600
+
+        def rm_get_arm_max_angular_acc(self):
+            return 0, 4.000
+
+        def rm_get_joint_max_speed(self):
+            return 0, [180, 180, 225, 225, 225, 225, 225]
+
+        def rm_get_joint_max_acc(self):
+            return 0, [600] * 7
+
+        def rm_set_arm_max_line_speed(self, v):
+            self.set["line_speed"] = v
+            return 0
+    r = _LimRobot()
+    lim = _sl.read(r)
+    check("all six limit families read back",
+          all(lim.get(k) is not None for k in
+              ("line_speed", "line_acc", "angular_speed", "angular_acc",
+               "joint_speed", "joint_acc")))
+    txt = _sl.describe(lim, 100, 50)
+    check("a percentage is reported in PHYSICAL units",
+          "0.250 m/s" in txt and "0.125 m/s" in txt and "112 deg/s" in txt,
+          txt[:60])
+    # The limits are global controller state and the machine's safety
+    # envelope — raising one must be deliberate, never incidental.
+    _raised = False
+    try:
+        _sl.apply(r, line_speed=0.9)
+    except ValueError:
+        _raised = True
+    check("raising a limit past the F10 envelope RAISES", _raised)
+    before = _sl.apply(r, line_speed=0.1)
+    check("lowering is allowed and returns the previous value",
+          r.set.get("line_speed") == 0.1 and before["line_speed"] == 0.250)
+    _sl.restore(r, before)
+    check("restore puts the envelope back",
+          r.set.get("line_speed") == 0.250)
+
+    # ── P7. Every SDK call matches the REAL signature ───────────────────
+    print("\nP7. SDK call-site audit")
+    # Two bugs of the same shape reached the arms on 2026-08-08:
+    # rm_set_hand_angle called without its positional `timeout`, and
+    # rm_movel handed an rm_pose_t when it indexes `pose[:3]` and builds
+    # the struct itself. Both passed under emulation because the emulator
+    # was more permissive than the API. The emulator now mirrors those
+    # signatures exactly; this catches the arity half statically, across
+    # every call site, so the next one never gets as far as hardware.
+    import ast as _ast
+    import inspect as _inspect
+    from Robotic_Arm.rm_robot_interface import RoboticArm as _RA, Algo as _Al
+    _real = {}
+    for _cls in (_RA, _Al):
+        for _n, _fn in _inspect.getmembers(_cls, _inspect.isfunction):
+            if _n.startswith("rm_"):
+                _real[_n] = _inspect.signature(_fn)
+    _src = _pathlib.Path(__file__).resolve().parent
+    _bad, _seen = [], 0
+    for _f in sorted(_src.glob("*.py")):
+        if _f.name in ("rm_emulator.py", _pathlib.Path(__file__).name):
+            continue
+        for _node in _ast.walk(_ast.parse(_f.read_text())):
+            if not isinstance(_node, _ast.Call):
+                continue
+            _fn = _node.func
+            _nm = _fn.attr if isinstance(_fn, _ast.Attribute) else None
+            if not _nm or _nm not in _real:
+                continue
+            # *args / **kwargs cannot be counted statically
+            if any(isinstance(a, _ast.Starred) for a in _node.args) or \
+                    any(k.arg is None for k in _node.keywords):
+                continue
+            _seen += 1
+            _params = [p for p in _real[_nm].parameters.values()
+                       if p.name != "self"]
+            _req = [p for p in _params
+                    if p.default is _inspect.Parameter.empty]
+            _n_args = len(_node.args) + len(_node.keywords)
+            if not (len(_req) <= _n_args <= len(_params)):
+                _bad.append(f"{_f.name}:{_node.lineno} {_nm}() got "
+                            f"{_n_args}, wants {len(_req)}..{len(_params)}")
+    check("every SDK call site matches the real signature arity",
+          not _bad, f"{_seen} call sites checked"
+          if not _bad else "; ".join(_bad))
+
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)
     print(f"Dry run: {n - f}/{n} passed")

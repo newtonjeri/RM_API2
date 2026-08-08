@@ -333,6 +333,11 @@ class EmuController:
                 "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0],
                 "payload": 0.706}
         self.active_tool = "Hand" if side == "left" else "Arm_Tip"
+        # F10: read from both arms 2026-08-07.
+        self.limits = {"line_speed": 0.250, "line_acc": 1.600,
+                       "angular_speed": 0.600, "angular_acc": 4.000}
+        self.joint_max_speed = [180.0] * 6 + [225.0]
+        self.joint_max_acc = [600.0] * 7
         # Web GUI screenshots (2026-05-07) show the arms shipped with this
         # OFF, so default to off and let the tests turn it on.
         self.self_collision = os.environ.get("RM_EMU_SELF_COLLISION") == "1"
@@ -946,6 +951,18 @@ class RoboticArm:
     MAX_QUEUE = int(os.environ.get("RM_EMU_MAX_QUEUE", "50"))
 
     def rm_movel(self, pose, v, r, connect, block):
+        # The real SDK indexes `pose[:3]` / `pose[3:]` to build rm_pose_t,
+        # so a struct argument raises TypeError there. Reproduce that
+        # instead of quietly accepting either shape — an emulator more
+        # permissive than the API certifies calls the hardware rejects
+        # (2026-08-08: this exact bug reached the arms).
+        try:
+            _ = [float(x) for x in pose[:6]]
+        except TypeError:
+            raise TypeError(f"'{type(pose).__name__}' object is not "
+                            "subscriptable")
+        if len(pose) < 6:
+            return 1
         if not (1 <= int(v) <= 100) or not (0 <= int(r) <= 100):
             return 1
         if self._ctrl.motion_locked:
@@ -1039,6 +1056,55 @@ class RoboticArm:
         # Open-loop jog: run toward the travel end at |speed|%.
         target = self._ctrl.lift_hw_max if speed > 0 else 0
         return self._ctrl.set_lift_height(abs(speed), target, 0)
+
+    # ── configured speed/acceleration envelope (F10, both arms) ──
+    # v% in movej/movel is a percentage OF THESE, so a runner that reports
+    # "cleaning at 100%" needs them to say what that is in m/s.
+    def rm_get_arm_max_line_speed(self):
+        return 0, self._ctrl.limits["line_speed"]
+
+    def rm_get_arm_max_line_acc(self):
+        return 0, self._ctrl.limits["line_acc"]
+
+    def rm_get_arm_max_angular_speed(self):
+        return 0, self._ctrl.limits["angular_speed"]
+
+    def rm_get_arm_max_angular_acc(self):
+        return 0, self._ctrl.limits["angular_acc"]
+
+    def rm_get_joint_max_speed(self):
+        return 0, list(self._ctrl.joint_max_speed)
+
+    def rm_get_joint_max_acc(self):
+        return 0, list(self._ctrl.joint_max_acc)
+
+    def rm_set_arm_max_line_speed(self, speed):
+        self._ctrl.limits["line_speed"] = float(speed)
+        return 0
+
+    def rm_set_arm_max_line_acc(self, acc):
+        self._ctrl.limits["line_acc"] = float(acc)
+        return 0
+
+    def rm_set_arm_max_angular_speed(self, speed):
+        self._ctrl.limits["angular_speed"] = float(speed)
+        return 0
+
+    def rm_set_arm_max_angular_acc(self, acc):
+        self._ctrl.limits["angular_acc"] = float(acc)
+        return 0
+
+    def rm_set_joint_max_speed(self, joint_num, speed):
+        if not (1 <= int(joint_num) <= 7):
+            return 1
+        self._ctrl.joint_max_speed[int(joint_num) - 1] = float(speed)
+        return 0
+
+    def rm_set_joint_max_acc(self, joint_num, acc):
+        if not (1 <= int(joint_num) <= 7):
+            return 1
+        self._ctrl.joint_max_acc[int(joint_num) - 1] = float(acc)
+        return 0
 
     def rm_get_install_pose(self):
         """Mounting angle, as ONE dict (not the (ret, dict) tuple

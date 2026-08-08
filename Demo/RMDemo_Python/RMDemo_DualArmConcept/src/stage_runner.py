@@ -47,10 +47,11 @@ from dual_arm_common import (
     ARM_TIMEOUT_S, DEV_JOINT, DEV_LIFT, LEFT_IP, LIFT_TIMEOUT_S,
     RIGHT_IP, ROBOT_PORT, hand_dwell_s, lift_hw_mm,
 )
-from segment_verifier import arm_stages, load_plan, resolve_plan, stage_maps
+import speed_limits
+from segment_verifier import (
+    arm_stages, load_plan, resolve_plan, stage_maps)
 from Robotic_Arm.rm_robot_interface import RoboticArm
-from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e, rm_pose_t, \
-    rm_position_t, rm_euler_t
+from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
 
 SERIALIZE = os.environ.get("RM_SERIALIZE", "1") != "0"
 POLE_QUARTER_M = 0.075          # what every commode task commands
@@ -246,14 +247,14 @@ class StageRunner:
             self.monitor.expect(self.arm.handle_id, DEV_JOINT)
             for i, q in enumerate(prog["poses"][1:], start=1):
                 last = i == n
-                pose = rm_pose_t()
-                pose.position = rm_position_t(*[float(v) for v in q[:3]])
-                pose.euler = rm_euler_t(*[float(v) for v in q[3:6]])
+                # rm_movel takes a 6-element LIST [x,y,z,rx,ry,rz] and
+                # builds rm_pose_t internally — handing it a struct fails
+                # with "'rm_pose_t' object is not subscriptable".
                 # connect=1 queues; the closing connect=0 executes the
                 # whole chain and yields ONE arrival event.
                 r = self.arm.robot.rm_movel(
-                    pose, speed, blend if not last else 0,
-                    0 if last else 1, 0)
+                    [float(x) for x in q[:6]], speed,
+                    blend if not last else 0, 0 if last else 1, 0)
                 if r != 0:
                     rejects.append((i, r))
             if rejects:
@@ -366,6 +367,11 @@ def main() -> int:
             result("FAIL", "run-mode selection", "did not engage")
             return 1
         report_run_modes(arm)
+        # A percentage is meaningless without its ceiling — print what the
+        # commanded v% actually is in m/s and deg/s on THIS controller.
+        lim = speed_limits.read(robot)
+        print("  [INFO] limits: " + speed_limits.describe(
+            lim, cfg.cleaning_speed_pct, cfg.arm_speed_pct))
         ok_err, detail = preflight_error_gate(arm)
         if not ok_err:
             result("FAIL", "no latched controller errors", detail)
