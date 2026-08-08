@@ -304,3 +304,170 @@ Phase 2 stage runner — toplid_left  [left]
   [PASS] stage sequence completed  (7 stages ran)
 
   Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:33:56
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   4.22s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:34:00
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([-7.2, -36.7, 15.1, 95.2, 25.6, -32.1, 156.6], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([-6.0, -33.8, 15.9, 100.8, 22.3, -40.4, 159.2], v=50%)
+    ok   execute_path                 [arm ]   4.20s  DRY tool=L_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([-0.0, -82.0, 26.0, 98.0, -6.0, 62.0, 111.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:34:05
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (6 device stages)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(grasp) [33, 33, 33, 33, 133, 944] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([12.3, -53.9, -10.2, 92.2, -5.8, 49.1, -4.4], v=50%)
+    ok   open_tenth                   [hand]   0.00s  DRY set_hand_angle(open_tenth) [130, 130, 130, 130, 133, 944] from plan
+    ok   execute_path                 [arm ]   4.13s  DRY tool=R_glove_2 27 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+  [PASS] stage sequence completed  (6 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:34:09
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+  plan arm stages: ['move_to_start', 'execute_path', 'move_to_rest']
+  [PASS] task is serialized (one device per stage)  (7 device stages)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(grasp) [33, 33, 33, 33, 133, 944] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([-21.2, -53.9, 6.7, 90.0, 19.6, 52.1, 173.6], v=50%)
+    ok   open_tenth                   [hand]   0.00s  DRY set_hand_angle(open_tenth) [130, 130, 130, 130, 133, 944] from plan
+    ok   execute_path                 [arm ]   4.21s  DRY tool=L_glove_2 27 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, 26.0, 98.0, -6.0, 62.0, 111.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (7 stages ran)
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:34:39
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: REAL   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.103
+
+  Summary: 0 PASS, 0 FAIL, 2 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-08 22:38:34
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: REAL   THE ARM, ITS POLE AND ITS HAND WILL MOVE
+========================================================================
+  plan arm stages: ['move_to_pre_start', 'move_to_start', 'execute_path', 'move_to_rest']
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.60s  release [993, 993, 993, 993, 981, 992] from plan (duration-based)
+    ok   move_pole_to_quarter_height  [pole]   5.07s  75 hw-mm at 50%
+    ok   hand_grasp                   [hand]   0.60s  quarter_grasp [750, 750, 750, 750, 1000, 944] from plan (duration-based)
+    ok   move_to_pre_start            [arm ]   2.29s  v=50%
+    ok   move_to_start                [arm ]   0.59s  v=50%
+  [INFO] right: run mode restored to REAL
+
+  Summary: 2 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/stage_runner.py", line 387, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/stage_runner.py", line 375, in main
+    ok = StageRunner(cfg, arm, monitor, plan).run()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/stage_runner.py", line 296, in run
+    ok, detail = self.run_cleaning_path(stage)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/stage_runner.py", line 254, in run_cleaning_path
+    r = self.arm.robot.rm_movel(
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alai-labs/realman_API/RM_API2/Python/Robotic_Arm/rm_robot_interface.py", line 1528, in rm_movel
+    po1.position = rm_position_t(*pose[:3])
+                                  ~~~~^^^^
+TypeError: 'rm_pose_t' object is not subscriptable
