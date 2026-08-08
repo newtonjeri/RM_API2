@@ -330,3 +330,103 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 7 PASS, 0 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-08 15:36:18
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    READ-ONLY (--diagnose-only/--no-pole): nothing moves at all
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=200 hw-mm  current=1250 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  [SKIP] lift acceptance probe  (--diagnose-only)
+  [SKIP] small stroke probe  (--diagnose-only)
+  [SKIP] home to full length  (--diagnose-only)
+
+  Summary: 4 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-08 15:36:18
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=right @ 192.168.1.103   gearing=1to1 (hw max 315)
+    READ-ONLY (--diagnose-only/--no-pole): nothing moves at all
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=200 hw-mm  current=1071 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  [SKIP] lift acceptance probe  (--diagnose-only)
+  [SKIP] small stroke probe  (--diagnose-only)
+  [SKIP] home to full length  (--diagnose-only)
+
+  Summary: 4 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-08 15:40:08
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=left @ 192.168.1.10   gearing=1to1 (hw max 315)
+    READ-ONLY (--diagnose-only/--no-pole): nothing moves at all
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=200 hw-mm  current=1246 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  [SKIP] lift acceptance probe  (--diagnose-only)
+  [SKIP] small stroke probe  (--diagnose-only)
+  [SKIP] home to full length  (--diagnose-only)
+
+  Summary: 4 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_pole_only.py
+  Log    : test_pole_only.log
+  Started: 2026-08-08 15:40:16
+========================================================================
+====================================================================
+C8  Pole-only diagnostic (lift acceptance + state dump)
+    pole on arm=right @ 192.168.1.103   gearing=1to1 (hw max 315)
+    READ-ONLY (--diagnose-only/--no-pole): nothing moves at all
+    mode: as-found  (select with --mode SIM|REAL)  [lift does NOT execute in SIM]
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode = REAL
+  [PASS] connected  (handle id=1)
+  [PASS] arm power  (ON)
+    joint err_flag=[0, 0, 0, 0, 0, 0, 0]  brake_state=[0, 0, 0, 0, 0, 0, 0]
+  [PASS] controller/joint errors  (clean)
+  [PASS] lift state  (pos=200 hw-mm  current=1043 mA  mode=0  err_flag=0)
+  [SKIP] rm_clear_system_err  (not requested (--clear-errors))
+  [SKIP] lift acceptance probe  (--diagnose-only)
+  [SKIP] small stroke probe  (--diagnose-only)
+  [SKIP] home to full length  (--diagnose-only)
+
+  Summary: 4 PASS, 0 FAIL, 4 SKIP

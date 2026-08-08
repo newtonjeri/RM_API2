@@ -248,3 +248,139 @@ Environment overrides:
   RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
   RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
 
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 15:46:20
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: movej through ('ready', 'rest', 'zero') (ARM MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  C14CAP {"label": "ready", "side": "right", "joints_deg": [0.0, -108.00499725341797, 0.01899999938905239, 103.04900360107422, -0.03099999949336052, 79.06099700927734, -0.006000000052154064], "controller_pose": [0.414737, -3.7e-05, 0.10655, 3.142, 0.277, 3.142], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-0.12311142683029175, -1.0413590644020587e-05, 0.4100233018398285, -0.0013485956005752087, 1.2933759689331055, -0.0019672431517392397]}
+  C14CAP {"label": "rest", "side": "right", "joints_deg": [0.004000000189989805, -81.96800231933594, -26.0, 97.9520034790039, 6.045000076293945, 61.96099853515625, 69.00299835205078], "controller_pose": [0.492132, -0.102026, 0.041577, 2.917, 0.041, 1.45], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-0.05833114683628082, -0.10086981952190399, 0.48842164874076843, 1.351406455039978, -0.12024594098329544, 1.528611660003662]}
+  C14CAP {"label": "zero", "side": "right", "joints_deg": [-0.0010000000474974513, 0.0010000000474974513, 0.026000000536441803, -0.009999999776482582, -0.027000000700354576, -0.0010000000474974513, -0.03400000184774399], "controller_pose": [0.867699, 0.0, 6.6e-05, 0.0, 1.57, 0.0], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-5.365141259972006e-05, -2.7056724860585746e-08, 0.8504999876022339, 1.8551196490079747e-07, -0.00017453284817747772, -0.00062831852119416]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    ready    controller vs rm_algo FK: max |d|  537.8 mm
+    rest     controller vs rm_algo FK: max |d|  550.5 mm
+    zero     controller vs rm_algo FK: max |d|  867.8 mm
+  [FAIL] controller pose vs offline FK  (868 mm apart — a work/tool frame offset IS configured on the controller; the URDF comparison must account for it (this may be the 59 mm))
+  [PASS] capture complete  (3 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 15:47:09
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: movej through ('ready', 'rest', 'zero') (ARM MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  C14CAP {"label": "ready", "side": "left", "joints_deg": [0.0010000000474974513, -108.13700103759766, -0.1809999942779541, 103.11199951171875, 0.07199999690055847, 79.1449966430664, 180.43099975585938], "controller_pose": [0.451512, -0.009672, -0.153068, 3.146, -0.277, -0.011], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-0.12317007780075073, -0.00045262082130648196, 0.4094039797782898, -0.03699391335248947, -1.2934391498565674, -3.1017003059387207]}
+  C14CAP {"label": "rest", "side": "left", "joints_deg": [0.0, -81.9739990234375, 26.000999450683594, 97.9489974975586, -6.038000106811523, 61.95600128173828, 111.03399658203125], "controller_pose": [0.562226, 0.085965, -0.210857, 2.916, -0.042, 1.69], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-0.05837886035442352, 0.10089315474033356, 0.48842695355415344, 1.351245641708374, 0.11960896104574203, 1.6133415699005127]}
+  C14CAP {"label": "zero", "side": "left", "joints_deg": [-0.0010000000474974513, 0.03500000014901161, 0.0, -0.024000000208616257, 0.03799999877810478, -0.017000000923871994, 180.00399780273438], "controller_pose": [1.127702, -0.009971, -0.035184, 3.141, -1.569, 0.0], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [0.00018161896150559187, -3.150657690298431e-08, 0.8504999279975891, -1.200304780013539e-07, 0.00010471987479832023, -3.1408772468566895]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    ready    controller vs rm_algo FK: max |d|  574.7 mm
+    rest     controller vs rm_algo FK: max |d|  699.3 mm
+    zero     controller vs rm_algo FK: max |d| 1127.5 mm
+  [FAIL] controller pose vs offline FK  (1128 mm apart — a work/tool frame offset IS configured on the controller; the URDF comparison must account for it (this may be the 59 mm))
+  [PASS] capture complete  (3 C14CAP records for the offline comparison)
+  [SKIP] glove tool frames created  (--create-frames not given)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 3 PASS, 1 FAIL, 1 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 15:48:09
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=right @ 192.168.1.103
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "right", "joints_deg": [0.0, -0.0010000000474974513, 0.0, 0.0010000000474974513, 0.0, 0.0010000000474974513, 0.0], "controller_pose": [0.867699, 0.0, -1.5e-05, 0.0, 1.57, 0.0], "tool_frame": {"name": "Arm_Tip", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-1.9547692318155896e-06, 0.0, 0.8504999876022339, 0.0, 1.7453292457503267e-05, 0.0]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d|  867.7 mm
+  [FAIL] controller pose vs offline FK  (868 mm apart — a work/tool frame offset IS configured on the controller; the URDF comparison must account for it (this may be the 59 mm))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    tool frame glove1   at (50.0, 0.0, 177.5) mm  payload 0.0 kg  ret=0
+    tool frame glove2   at (13.5, 0.0, 197.5) mm  payload 0.0 kg  ret=0
+    tool frame glove3   at (75.0, 7.0, 202.5) mm  payload 0.0 kg  ret=0
+    tool frame glove4   at (55.0, 7.0, 237.5) mm  payload 0.0 kg  ret=0
+    tool frame tip      at (15.0, 5.0, 262.5) mm  payload 0.0 kg  ret=0
+  [PASS] glove tool frames created  (glove1(ret=0), glove2(ret=0), glove3(ret=0), glove4(ret=0), tip(ret=0); active frame restored)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 4 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_frame_alignment.py
+  Log    : test_frame_alignment.log
+  Started: 2026-08-08 15:48:30
+========================================================================
+====================================================================
+C14  Frame alignment survey
+    arm=left @ 192.168.1.10
+    capture: current pose only (NOTHING MOVES)
+    mode: REAL
+    C14CAP lines are the deliverable — the URDF/TF comparison
+    runs offline against them (frame_alignment_offline.py)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  C14CAP {"label": "as-found", "side": "left", "joints_deg": [0.0, 0.0, -0.0020000000949949026, 0.0, 0.0010000000474974513, -0.0010000000474974513, 179.99899291992188], "controller_pose": [1.127697, -0.01, -0.035032, 3.141, -1.57, 0.0], "tool_frame": {"name": "Hand", "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0], "payload": 0.706, "x": -12.0, "y": 44.0, "z": 128.0}, "work_frame": {"name": "World", "pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "payload": 0.0, "x": 0.0, "y": 0.0, "z": 0.0}, "offline_fk": [-2.513274012017064e-06, 4.386490476404603e-11, 0.8504999876022339, -3.064021814047635e-10, 1.7453292457503267e-05, 3.1415576934814453]}
+  [PASS] tool/work frame readable  (controller reports its active frames)
+    as-found controller vs rm_algo FK: max |d| 1127.7 mm
+  [FAIL] controller pose vs offline FK  (1128 mm apart — a work/tool frame offset IS configured on the controller; the URDF comparison must account for it (this may be the 59 mm))
+  [PASS] capture complete  (1 C14CAP records for the offline comparison)
+    tool frame glove1   at (-50.0, 0.0, 172.5) mm  payload 0.706 kg  ret=0
+    tool frame glove2   at (-20.0, 0.0, 197.5) mm  payload 0.706 kg  ret=0
+    tool frame glove3   at (-75.0, 7.0, 202.5) mm  payload 0.706 kg  ret=0
+    tool frame glove4   at (-55.0, 7.0, 237.5) mm  payload 0.706 kg  ret=0
+    tool frame tip      at (-15.0, 5.0, 262.5) mm  payload 0.706 kg  ret=0
+  [PASS] glove tool frames created  (glove1(ret=0), glove2(ret=0), glove3(ret=0), glove4(ret=0), tip(ret=0); active frame restored)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 4 PASS, 1 FAIL, 0 SKIP
