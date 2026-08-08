@@ -299,3 +299,100 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_waypoint_chain.py
+  Log    : test_waypoint_chain.log
+  Started: 2026-08-08 22:06:49
+========================================================================
+====================================================================
+C10  Chained-target execution (trajectory_connect)
+    arm=right @ 192.168.1.103   v=20%   segments ±4.0° on J1/J3 around ready
+    queue depths probed: (2, 5, 10, 20, 27, 43, 60)   fault probe (W4): ON
+    mode: REAL
+    THE RIGHT ARM WILL MOVE (small sweeps)
+====================================================================
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] homed to ready
+
+  W1 — 4-segment chain, r=0
+    rets=[0, 0, 0, 0]  duration=3.18s  events(connect flags)=[]
+  [PASS] chain executes  (4 segments, 0 device-0 event(s), flags [])
+
+  W2 — queue depth
+    depth  2: rejected at none, completed in 1.31s
+    depth  5: rejected at none, completed in 4.09s
+    depth 10: rejected at none, completed in 8.71s
+    depth 20: rejected at none, completed in 17.99s
+    depth 27: rejected at none, completed in 24.42s   <-- needed by toplid_{left,right}
+    depth 43: rejected at none, completed in 39.24s   <-- needed by hinge_area_{left,right}
+    depth 60: rejected at none, completed in 54.83s
+  [PASS] queue depth measured  (deepest clean chain: 60 segments — covers all tasks (deepest needs 43))
+
+  W3 — blend: r=0 vs r=50, same 3-corner path
+    r= 0: 3.15s
+    r=50: 2.98s
+  [PASS] blend effect measured  (r=50 saves +0.18s -> blending is real)
+
+  W4 — mid-chain INVALID target (J2 out of limit)
+    rets=[0, 1, 0]  completed=True
+  [PASS] mid-chain failure behaviour  (bad segment ret=1; chain still completed — record which for the dispatcher design)
+
+  W5 — rm_moves spline (informational)
+  [PASS] rm_moves spline probed  (rets=[0, 0, 0, 0] completed=True)
+  [INFO] right: run mode restored to REAL
+
+  Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_waypoint_chain.py
+  Log    : test_waypoint_chain.log
+  Started: 2026-08-08 22:10:44
+========================================================================
+====================================================================
+C10  Chained-target execution (trajectory_connect)
+    arm=left @ 192.168.1.10   v=20%   segments ±4.0° on J1/J3 around ready
+    queue depths probed: (100, 13)   fault probe (W4): ON
+    mode: REAL
+    THE LEFT ARM WILL MOVE (small sweeps)
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  [PASS] homed to ready
+
+  W1 — 4-segment chain, r=0
+    rets=[0, 0, 0, 0]  duration=2.23s  events(connect flags)=[]
+  [PASS] chain executes  (4 segments, 0 device-0 event(s), flags [])
+
+  W2 — queue depth
+    depth 100: rejected at none, completed in 65.42s
+    depth 13: rejected at none, completed in 8.15s
+  [FAIL] queue depth measured  (deepest clean chain: 13 segments, but hinge_area_{left,right} needs 43 — the dispatcher must batch)
+
+  W3 — blend: r=0 vs r=50, same 3-corner path
+    r= 0: 2.23s
+    r=50: 2.23s
+  [PASS] blend effect measured  (r=50 saves +0.01s -> no measurable effect — corners may full-stop anyway)
+
+  W4 — mid-chain INVALID target (J2 out of limit)
+    rets=[0, 1, 0]  completed=True
+  [PASS] mid-chain failure behaviour  (bad segment ret=1; chain still completed — record which for the dispatcher design)
+
+  W5 — rm_moves spline (informational)
+  [PASS] rm_moves spline probed  (rets=[0, 0, 0, 0] completed=True)
+  [INFO] left: run mode restored to REAL
+
+  Summary: 6 PASS, 1 FAIL, 0 SKIP

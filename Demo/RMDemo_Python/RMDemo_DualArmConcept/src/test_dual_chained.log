@@ -36,3 +36,51 @@ current c api version:  1.1.6
   [INFO] right: run mode restored to REAL
 
   Summary: 4 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_chained.py
+  Log    : test_dual_chained.log
+  Started: 2026-08-08 22:13:55
+========================================================================
+====================================================================
+C3  Chained dual-arm execution (left leads, right follows)
+    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
+    sequence: [('arm', 'ready'), ('hand', 'release'), ('sync', ('zero', 'half')), ('hand', 'grasp'), ('sync', ('ready', 'full')), ('hand', 'half_grasp'), ('arm', 'rest')]
+    mode: REAL
+    poles pre-positioned to full length (0.29 m) before the sequence
+    BOTH ARMS AND BOTH POLES WILL MOVE
+====================================================================
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] right: run mode = REAL
+  [INFO] left: error state clean
+  [INFO] right: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.00 s, event=True)
+  [INFO] right: pole at full length (0.01 s, event=True)
+  [PASS] poles pre-positioned to full length
+
+  chain results:
+  ────────────────────────────────────────────────────────────
+  step 0 ('arm', 'ready')       follower start after leader done, gate latency     0.2 ms, ok=True
+  step 1 ('hand', 'release')    follower start after leader done, gate latency     0.1 ms, ok=True
+  step 2 ('sync', ('zero', 'half')) follower start after leader done, gate latency    10.8 ms, ok=True
+  step 3 ('hand', 'grasp')      follower start after leader done, gate latency  4718.1 ms, ok=True
+  step 4 ('sync', ('ready', 'full')) follower start after leader done, gate latency    10.8 ms, ok=True
+  step 5 ('hand', 'half_grasp') follower start after leader done, gate latency  5251.9 ms, ok=True
+  step 6 ('arm', 'rest')        follower start after leader done, gate latency  3827.8 ms, ok=True
+  [PASS] all dispatches accepted
+  [PASS] both chains completed
+  [PASS] ordering invariant  (follower step k always after leader step k done)
+  [FAIL] follower gate latency  (max 5.25 s >= 1.0 s)
+  [WARN] 4 arrivals confirmed by position fallback, not event
+  [INFO] left: run mode restored to REAL
+  [INFO] right: run mode restored to REAL
+
+  Summary: 5 PASS, 1 FAIL, 0 SKIP

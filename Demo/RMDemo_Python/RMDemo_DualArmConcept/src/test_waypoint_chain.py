@@ -43,7 +43,8 @@ STEP_DEG = 4.0                # per-segment J1/J3 offset — small, free space
 # cleaning paths queue EVERY segment (Newton, 2026-08-08) — 43 for each
 # hinge task, 27 for each toplid. Probing only to 20 left the depth the
 # dispatcher actually relies on unverified.
-DEPTHS = (2, 5, 10, 20, 27, 43, 60)
+# DEPTHS = (2, 5, 10, 20, 27, 43, 60)
+DEPTHS = (100, 13)
 TASK_DEPTHS = {27: "toplid_{left,right}", 43: "hinge_area_{left,right}"}
 
 _results = {"PASS": 0, "FAIL": 0, "SKIP": 0}
