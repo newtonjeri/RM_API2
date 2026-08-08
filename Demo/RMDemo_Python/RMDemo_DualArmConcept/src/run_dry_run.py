@@ -17,6 +17,7 @@ _log_path = _setup_log(__file__)
 
 import os as _os
 import pathlib as _pathlib
+import json as _json
 _os.environ.setdefault("RM_HAND_DWELL_S", "0.05")
 # the canfd stream runs in real wall time, unlike the mocks
 _os.environ.setdefault("RM_CANFD_ARM_S", "0.05")
@@ -723,17 +724,16 @@ def main() -> int:
     check("plan is bundled in the repo", bundled.exists(),
           f"{bundled.stat().st_size // 1024} KB" if bundled.exists()
           else "MISSING — the lab machine cannot capture")
-    ws_plan = (sv.WS / "Resource" / "plans" / "commode_c" / "hardware"
-               / "hinge_area_right_ruckig_pro_only.json")
+    # The repo copy is THE plan on every machine. Preferring a workspace
+    # copy is what made the lab rehearse a different plan (stroke stage
+    # named execute_cleaning_path, 2012 wp, extra retreat) than the one
+    # C12 had verified — both runs looking perfectly healthy.
     got = sv.resolve_plan("hinge_area_right_ruckig_pro_only.json")
-    check("workspace copy wins when present" if ws_plan.exists()
-          else "falls back to the bundled copy",
-          got == (ws_plan if ws_plan.exists() else bundled))
-    # The capture half must build its targets with NO workspace at all.
+    check("the repo's plans/ copy is the resolved plan", got == bundled)
     _saved_ws = sv.WS
     try:
-        sv.WS = _pathlib.Path("/nonexistent/no/workspace")
-        check("resolver falls back when the workspace is absent",
+        sv.WS = _pathlib.Path("/some/other/workspace")
+        check("a workspace elsewhere does NOT change the plan",
               sv.resolve_plan("hinge_area_right_ruckig_pro_only.json")
               == bundled)
     finally:
@@ -747,6 +747,53 @@ def main() -> int:
     check("bundled plan waypoints are radians, 7 joints",
           len(stages[0]["joint_names"]) == 7
           and all(abs(v) < 7 for v in stages[0]["waypoints"][0]["positions"]))
+
+    # ── F1m. C11 sampling and stage-name independence ───────────────────
+    print("\nF1m. C11 capture reduction")
+
+    # Stage names differ per task (execute_path / execute_cleaning_path /
+    # square1_motion / test_motion ... — see cleaning_tasks/config), so the
+    # path stage MUST be found by size. Matching on a name silently
+    # collapsed a 2012-waypoint stroke to 2 targets on 2026-08-08.
+    fake = {"sub_trajectories": [
+        {"stage_name": "whatever_it_is_called", "num_waypoints": 100,
+         "joint_names": [f"R_joint{i}" for i in range(1, 8)],
+         "waypoints": [{"positions": [i * 0.001] * 7} for i in range(100)]},
+        {"stage_name": "short_hop", "num_waypoints": 3,
+         "joint_names": [f"R_joint{i}" for i in range(1, 8)],
+         "waypoints": [{"positions": [0.2] * 7} for _ in range(3)]},
+    ]}
+    _fp = _pathlib.Path(_os.environ.get(
+        "TMPDIR", "/tmp")) / "dryrun_fake_plan.json"
+    _fp.write_text(_json.dumps(fake))
+    _os.environ["RM_ARM"] = "right"
+    import test_rehearsal_validate as trv2
+    st = trv2.build_targets(str(_fp), 20)
+    check("path stage found by SIZE, not by stage name",
+          len(st[0]["targets"]) == 20 and st[0]["name"]
+          == "whatever_it_is_called")
+    check("a short stage stays at its two endpoints",
+          len(st[1]["targets"]) == 2)
+
+    # Arc-length resampling: the push streams while the arm is idle, so
+    # index-based sampling lands in the idle clusters and misses the real
+    # geometry. Here 90% of the "capture" is a single stationary pose.
+    idle = [[0.0] * 7] * 90 + [[float(i)] + [0.0] * 6 for i in range(1, 11)]
+
+    def _distinct(pts):
+        return len({round(p[0], 6) for p in pts})
+    # Endpoint spread is NOT the metric — subsample() always keeps first
+    # and last, so it looks fine while spending 10 of 11 picks inside the
+    # dwell. What matters is INTERIOR coverage: how much of the traverse
+    # actually gets a sample, since that is where a close approach hides.
+    check("arc-length resampling covers the traverse",
+          _distinct(trv2.resample_by_arclength(idle, 11)) >= 10,
+          f"{_distinct(trv2.resample_by_arclength(idle, 11))}/11 distinct")
+    check("index subsampling clusters in the dwell (the bug this replaces)",
+          _distinct(sv.subsample(idle, 11)) <= 4,
+          f"only {_distinct(sv.subsample(idle, 11))}/11 distinct")
+    check("a capture that never moved degrades safely",
+          len(trv2.resample_by_arclength([[1.0] * 7] * 50, 10)) == 1)
 
     # ── F1i. UDP push target is resolved, not guessed ───────────────────
     print("\nF1i. UDP push target resolution")

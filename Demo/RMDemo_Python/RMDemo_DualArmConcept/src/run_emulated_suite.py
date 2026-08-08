@@ -36,6 +36,7 @@ import test_dual_free
 import test_single_arm_planned
 import test_single_arm_locked
 import test_pole_only
+import test_rehearsal_validate
 
 SUITE = [
     ("C1 connect", test_dual_connect),
@@ -47,6 +48,7 @@ SUITE = [
     ("C3 chained", test_dual_chained),
     ("C4 free", test_dual_free),
     ("C6 single-arm", test_single_arm_planned),
+    ("C11 rehearsal", test_rehearsal_validate),
 ]
 
 

@@ -60,21 +60,20 @@ BUNDLED_PLANS = pathlib.Path(__file__).resolve().parent.parent / "plans"
 
 
 def resolve_plan(name: str) -> pathlib.Path:
-    """Locate a saved orchestrator plan, workspace first, bundle second.
+    """THE plan is the copy in this repo's ../plans/. No search, no fallback.
 
-    The plans live in the ROS workspace, which exists on the dev machine
-    but not necessarily on the lab laptop — and the CAPTURE half of C11
-    runs there. A copy therefore travels in this repo under ../plans/.
+    An earlier version preferred whatever sat in the ROS workspace, and on
+    2026-08-08 that produced exactly the failure the bundling was meant to
+    prevent: the lab machine's workspace held a DIFFERENT plan under the
+    same filename (stroke stage `execute_cleaning_path`, 2012 wp, plus an
+    extra retreat stage), so the capture rehearsed one plan while the dev
+    machine had verified another. Both runs looked fine.
 
-    Order: the workspace copy wins when present (it is the authoritative,
-    freshest one); the bundled copy is the fallback so a machine with no
-    workspace can still capture. Callers print which one was used —
-    silently switching plan sources would be a nasty way to get two
-    different clearance maps.
+    The plan is a versioned artifact of this repo, like the code: whatever
+    is committed here is what every machine runs. Point somewhere else
+    deliberately with `--plan PATH` — never by accident, never by which
+    machine you happen to be on.
     """
-    ws = WS / "Resource" / "plans" / "commode_c" / "hardware" / name
-    if ws.exists():
-        return ws
     return BUNDLED_PLANS / name
 
 

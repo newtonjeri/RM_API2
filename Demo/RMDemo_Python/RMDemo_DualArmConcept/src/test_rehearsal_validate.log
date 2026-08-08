@@ -274,3 +274,44 @@ current c api version:  1.1.6
   [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
 
   Summary: 7 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-08 16:37:56
+========================================================================
+======================================================================
+C11  Rehearsal validation — capture the controller, calibrate C12
+     side=right  plan=/home/newtonjeri/butterfli_ws/src/butterfli-ai-ros-jazzy/Resource/plans/commode_c/hardware/hinge_area_right_ruckig_pro_only.json
+     plan source: ROS workspace
+     REPLAY rehearsal_right.json — analysis only, no hardware
+======================================================================
+  [SKIP] run mode engaged and verified  (replay)
+  [SKIP] UDP capture channel live  (replay)
+  [SKIP] every sparse target executed  (replay)
+  [SKIP] capture ends at the commanded target  (replay)
+
+  analysing 2918 captured frames vs 125 predicted; sweeping <=12/stage
+  [verifier] URDF butterfli.urdf, fixture 'commode_c': 5 meshes, side=right
+  [PASS] captured trajectory is self-collision free
+  [PASS] fixture contact matches the prediction  (all 5 stages within tolerance)
+
+  ────────────────────────────────────────────────────────────────────────
+  PER-STAGE RESIDUAL — controller reality vs the C12 model
+  ────────────────────────────────────────────────────────────────────────
+  stage                   dev deg  tool mm  pred mm   cap mm  optimism  contact
+  move_to_pre_start         0.003     0.01    19.96    19.98     -0.03  free
+  move_to_start             0.004     0.01    19.96    19.96     -0.00  free
+  execute_cleaning_path     0.003     0.01     0.00     0.00       n/a  touch 58%/58%
+  move_to_pre_start         0.003     0.01     0.00     0.00       n/a  touch 58%/75%
+  move_to_rest              0.003     0.01    19.94    19.94     -0.00  free
+  ────────────────────────────────────────────────────────────────────────
+    clearance optimism (free-space stages)     0.00 mm   <== the measured margin
+    worst tool-point deviation                 0.01 mm   (conservative bound)
+  ────────────────────────────────────────────────────────────────────────
+    ==> FCL MARGIN for C12: 5 mm (measured 0.0 + 5 mm safety)
+    Re-verify with:  python3 run_hinge_verify.py --margin 5
+  ────────────────────────────────────────────────────────────────────────
+  [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
+
+  Summary: 3 PASS, 0 FAIL, 4 SKIP

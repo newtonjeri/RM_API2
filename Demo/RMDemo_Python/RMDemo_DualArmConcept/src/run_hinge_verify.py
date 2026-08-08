@@ -66,9 +66,9 @@ def main() -> int:
     print("=" * 70)
     print("C12  Controller-motion collision verification — hinge_area_right")
     print(f"     plan: {plan_path}")
-    print("     source: " + ("BUNDLED copy in this repo"
+    print("     source: " + ("this repo's plans/ (the contract)"
                              if str(BUNDLED_PLANS) in str(plan_path)
-                             else "ROS workspace"))
+                             else "EXPLICIT --plan override"))
     print(f"     samples/segment: {samples}   stroke targets: {stroke_n}   "
           f"margin: {margin_m * 1000:.0f} mm")
     print("=" * 70)
@@ -90,7 +90,8 @@ def main() -> int:
             v.movej_timeline(maps[0], maps[-1], samples),
             ARM_JOINTS, tag="modeA")
         sparse = None
-        if name == "execute_path" and len(maps) > stroke_n:
+        # by SIZE, not by stage name — see build_targets in C11
+        if len(maps) > stroke_n:
             targets = subsample(maps, stroke_n)
             timeline = []
             for a, b in zip(targets, targets[1:]):

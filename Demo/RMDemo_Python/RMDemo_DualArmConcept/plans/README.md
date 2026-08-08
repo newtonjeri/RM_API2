@@ -21,19 +21,22 @@ The workspace can't travel in this repo, but it doesn't have to: the
 capture only reads joint positions out of the plan, and the machine that
 does the geometry is the one that already has the workspace.
 
-## Resolution order
+## Resolution — this folder, full stop
 
-`segment_verifier.resolve_plan()`, used by `test_rehearsal_validate.py`
-and `run_hinge_verify.py`:
+`segment_verifier.resolve_plan()` returns the copy **here**. It does not
+search the ROS workspace. Override deliberately with `--plan PATH`, never
+by accident and never by which machine you happen to be on.
 
-1. `--plan PATH` if given
-2. the **workspace** copy (`$BUTTERFLI_WS/Resource/plans/commode_c/hardware/`)
-   — authoritative and freshest, so it wins whenever it exists
-3. this **bundled** copy
+An earlier version preferred the workspace copy, and on 2026-08-08 that
+produced precisely the failure this folder exists to prevent: the lab
+machine's workspace held a *different* plan under the same filename —
+stroke stage `execute_cleaning_path` with 2012 waypoints plus an extra
+retreat stage — so the rehearsal captured one plan while the dev machine
+had verified another. Both runs reported success.
 
-Both scripts print which source they used. That matters: two different
-plan files would silently produce two different clearance maps, and the
-C11 residual is only valid for the plan C12 verified.
+The plan is a versioned artifact of this repo, like the code. Whatever is
+committed here is what every machine runs, and both scripts print the path
+they used.
 
 ## Refreshing
 

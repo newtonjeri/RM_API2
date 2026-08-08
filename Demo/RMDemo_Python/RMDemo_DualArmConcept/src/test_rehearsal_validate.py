@@ -57,8 +57,8 @@ from dual_arm_common import (
     UDP_PORT, ArrivalMonitor,
 )
 from segment_verifier import (
-    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, resolve_plan, stage_maps,
-    subsample)
+    BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, resolve_plan,
+    stage_maps, subsample)
 from Robotic_Arm.rm_robot_interface import RoboticArm
 from Robotic_Arm.rm_ctypes_wrap import (
     rm_thread_mode_e, rm_realtime_arm_state_callback_ptr,
@@ -73,8 +73,8 @@ PREF = "R_" if ARM_SIDE == "right" else "L_"
 ARM_JOINTS = [f"{PREF}joint{i}" for i in range(1, 8)]
 CONNECTOR = f"{PREF}ConnectorLink"
 
-# Workspace copy if present, else the copy bundled in this repo — the
-# capture half must work on a machine with no ROS workspace.
+# THE plan: the copy committed in this repo's plans/. Not a search, not a
+# fallback — see segment_verifier.resolve_plan for why.
 DEFAULT_PLAN = resolve_plan("hinge_area_right_ruckig_pro_only.json")
 DEFAULT_SAVE = pathlib.Path(__file__).resolve().parent / \
     f"rehearsal_{ARM_SIDE}.json"
@@ -130,7 +130,14 @@ def build_targets(plan_path, stroke_n):
     stages = []
     for st in arm_stages(plan, prefix=f"{PREF}joint"):
         maps = stage_maps(st)
-        if st["stage_name"] == "execute_path" and len(maps) > stroke_n:
+        # Subsample by SIZE, never by stage name. The 2026-08-08 lab
+        # capture matched on "execute_path" while that workspace's plan
+        # calls the stroke "execute_cleaning_path", so a 2012-waypoint
+        # cleaning path collapsed to its two endpoints and the rehearsal
+        # measured the model against a straight line — a pass that proved
+        # nothing. Any stage denser than stroke_n is a path, whatever it
+        # is called.
+        if len(maps) > stroke_n:
             targets = subsample(maps, stroke_n)
         else:
             targets = [maps[0], maps[-1]]
@@ -160,6 +167,38 @@ def predicted_path(stages, per_segment=25):
                 path.append([ai * (1 - f) + bi * f for ai, bi in zip(a, b)])
                 owner.append(k)
     return path, owner
+
+
+def resample_by_arclength(points, n):
+    """n points evenly spaced along the PATH, not along the sample index.
+
+    The realtime push streams while the arm is STATIONARY — during every
+    arrival-event wait and between stages — so a capture is dominated by
+    idle frames sitting at a handful of configurations. Index-based
+    subsampling then spends most of its budget inside those clusters and
+    can miss the closest approach completely: the emulator run read a
+    stage minimum of 46.9 mm against a predicted 19.9 mm while the two
+    paths agreed to 0.0001 deg. The paths were identical; the sampling
+    was not.
+
+    Arc length in joint space is the honest parameter for a geometry
+    check, and it makes the result independent of speed, dwell time and
+    how long an event took to fire.
+    """
+    import numpy as np
+    P = np.asarray(points, dtype=float)
+    if len(P) <= 2:
+        return [p.tolist() for p in P]
+    seg = np.linalg.norm(np.diff(P, axis=0), axis=1)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    if s[-1] <= 1e-9:                      # the arm never moved
+        return [P[0].tolist()]
+    want = np.linspace(0.0, s[-1], min(n, len(P)))
+    idx = np.searchsorted(s, want, side="right") - 1
+    idx = np.clip(idx, 0, len(P) - 2)
+    span = np.where(seg[idx] > 1e-12, seg[idx], 1.0)
+    frac = ((want - s[idx]) / span)[:, None]
+    return (P[idx] + frac * (P[idx + 1] - P[idx])).tolist()
 
 
 # ── residual geometry ──
@@ -219,9 +258,19 @@ def tool_gap_mm(verifier, qa_deg, qb_deg):
 def capture(mode, plan_path, stroke_n, speed_pct, save_path):
     stages = build_targets(plan_path, stroke_n)
     n_targets = sum(len(s["targets"]) for s in stages)
-    print(f"  plan stages: {[s['name'] for s in stages]}")
-    print(f"  sparse targets: {n_targets} "
-          f"(stroke subsampled to {stroke_n})")
+    print("  plan stages:")
+    for s in stages:
+        print(f"    {s['name']:26s} {s['num_waypoints']:5d} wp -> "
+              f"{len(s['targets']):2d} targets"
+              + ("   <-- PATH, subsampled" if len(s["targets"]) > 2 else ""))
+    print(f"  sparse targets: {n_targets}")
+    # A rehearsal where every stage collapsed to its endpoints tests
+    # joint-linear motion against a joint-linear model — it cannot fail,
+    # and it proves nothing about the cleaning stroke. Say so loudly.
+    if all(len(s["targets"]) <= 2 for s in stages):
+        print("  [WARN] every stage reduced to 2 targets — no stage exceeds "
+              f"{stroke_n} waypoints. The residual will be trivially zero; "
+              "check --targets and the plan.")
 
     robot = None
     original_mode = None
@@ -396,10 +445,14 @@ def analyse(rec, samples_n):
             print(f"    [WARN] stage '{st['name']}' attracted no captured "
                   "samples — excluded from the residual")
             continue
-        cap_rep = v.verify_timeline(_maps(subsample(cap_q, per_stage)),
-                                    ARM_JOINTS, tag=f"cap:{st['name']}")
-        pred_rep = v.verify_timeline(_maps(subsample(pred_q, per_stage)),
-                                     ARM_JOINTS, tag=f"pred:{st['name']}")
+        # Both sides resampled by ARC LENGTH so the comparison is between
+        # two paths, not between two sampling patterns.
+        cap_rep = v.verify_timeline(
+            _maps(resample_by_arclength(cap_q, per_stage)),
+            ARM_JOINTS, tag=f"cap:{st['name']}")
+        pred_rep = v.verify_timeline(
+            _maps(resample_by_arclength(pred_q, per_stage)),
+            ARM_JOINTS, tag=f"pred:{st['name']}")
         worst = max((d for d in dev if d[3] == k), key=lambda d: d[0])
         self_hits += cap_rep["self_collisions"]
         rows.append({
@@ -490,9 +543,12 @@ def main() -> int:
     print("=" * 70)
     print("C11  Rehearsal validation — capture the controller, calibrate C12")
     print(f"     side={ARM_SIDE}  plan={plan_path}")
-    print("     plan source: " + ("BUNDLED copy in this repo"
+    print("     plan source: " + ("this repo's plans/ (the contract)"
                                   if str(BUNDLED_PLANS) in str(plan_path)
-                                  else "ROS workspace"))
+                                  else "EXPLICIT --plan override"))
+    if not pathlib.Path(plan_path).exists():
+        print(f"  [FATAL] plan not found: {plan_path}")
+        return 1
     if replay:
         print(f"     REPLAY {replay} — analysis only, no hardware")
     else:
