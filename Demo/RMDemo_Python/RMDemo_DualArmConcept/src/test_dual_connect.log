@@ -362,3 +362,75 @@ current c api version:  1.1.6
   [PASS] pre-check complete  (no motion was commanded)
 
   Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_connect.py
+  Log    : test_dual_connect.log
+  Started: 2026-08-08 23:28:42
+========================================================================
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [FAIL] left: arm state  (ret=0 active=['4109'])
+  [PASS] left: lift state  (pos=75 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=75 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 8 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_connect.py
+  Log    : test_dual_connect.log
+  Started: 2026-08-08 23:28:55
+========================================================================
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [FAIL] left: arm state  (ret=0 active=['4109'])
+  [PASS] left: lift state  (pos=75 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=75 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 8 PASS, 1 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_connect.py
+  Log    : test_dual_connect.log
+  Started: 2026-08-08 23:30:40
+========================================================================
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'])
+  [PASS] left: lift state  (pos=75 of 315 (1to1))
+  [INFO] left: run mode = REAL
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'])
+  [PASS] right: lift state  (pos=75 of 315 (1to1))
+  [INFO] right: run mode = REAL
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
