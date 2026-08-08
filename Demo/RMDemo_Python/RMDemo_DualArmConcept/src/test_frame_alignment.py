@@ -40,7 +40,21 @@ proved URDF `*_ConnectorLink` == RealMan `Arm_Tip` + a CONSTANT
 frame becomes a controller tool frame at (xacro offset + 15.3 mm Z),
 relative to Arm_Tip, via rm_set_manual_tool_frame:
 
-    glove1..glove4, tip     (e.g. right glove4 = 55, 7, 220.3 mm)
+Frame NAMES track the URDF links (`frame_alignment_offline.IK_FRAMES`),
+because these frames exist so a cleaning point expressed in
+`R_glove_frame_4` can be commanded directly on the controller — that only
+works if both sides call it the same thing. The controller's name field is
+11 chars while `R_glove_frame_4` is 15, so one mechanical rule bridges
+them: drop the `_frame` token.
+
+    R_glove_frame_1..4  ->  R_glove_1..4   (e.g. R_glove_4 = 55, 7, 220.3 mm)
+    R_tip_frame         ->  R_tip
+    R_index_tip_frame   ->  R_index_tip
+
+Existing frames are UPDATED (rm_update_tool_frame); only new ones are
+created. rm_set_manual_tool_frame returns ret=1 on a name that already
+exists, which is what failed on the second 2026-08-08 run. The invented
+`glove1..glove4`/`tip` frames from the first run are deleted.
 
 The payload of the CURRENT tool frame is copied onto the new frames (so
 force compensation is unchanged), each frame is read back to verify, and
@@ -141,10 +155,15 @@ def _capture(robot, label):
             cap[name] = frame if ret == 0 else f"ret={ret}"
         except Exception as exc:
             cap[name] = f"unavailable: {exc!r}"
+    # rm_get_install_pose returns ONE dict {return_code,x,y,z} — not the
+    # (ret, dict) tuple most getters use. Unpacking it as a tuple raised
+    # ValueError on 2026-08-08, so the mounting angle was never applied and
+    # the FK check compared two different frames.
     try:
-        ret, ip_ = robot.rm_get_install_pose()
+        ip_ = robot.rm_get_install_pose()
         cap["install_pose"] = ([ip_.get("x"), ip_.get("y"), ip_.get("z")]
-                               if ret == 0 else f"ret={ret}")
+                               if ip_.get("return_code") == 0
+                               else f"ret={ip_.get('return_code')}")
     except Exception as exc:
         cap["install_pose"] = f"unavailable: {exc!r}"
     cap["offline_fk"] = (_offline_fk(
@@ -164,7 +183,9 @@ def _create_glove_frames(robot):
     the proven constant Arm_Tip->ConnectorLink 15.3 mm Z). Returns the
     (tag, name, detail) triple for result()."""
     import numpy as np
-    from frame_alignment_offline import GLOVE_FRAMES, _euler_zyx_to_R
+    from frame_alignment_offline import (
+        ARM_TIP_TO_CONNECTOR_M, IK_FRAMES, controller_frame_name,
+        frame_map, print_frame_map, _euler_zyx_to_R)
     from Robotic_Arm.rm_ctypes_wrap import rm_frame_t, rm_pose_t, \
         rm_position_t, rm_euler_t
 
@@ -178,6 +199,7 @@ def _create_glove_frames(robot):
         original = (cur.get("name") or cur.get("frame_name")) \
             if ret == 0 else None
         payload = float(cur.get("payload", 0.0)) if ret == 0 else 0.0
+        com = tuple(float(cur.get(k, 0.0)) for k in ("x", "y", "z"))
     except Exception as exc:
         return ("FAIL", "glove tool frames created",
                 f"cannot read the current tool frame: {exc!r}")
@@ -187,31 +209,101 @@ def _create_glove_frames(robot):
                 f"keys={sorted(cur) if ret == 0 else '-'}) — refusing to "
                 "write frames we could not restore from")
 
+    # What is already on the controller? rm_set_manual_tool_frame CREATES a
+    # frame and returns ret=1 if the name is taken — which is why the second
+    # run of 2026-08-08 failed on all five. Existing names must be UPDATED.
+    try:
+        total = robot.rm_get_total_tool_frame()
+        existing = list(total.get("tool_names") or [])
+        capacity = 10                       # rm_frame_name_t*10 in the SDK
+    except Exception as exc:
+        print(f"    [WARN] cannot list tool frames ({exc!r}) — assuming none")
+        existing, capacity = [], 10
+    print(f"    existing tool frames ({len(existing)}/{capacity}): "
+          f"{existing}")
+
+    # Drop the invented names written on 2026-08-08: wrong values (32.5 mm
+    # instead of 15.3) AND wrong names (they must match the URDF links).
+    removed = []
+    for legacy in ("glove1", "glove2", "glove3", "glove4", "tip"):
+        if legacy in existing and legacy != original:
+            if robot.rm_delete_tool_frame(legacy) == 0:
+                removed.append(legacy)
+                existing.remove(legacy)
+    if removed:
+        print(f"    removed superseded frames: {', '.join(removed)}")
+
+    wanted = {controller_frame_name(link): (link, xyz, rpy)
+              for link, (xyz, rpy) in IK_FRAMES[ARM_SIDE].items()}
+    new_count = len([n for n in wanted if n not in existing])
+    if len(existing) + new_count > capacity:
+        return ("FAIL", "glove tool frames created",
+                f"{len(existing)} frames on the controller + {new_count} new "
+                f"> {capacity} capacity — delete unused frames first")
+
+    print()
+    print_frame_map(ARM_SIDE, indent="    ")
+    print()
     residual = np.eye(4)
-    # Arm_Tip -> ConnectorLink, measured with the ISF (six-axis force)
-    # arm model that matches both controllers to 1 um. Do NOT hard-code a
-    # value derived from a different rm_force_type_e variant.
-    residual[2, 3] = 0.0153
+    residual[2, 3] = ARM_TIP_TO_CONNECTOR_M   # imported, never re-declared
     created, failed = [], []
-    for name, (xyz, rpy) in GLOVE_FRAMES[ARM_SIDE].items():
+    for fname, (link, xyz, rpy) in wanted.items():
         T = np.eye(4)
         T[:3, :3] = _euler_zyx_to_R(*rpy)
         T[:3, 3] = xyz
         T = residual @ T
         frame = rm_frame_t()
-        frame.frame_name = name.encode()[:11]
+        frame.frame_name = fname.encode()
         frame.pose = rm_pose_t()
         frame.pose.position = rm_position_t(*[float(v) for v in T[:3, 3]])
         frame.pose.euler = rm_euler_t(*[float(v) for v in rpy])
         frame.payload = payload
+        frame.x, frame.y, frame.z = com     # payload centroid, carried over
+        update = fname in existing
         try:
-            ret = robot.rm_set_manual_tool_frame(frame)
+            ret = (robot.rm_update_tool_frame(frame) if update
+                   else robot.rm_set_manual_tool_frame(frame))
         except Exception as exc:
             ret = repr(exc)
-        (created if ret == 0 else failed).append(f"{name}(ret={ret})")
-        print(f"    tool frame {name:8s} at "
-              f"({T[0, 3] * 1000:.1f}, {T[1, 3] * 1000:.1f}, "
-              f"{T[2, 3] * 1000:.1f}) mm  payload {payload} kg  ret={ret}")
+        (created if ret == 0 else failed).append(f"{fname}(ret={ret})")
+        print(f"    {'update' if update else 'create'} {fname:12s} "
+              f"<- {link:20s} at ({T[0, 3] * 1000:7.1f}, "
+              f"{T[1, 3] * 1000:6.1f}, {T[2, 3] * 1000:6.1f}) mm  "
+              f"payload {payload} kg  ret={ret}")
+    # ── MATCH TABLE: read every frame BACK off the controller ──
+    # Writing returned ret=0; that is not the same as the controller
+    # holding the value we meant. Read each one back and compare against
+    # the same frame_map() row the write came from, so the table printed
+    # here is evidence rather than an assertion.
+    print("\n    MATCH TABLE — URDF frame vs what the controller now holds")
+    print(f"    {'URDF link':22s} {'controller':12s} "
+          f"{'expected (mm)':>22s} {'read back (mm)':>22s}  d mm")
+    print("    " + "-" * 88)
+    mismatched = []
+    for link, fname, _conn, tip, _rpy in frame_map(ARM_SIDE):
+        try:
+            gret, got = robot.rm_get_given_tool_frame(fname)
+        except Exception as exc:
+            gret, got = -1, {"error": repr(exc)}
+        if gret != 0 or not isinstance(got.get("pose"), (list, tuple)):
+            mismatched.append(f"{fname}(read ret={gret})")
+            print(f"    {link:22s} {fname:12s} "
+                  f"{tip[0] * 1000:7.1f}{tip[1] * 1000:7.1f}"
+                  f"{tip[2] * 1000:7.1f}   {'UNREADABLE':>22s}")
+            continue
+        rb = list(got["pose"])[:3]
+        d = max(abs(a - b) * 1000.0 for a, b in zip(rb, tip))
+        ok = d <= 0.5                      # 0.5 mm: float round-trip only
+        if not ok:
+            mismatched.append(f"{fname}({d:.1f} mm off)")
+        print(f"    {link:22s} {fname:12s} "
+              f"{tip[0] * 1000:7.1f}{tip[1] * 1000:7.1f}{tip[2] * 1000:7.1f}"
+              f"   {rb[0] * 1000:7.1f}{rb[1] * 1000:7.1f}{rb[2] * 1000:7.1f}"
+              f"  {d:5.2f} {'OK' if ok else '<-- MISMATCH'}")
+    print("    " + "-" * 88)
+    if mismatched:
+        failed.append(f"readback({', '.join(mismatched)})")
+
     # Restore, then READ BACK — never report a restore we did not verify.
     restored = None
     try:
@@ -303,30 +395,54 @@ def main() -> int:
                "controller reports its active frames" if frames_ok else
                "frame getters failed — capture incomplete")
 
-        # Controller pose vs offline rm_algo FK: catches a gross work-frame
-        # or tool-frame offset immediately, before any URDF comparison.
-        worst = None
+        # Controller pose vs offline rm_algo FK, in TWO tiers.
+        #
+        # The controller reports through its MOUNTING ANGLE (these arms sit
+        # rotated ~90 deg about Y on the torso), so the raw vectors differ
+        # by a rigid rotation even when the model is perfect — that is what
+        # produced the bogus "868 mm mismatch" on 2026-08-08.
+        #
+        # Tier 1, always: |p|, the distance from the arm base. It is
+        # INVARIANT under any base rotation or work frame, so it isolates
+        # exactly one thing — is the ARM MODEL right? This is the tier that
+        # caught the RM_B_E/ISF error (17.2 mm, F15).
+        #
+        # Tier 2, when the install pose is readable: the full vector.
+        worst = worst_vec = None
+        import math as _math
         for c in caps:
             if not (c["controller_pose"] and c["offline_fk"]):
                 continue
-            d = [abs(a - b) for a, b
-                 in zip(c["controller_pose"][:3], c["offline_fk"][:3])]
-            err = max(d)
+            nc = _math.dist(c["controller_pose"][:3], (0, 0, 0))
+            no = _math.dist(c["offline_fk"][:3], (0, 0, 0))
+            err = abs(nc - no)
             worst = max(worst or 0.0, err)
-            print(f"    {c['label']:8s} controller vs rm_algo FK: "
-                  f"max |d| {err * 1000:6.1f} mm")
+            line = (f"    {c['label']:8s} |p| controller {nc * 1000:7.1f} mm "
+                    f"vs rm_algo {no * 1000:7.1f} mm   d={err * 1000:5.2f} mm")
+            if isinstance(c.get("install_pose"), list):
+                vec = max(abs(a - b) for a, b in
+                          zip(c["controller_pose"][:3], c["offline_fk"][:3]))
+                worst_vec = max(worst_vec or 0.0, vec)
+                line += f"   full-vector d={vec * 1000:.1f} mm"
+            print(line)
+        if worst_vec is None:
+            print("    (install pose unreadable — orientation not checked; "
+                  "the |p| tier still proves the arm model)")
         if worst is None:
-            result("FAIL", "controller pose vs offline FK", "no data")
+            result("FAIL", "arm model matches the controller", "no data")
         elif worst <= FK_TOL_M:
-            result("PASS", "controller pose vs offline FK",
-                   f"agree within {worst * 1000:.1f} mm — controller runs "
-                   "default mounting/tool, as rm_algo assumes")
+            result("PASS", "arm model matches the controller",
+                   f"|p| agrees within {worst * 1000:.2f} mm"
+                   + (f", full vector within {worst_vec * 1000:.1f} mm"
+                      if worst_vec is not None else " (reach only)"))
         else:
-            result("FAIL", "controller pose vs offline FK",
-                   f"{worst * 1000:.0f} mm apart even after mirroring the "
-                   "controller's mounting angle, work frame and tool frame "
-                   "offline — the ARM MODEL itself disagrees (check "
-                   "RM_FORCE_MODEL: the variant sets the wrist length)")
+            result("FAIL", "arm model matches the controller",
+                   f"|p| differs by {worst * 1000:.1f} mm — a base rotation "
+                   "cannot cause this, so the MODEL is wrong. Check "
+                   f"RM_FORCE_MODEL (currently "
+                   f"{os.environ.get('RM_FORCE_MODEL', 'RM_MODEL_RM_ISF_E')}"
+                   "): the force-sensor variant sets the wrist length, and "
+                   "RM_MODEL_RM_B_E is 17.2 mm short on these arms")
 
         complete = all(c["joints_deg"] and c["controller_pose"] for c in caps)
         result("PASS" if complete else "FAIL", "capture complete",

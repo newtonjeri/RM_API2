@@ -42,23 +42,119 @@ if str(RM_PY) not in sys.path:
 
 URDF = WS / "butterfli_workspace" / "urdf" / "butterfli.urdf"
 
-# ConnectorLink -> ik/glove frames (verbatim from ik_frames.xacro)
-GLOVE_FRAMES = {
+# ConnectorLink -> ik frames, keyed by the URDF LINK NAME and verbatim from
+# butterfli_description/urdf/ik_frames.xacro. Keying by the URDF name (not an
+# invented label) is the whole point: these frames exist to let a cleaning
+# point expressed in `R_glove_frame_4` be commanded directly on the
+# controller, and that only works if both sides call it the same thing.
+# `verify_against_urdf()` below re-derives every offset from the live URDF so
+# this table cannot drift silently.
+IK_FRAMES = {
     "right": {
-        "glove1": ((0.05, 0.0, 0.145), (0.0, 0.0, 0.0)),
-        "glove2": ((0.0135, 0.0, 0.165), (0.0, 0.0, 0.0)),
-        "glove3": ((0.075, 0.007, 0.17), (0.0, 0.0, 0.0)),
-        "glove4": ((0.055, 0.007, 0.205), (0.0, 0.0, 0.0)),
-        "tip": ((0.015, 0.005, 0.23), (0.0, 0.0, 0.0)),
+        "R_glove_frame_1": ((0.05, 0.0, 0.145), (0.0, 0.0, 0.0)),
+        "R_glove_frame_2": ((0.0135, 0.0, 0.165), (0.0, 0.0, 0.0)),
+        "R_glove_frame_3": ((0.075, 0.007, 0.17), (0.0, 0.0, 0.0)),
+        "R_glove_frame_4": ((0.055, 0.007, 0.205), (0.0, 0.0, 0.0)),
+        "R_tip_frame": ((0.015, 0.005, 0.23), (0.0, 0.0, 0.0)),
+        "R_index_tip_frame": ((0.0242, 0.0288, 0.225), (0.0, 0.0, 0.0)),
     },
     "left": {
-        "glove1": ((-0.05, 0.0, 0.14), (0.0, 0.0, 0.0)),
-        "glove2": ((-0.02, 0.0, 0.165), (0.0, 0.0, 0.0)),
-        "glove3": ((-0.075, 0.007, 0.17), (0.0, 0.0, 0.0)),
-        "glove4": ((-0.055, 0.007, 0.205), (0.0, 0.0, 0.0)),
-        "tip": ((-0.015, 0.005, 0.23), (0.0, 0.0, 0.0)),
+        "L_glove_frame_1": ((-0.05, 0.0, 0.14), (0.0, 0.0, 0.0)),
+        "L_glove_frame_2": ((-0.02, 0.0, 0.165), (0.0, 0.0, 0.0)),
+        "L_glove_frame_3": ((-0.075, 0.007, 0.17), (0.0, 0.0, 0.0)),
+        "L_glove_frame_4": ((-0.055, 0.007, 0.205), (0.0, 0.0, 0.0)),
+        "L_tip_frame": ((-0.015, 0.005, 0.23), (0.0, 0.0, 0.0)),
+        "L_index_tip_frame": ((-0.0242, 0.0288, 0.225), (0.0, 0.0, 0.0)),
     },
 }
+
+# The controller's frame_name field is c_char_Array_12 — 11 usable chars —
+# while `R_glove_frame_4` is 15. One mechanical rule bridges the two, chosen
+# so every name fits and the mapping stays obvious and reversible:
+#
+#     R_glove_frame_4    ->  R_glove_4      (9)
+#     R_tip_frame        ->  R_tip          (5)
+#     R_index_tip_frame  ->  R_index_tip    (11, exactly at the limit)
+FRAME_NAME_MAX = 11
+
+# Arm_Tip -> ConnectorLink. THE single source of this number: the hardware
+# test imports it rather than re-declaring it, because a copy that drifts
+# puts MoveIt and the controller on different definitions of the same named
+# frame — the exact failure C14 exists to prevent. Measured 2026-08-08 with
+# the ISF arm model (see segment_verifier.FORCE_MODEL_NAME); it was 32.5 mm
+# while the model was wrongly RM_B_E.
+ARM_TIP_TO_CONNECTOR_M = 0.0153
+
+
+def controller_frame_name(urdf_link: str) -> str:
+    """URDF link name -> controller tool-frame name (drop the `_frame` token)."""
+    name = urdf_link.replace("_frame", "")
+    if len(name) > FRAME_NAME_MAX:
+        raise ValueError(
+            f"{urdf_link!r} -> {name!r} is {len(name)} chars; the controller "
+            f"accepts {FRAME_NAME_MAX}. Shorten the URDF link name or extend "
+            "the mapping rule — do NOT silently truncate, two frames could "
+            "collide.")
+    return name
+
+
+def frame_map(side):
+    """The URDF <-> controller frame table. One source, three consumers:
+    the printed doc, the hardware writer, and the read-back verifier.
+
+    Each row: (urdf_link, controller_name, xyz_from_ConnectorLink_m,
+               xyz_from_ArmTip_m, rpy).
+    The two offsets differ only by ARM_TIP_TO_CONNECTOR_M on Z, since the
+    residual is a pure translation with zero rotation.
+    """
+    rows = []
+    for link, (xyz, rpy) in IK_FRAMES[side].items():
+        tip = (xyz[0], xyz[1], xyz[2] + ARM_TIP_TO_CONNECTOR_M)
+        rows.append((link, controller_frame_name(link), tuple(xyz), tip,
+                     tuple(rpy)))
+    return rows
+
+
+def print_frame_map(side, indent="  "):
+    """Human-readable match table."""
+    print(f"{indent}{'URDF link (MoveIt / TF)':24s} "
+          f"{'controller frame':17s} {'from ConnectorLink (mm)':>25s}   "
+          f"{'from Arm_Tip (mm)':>22s}")
+    print(indent + "-" * 92)
+    for link, name, conn, tip, _rpy in frame_map(side):
+        print(f"{indent}{link:24s} {name:17s} "
+              f"{conn[0] * 1000:8.1f}{conn[1] * 1000:8.1f}"
+              f"{conn[2] * 1000:8.1f}   "
+              f"{tip[0] * 1000:7.1f}{tip[1] * 1000:7.1f}{tip[2] * 1000:7.1f}")
+    print(indent + "-" * 92)
+    print(f"{indent}rule: controller name = URDF link with '_frame' removed"
+          f"  |  Arm_Tip -> ConnectorLink = "
+          f"{ARM_TIP_TO_CONNECTOR_M * 1000:.1f} mm on Z, zero rotation")
+
+
+def verify_against_urdf(model, side):
+    """Re-derive every IK_FRAMES offset from the URDF; report disagreements.
+
+    Returns a list of (link, dx_mm) for frames that differ, empty when the
+    table matches. Guards against ik_frames.xacro moving without this table
+    moving with it — which would put the controller and MoveIt on different
+    definitions of the same named frame, the exact failure C14 exists to
+    prevent.
+    """
+    pref = "R_" if side == "right" else "L_"
+    jm = {f"{pref}joint{i + 1}": 0.0 for i in range(7)}
+    tw = model.link_world_transforms(jm)
+    conn = tw[f"{pref}ConnectorLink"]
+    bad = []
+    for link, (xyz, _rpy) in IK_FRAMES[side].items():
+        if link not in tw:
+            bad.append((link, float("nan")))
+            continue
+        actual = (np.linalg.inv(conn) @ tw[link])[:3, 3]
+        d = np.linalg.norm(actual - np.asarray(xyz)) * 1000.0
+        if d > 0.01:
+            bad.append((link, float(d)))
+    return bad
 
 # Joint test set (degrees): named states + exercising every joint
 CONFIGS = {
@@ -109,6 +205,15 @@ def main() -> int:
         return 0
     side = "left" if "--side" in sys.argv and \
         sys.argv[sys.argv.index("--side") + 1] == "left" else "right"
+
+    # --map: the table alone. No hardware, no URDF, no rm_algo — so it
+    # works on the lab laptop and is the thing to consult when wiring a
+    # cleaning point's ik_frame to a controller tool frame.
+    if "--map" in sys.argv:
+        for s in ("right", "left"):
+            print(f"\n{s.upper()} arm — URDF frame <-> controller tool frame")
+            print_frame_map(s)
+        return 0
 
     from butterfli_workspace.urdf_kinematics import UrdfModel
     from Robotic_Arm.rm_robot_interface import (
@@ -169,11 +274,24 @@ def main() -> int:
               "\nCompose it into the tool frames (already done below):")
         residual = base
 
+    # the table above is only trustworthy if it still matches the URDF
+    drift = verify_against_urdf(model, side)
+    if drift:
+        print("\nWARNING: IK_FRAMES disagrees with ik_frames.xacro:")
+        for link, d in drift:
+            print(f"    {link:20s} off by {d:.2f} mm")
+        print("  Update IK_FRAMES before writing anything to a controller.")
+        return 1
+    print(f"\n  IK_FRAMES verified against the URDF "
+          f"({len(IK_FRAMES[side])} frames, all within 0.01 mm)")
+
     print(f"\nTool frames to create on the {side.upper()} controller "
           "(rm_set_manual_tool_frame, pose relative to Arm_Tip):")
-    print(f"{'name':10s} {'x mm':>8s} {'y mm':>8s} {'z mm':>8s}   rpy rad")
+    print(f"{'URDF link':20s} {'controller':12s} {'x mm':>8s} {'y mm':>8s} "
+          f"{'z mm':>8s}   rpy rad")
     table = {}
-    for fname, (xyz, rpy) in GLOVE_FRAMES[side].items():
+    for link, (xyz, rpy) in IK_FRAMES[side].items():
+        fname = controller_frame_name(link)
         Tf = np.eye(4)
         Tf[:3, :3] = _euler_zyx_to_R(*rpy)
         Tf[:3, 3] = xyz
@@ -185,8 +303,8 @@ def main() -> int:
         rx = math.atan2(Tt[2, 1], Tt[2, 2])
         table[fname] = [round(float(v), 6) for v in
                         (x, y, z, rx, ry, rz)]
-        print(f"{fname:10s} {x * 1000:8.2f} {y * 1000:8.2f} {z * 1000:8.2f}"
-              f"   [{rx:+.4f} {ry:+.4f} {rz:+.4f}]")
+        print(f"{link:20s} {fname:12s} {x * 1000:8.2f} {y * 1000:8.2f} "
+              f"{z * 1000:8.2f}   [{rx:+.4f} {ry:+.4f} {rz:+.4f}]")
     print("\nMachine-readable (for test_frame_alignment.py --create-frames):")
     import json
     print("C14FRAMES " + json.dumps({"side": side, "frames": table}))

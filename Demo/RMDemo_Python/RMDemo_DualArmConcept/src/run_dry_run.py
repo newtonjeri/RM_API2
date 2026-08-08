@@ -668,6 +668,53 @@ def main() -> int:
     check("lopsided capture still attributes to every stage",
           per[0] >= 1 and per[1] >= 1)
 
+    # ── F1k. Controller tool-frame names must track the URDF ────────────
+    print("\nF1k. IK frame naming (controller <-> URDF)")
+    import frame_alignment_offline as fao
+
+    for side, pref in (("right", "R_"), ("left", "L_")):
+        links = list(fao.IK_FRAMES[side])
+        check(f"{side}: all 6 ik frames present, correctly prefixed",
+              len(links) == 6 and all(ln.startswith(pref) for ln in links))
+        names = [fao.controller_frame_name(ln) for ln in links]
+        # c_char_Array_12 = 11 usable chars; a longer name would be
+        # truncated by the SDK and two frames could silently collide.
+        check(f"{side}: every controller name fits in 11 chars",
+              all(len(n) <= fao.FRAME_NAME_MAX for n in names),
+              f"longest {max(names, key=len)!r}")
+        check(f"{side}: names are unique after mapping",
+              len(set(names)) == len(names))
+        check(f"{side}: mapping is the documented rule",
+              all(n == ln.replace("_frame", "")
+                  for ln, n in zip(links, names)))
+    _raised = False
+    try:
+        fao.controller_frame_name("R_a_very_long_frame_name_here")
+    except ValueError:
+        _raised = True
+    check("an over-long name RAISES rather than truncating", _raised)
+
+    # The map is the contract between MoveIt's ik_frame and the controller
+    # tool frame. It must be complete, consistent, and single-sourced.
+    for side in ("right", "left"):
+        rows = fao.frame_map(side)
+        check(f"{side}: frame map covers every ik frame",
+              len(rows) == len(fao.IK_FRAMES[side]))
+        check(f"{side}: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z",
+              all(abs(tip[2] - conn[2] - fao.ARM_TIP_TO_CONNECTOR_M) < 1e-9
+                  and tip[0] == conn[0] and tip[1] == conn[1]
+                  for _l, _n, conn, tip, _r in rows))
+    # The hinge task's ik_frame must be IN the map, or the whole exercise
+    # misses its target: cleaning points name R_glove_frame_4 explicitly.
+    check("the hinge task's ik_frame R_glove_frame_4 is mapped",
+          "R_glove_frame_4" in fao.IK_FRAMES["right"]
+          and fao.controller_frame_name("R_glove_frame_4") == "R_glove_4")
+    # One residual constant, imported — never re-declared in the writer.
+    _src = (_pathlib.Path(__file__).resolve().parent
+            / "test_frame_alignment.py").read_text()
+    check("the frame writer imports the residual, not a copy of it",
+          "ARM_TIP_TO_CONNECTOR_M" in _src and "0.0153" not in _src)
+
     # ── F1j. The C11 capture runs where there is NO ROS workspace ───────
     print("\nF1j. Plan resolution (lab laptop has no workspace)")
     import segment_verifier as sv
