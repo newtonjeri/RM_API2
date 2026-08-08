@@ -82,7 +82,7 @@ class StageRunner:
     """Walks a task's active stages, one device at a time."""
 
     def __init__(self, cfg, arm, monitor, plan, dry=False,
-                 serialize=SERIALIZE, sim=False):
+                 serialize=SERIALIZE, sim=False, hover_mm=0.0):
         self.cfg = cfg
         self.arm = arm
         self.monitor = monitor
@@ -96,6 +96,7 @@ class StageRunner:
         # things that only the real SDK catches (a wrong pose frame, a bad
         # call signature) WITHOUT the arm ever moving for real.
         self.sim = sim
+        self.hover_mm = hover_mm
         self.in_flight = None          # the invariant, as state
         self.log = []
         self.pole_m = None
@@ -239,14 +240,26 @@ class StageRunner:
         if self.pole_m is None:
             return False, ("pole height unknown — the path is a function of "
                            "it; run the pole stage first")
-        prog = CleaningPath(self.cfg).movel_program(self.pole_m)
+        prog = CleaningPath(self.cfg).movel_program(
+            self.pole_m, hover_mm=self.hover_mm)
         n = prog["segments"]
         self._claim("arm", "execute_path")
+        original_tool = None
         try:
             if self.dry:
                 return True, (f"DRY tool={prog['tool_frame']} "
                               f"{n} chained movel, r={prog['blend_pct']}%, "
                               f"v={self.cfg.cleaning_speed_pct}%")
+            # Remember the active tool frame — and PUT IT BACK in the
+            # finally, success or failure. The 2026-08-08 run aborted
+            # mid-chain and left the left arm on L_glove_4 (visible in the
+            # GUI screenshot: tool -55/7/220.3), persisted across reboot.
+            try:
+                fret, cur = self.arm.robot.rm_get_current_tool_frame()
+                original_tool = (cur.get("name") or cur.get("frame_name")) \
+                    if fret == 0 else None
+            except Exception:
+                original_tool = None
             ret = self.arm.robot.rm_change_tool_frame(prog["tool_frame"])
             if ret != 0:
                 return False, (
@@ -278,9 +291,21 @@ class StageRunner:
                                f"{rejects[:5]} — check queue depth (C10)")
             arrived, ok = self.monitor.wait(self.arm.handle_id, DEV_JOINT,
                                             max(ARM_TIMEOUT_S, 120.0))
-            return bool(arrived and ok), f"{n} segments, tool " \
-                f"{prog['tool_frame']}"
+            return bool(arrived and ok), (
+                f"{n} segments, tool {prog['tool_frame']}"
+                + (f", HOVER {prog['hover_mm']:.0f} mm"
+                   if prog["hover_mm"] else ""))
         finally:
+            if original_tool and original_tool != prog["tool_frame"]:
+                try:
+                    rr = self.arm.robot.rm_change_tool_frame(original_tool)
+                    vret, now = self.arm.robot.rm_get_current_tool_frame()
+                    back = (now.get("name") or now.get("frame_name")) \
+                        if vret == 0 else None
+                    print(f"    tool frame restored to {original_tool!r} "
+                          f"(ret={rr}, now {back!r})")
+                except Exception as exc:
+                    print(f"    [WARN] tool frame restore failed: {exc!r}")
             self._release()
 
     # ── the walk ──
@@ -332,9 +357,10 @@ def main() -> int:
     for k in _results:
         _results[k] = 0
     handle_cli(__doc__, extra_flags=("--dry",),
-               value_flags=("--task", "--fixture"))
+               value_flags=("--task", "--fixture", "--hover"))
     task = _arg("--task", "hinge_area_right")
     fixture = _arg("--fixture", "commode_c")
+    hover_mm = float(_arg("--hover", "0"))
     dry = "--dry" in sys.argv
     forced = parse_mode_arg()
 
@@ -349,6 +375,10 @@ def main() -> int:
           f"{cfg.arm_speed_intended_pct}% before the transit/derate policy)")
     print(f"    serialization: {'ENFORCED' if SERIALIZE else 'report-only'}"
           "   (RM_SERIALIZE=0 to relax)")
+    if hover_mm:
+        print(f"    HOVER {hover_mm:.0f} mm — the whole cleaning path is "
+              "lifted OFF the surface\n    (contact A/B rehearsal: same "
+              "chain, same speeds, no contact)")
     print(f"    mode: {mode_label(forced)}"
           + ("   DRY RUN — no commands are sent" if dry else
              "   THE ARM, ITS POLE AND ITS HAND WILL MOVE"))
@@ -360,7 +390,8 @@ def main() -> int:
           f"{[s['stage_name'] for s in arm_stages(plan, prefix=f'{pref}joint')]}")
 
     if dry:
-        runner = StageRunner(cfg, None, None, plan, dry=True)
+        runner = StageRunner(cfg, None, None, plan, dry=True,
+                             hover_mm=hover_mm)
         ok = runner.run()
         print(f"\n  Summary: {_results['PASS']} PASS, {_results['FAIL']} "
               f"FAIL, {_results['SKIP']} SKIP")
@@ -405,7 +436,8 @@ def main() -> int:
             print("  [INFO] SIMULATION: the arm executes; pole and hand "
                   "stages are ASSUMED successful (the controller models "
                   "neither — F3)")
-        ok = StageRunner(cfg, arm, monitor, plan, sim=sim_mode).run()
+        ok = StageRunner(cfg, arm, monitor, plan, sim=sim_mode,
+                         hover_mm=hover_mm).run()
         return 0 if ok else 1
     finally:
         restore_run_modes(originals)

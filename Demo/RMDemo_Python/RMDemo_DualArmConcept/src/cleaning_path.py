@@ -197,17 +197,46 @@ class CleaningPath:
                 @ np.linalg.inv(tw[f"{pref}base_link"])
                 @ tw[self.cfg.reference_frame])
 
-    def movel_program(self, pole_m, blend_pct=BLEND_PCT_DEFAULT):
+    def movel_program(self, pole_m, blend_pct=BLEND_PCT_DEFAULT,
+                      hover_mm=0.0):
         """The chained movel program, in the ARM BASE frame.
 
+        hover_mm lifts EVERY waypoint off the surface along the TASK'S OWN
+        RETREAT VECTOR — normalize(pre_start_pose - start_pose) in the
+        reference frame. Not the waypoint's local +Z: the yaml header
+        claims pre_start is "start retreated along local +Z", but the
+        DATA says otherwise — hinge's declared retreat aligns with local
+        +Z at only 0.198 (the values are hand-edited), and toplid's at
+        -0.991, i.e. the OPPOSITE sign. The declared vector is what the
+        task itself uses to approach, so it is the direction that is
+        guaranteed to leave the surface. A hover run executes the exact
+        same chain with no contact: the A/B that separates "contact
+        torque trips the power rail" from "speed does".
+
         Returns a dict with the poses, the tool frame to select, and the
-        queue depth needed — the dispatcher gates on that depth because
-        C10 only verified chaining to 20 segments.
+        queue depth needed.
         """
         from frame_alignment_offline import controller_frame_name
         T = self._ref_to_arm_base(pole_m)
+        lift_ref = np.zeros(3)
+        if hover_mm:
+            sp = self.cfg.cartesian_poses.get("start_pose")
+            pp = self.cfg.cartesian_poses.get("pre_start_pose")
+            if not (sp and pp):
+                raise SystemExit(
+                    f"task {self.cfg.task!r} declares no pre_start_pose — "
+                    "no retreat vector to hover along. Run without --hover "
+                    "or add the pose to the task config.")
+            u = np.asarray(pp[:3], float) - np.asarray(sp[:3], float)
+            n = np.linalg.norm(u)
+            if n < 1e-6:
+                raise SystemExit("start and pre_start coincide — no "
+                                 "retreat direction")
+            lift_ref = u / n * (float(hover_mm) / 1000.0)
         poses, names = [], []
         for name, T_ref in self.waypoints_ref():
+            T_ref = T_ref.copy()
+            T_ref[:3, 3] = T_ref[:3, 3] + lift_ref   # away from the surface
             M = T @ T_ref
             rx, ry, rz = R_to_euler(M[:3, :3])
             poses.append([float(M[0, 3]), float(M[1, 3]), float(M[2, 3]),
@@ -219,6 +248,7 @@ class CleaningPath:
             "tool_frame": controller_frame_name(self.cfg.ik_frame),
             "pole_m": pole_m,
             "blend_pct": blend_pct,
+            "hover_mm": float(hover_mm),
             "waypoint_names": names,
             "poses": poses,
             "segments": len(poses) - 1,     # movel commands to issue

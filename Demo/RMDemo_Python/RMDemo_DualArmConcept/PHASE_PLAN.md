@@ -9,8 +9,19 @@ C15/C16 hardware sessions overturned the arm–pole synchronization design.*
 
 ## 0. Status at a glance
 
+*(Fully revised 2026-08-08 late — all Phase 1 blocking gates are closed;
+Phase 2 is APPROVED and in progress.)*
+
 | | |
 |---|---|
+| **Architecture** | ROS 2 plans/validates; the RealMan controller executes. **Confirmed end to end**: canfd sync (C17 both arms), chained movel to depth 100 (C10), movej joint-linear to 0.004° (C11), frame chain vs both controllers 0.0 mm / 0.07° (C14). |
+| **Phase 1** | **All blocking gates ✅** — C1 C2 C3 C5 C6 C7 C8 C10 C11 C12 C14 C15 C16(🔵) C17. C4/C13 stay open by design (non-blocking). |
+| **Phase 2 build** | **Delivered and emulator-verified**: `task_config.py` (two-file config merge, serialization enforced via `RM_SERIALIZE`), `cleaning_path.py` (config-resolved Cartesian path, mount-corrected, hover A/B), `stage_runner.py` (blocking dispatcher, SIM assumes pole/hand — F3), `speed_limits.py`, `power_probe.py`, `recover_joints.py`. Four tasks bundled and verified: hinge_area_{right,left}, toplid_{right,left}. Dry run **208/208**, emulated suite **19/19** (all four tasks end to end). |
+| **Speeds** | MoveIt's scaling == controller % (F20). Policy: **cleaning 100 %, everything else 50 %**; pole saturates against the drive first. `RM_SPEED_DERATE` for bring-up. |
+| **Open item (NOT a gate)** | **F21 / R10**: J6/J7 Under-Voltage during the first free-space run at the new speeds; recovery + probe ladder defined. ZIGZAG01 — our own RealMan-level MOVEL program — already executes this motion class on this hardware, so this is an execution debug, not a feasibility question (Newton). |
+| **Vendor** | F9 (arm+pole planned-domain conflict) vendor-confirmed, no ETA; sync stays canfd-only, planned backend LOCKED. Under-voltage evidence (power_probe CSVs) goes to the same support thread. |
+
+---|---|
 | **Architecture** | ROS 2 (MoveIt/MTC) plans and validates; the RealMan controller executes. **Unchanged and still sound.** |
 | **What changed** | Arm–pole *synchronization* cannot be done with planned moves. Proven model-free on both arms (C16). Sync moves to **CANFD passthrough**; everything else stays on planned moves. |
 | **Hardware state** | Both arms **V1.7.4**, algo 1.5.9, lifts 1:1 true mm over **0–315 mm**. Firmware mismatch resolved. |
@@ -86,6 +97,15 @@ Its lift blocks are one `height=330, speed=100, BLOCKING` followed by **seven**
 synchronization.** Treat it as the reference for how to command the pole
 around planned arm motion.
 
+**And it is more than that (Newton, 2026-08-08): ZIGZAG01 is the
+RealMan-level version of our task files** — the same motion class Phase 2
+executes (a MOVEL waypoint program with blend, pole staged between arm
+motion) written directly against the controller, and it runs on this very
+hardware. That is why the F21 under-voltage incident is classified as an
+execution bug to introspect and fix — speeds, transients, supply margin —
+and **not** a gate on Phase 2: the capability itself is already
+demonstrated on this machine.
+
 ---
 
 ## 3. What the bench tests have established
@@ -111,6 +131,7 @@ around planned arm motion.
 | **F18** | **Two silent-substitution bugs, both caught before hardware.** (a) `rm_set_manual_tool_frame` CREATES — it returns ret=1 on an existing name, which is why the second C14 run failed on all five frames; existing frames need `rm_update_tool_frame`. (b) The commode tasks use hand poses `open_tenth` (1.17 rad) and `quarter_grasp` (0.336) that are not concept states, and substituting the nearest-named state sent `open_tenth` to **993 counts instead of ~130** — the hand flying open mid-task while gripping a cloth against the fixture | Frames are now created-or-updated with a read-back match table. Hand targets come from the **plan's own joint angles** through `hand_rad_to_hw()`, a fit derived from the three states we hold in both radians (SRDF) and counts (bench) — it reproduces all three to within 1 count. A pose with neither source is SKIPPED, never guessed |
 | **F19** | **The controller accepts at least 100 chained `movel` segments** (hardware, 2026-08-08: depth 100, no rejection, 65.4 s). Hinge needs 43, toplid 27 | **No batching needed** — a cleaning path is one chain, as designed. This was the last result that could have forced a dispatcher redesign. Caveat: blend `r=50` saved only 0.01 s over `r=0` on that run (an earlier probe showed 0.64 s), so the 10 % blend radius is not yet justified by measurement |
 | **F20** | **MoveIt's velocity scaling IS the controller's percentage.** `joint_limits.yaml` gives 3.14 / 3.92 rad/s = **179.9 / 224.6 deg/s** against the controller's measured **180 / 225** (F10) — the same ceiling. So `max_velocity_scaling: 1.0` means v=100 %. The POLE does not line up: MoveIt allows 160 mm/s, the drive does 104.2 (F12), so scaling 1.0 asks 154 % and saturates | Speeds now come from the config, not a hard-coded cap (an earlier version multiplied by 20 — a silent 5× slowdown). Operating policy (Newton): **cleaning 100 %, everything else 50 %**; the pole saturates against the DRIVE before the halving. `start_pose_velocity_scaling` is a MULTIPLIER on the task scaling, not a scaling of its own. Acceleration and jerk scaling cannot be mapped — `movej`/`movel` take only `v` and `r`, so the task's jerk 0.3 never reaches the arm |
+| **F21** | **J6/J7 "Under Voltage" incident (left arm, 2026-08-08 ~23:00).** During the first session at the new speeds (transit 50 %, cleaning 100 % — all prior sessions ran 20 %), the movel chain aborted ~4.8 s in (controller pushed trajectory_state=False); GUI showed **Joint6/Joint7 Under Voltage, de-enabled**. Every later motion died in ~0.07 s (dead joints reject all commands — including movej, so NOT a frame issue). **Teach mode was violent because pressing it releases ALL brakes and unpowered wrist joints fall under gravity**; releasing re-clamps mid-fall. Fault recurred after reboot. Install pose ruled out as cause: our code has NO setter call (grep), and the 18:58 capture read install_pose **[0, 90, 0]** back from both arms. **The motion was FREE SPACE — no contact with the commode occurred (Newton, 2026-08-08), so contact torque is ruled out for this incident.** Working hypothesis, re-ranked: (1) **supply/harness margin** — free-space motion at the first-ever 50/100 % speeds draws accel-transient current the bus should absorb but didn't, and J6/J7 sit at the far end of the internal power chain where sag lands first; recurrence at boot (no motion) is the strongest hardware signal. (2) wrist-drive demand — Cartesian tracking can load the small wrist drives specifically; the probe distinguishes by WHICH joint's current spikes at the dip. A healthy arm sustains rated free-space motion, so if dips track motion this is a hardware/support case for RealMan, not a design limit | **Do not use teach mode with disabled joints — support the wrist.** Recovery is PER JOINT: clear error + re-enable (`recover_joints.py --enable 6,7`, or the GUI's Clear Error + Enable). Gate hardened: `error_state()` now reads `rm_get_joint_en_state` and REFUSES with disabled joints; the connect test no longer reports "clean" over dead joints (it did exactly that during this incident). Our one real state leak fixed: the runner left the active tool frame on `L_glove_4` after the abort (visible in the GUI screenshot) — now restored in a `finally`. Correlation test when recovered: rerun at `RM_SPEED_DERATE=0.4` |
 | F14 | Right arm `ready→zero` takes **6.72 s** vs left **3.72 s** at the same 20 %, identical joint deltas, same firmware | Per-arm motion config differs; any arm-duration estimate is per-arm. Unexplained |
 
 ---
@@ -132,9 +153,9 @@ Legend: ✅ passed · 🟡 partial · ⛔ blocked · ⬜ not started ·
 | C15 | `test_pole_speed` | Is the pole slow at low speed, or slowed by arm motion? | yes | ✅ | **Phase A 16/16 both arms** — no speed floor; Phase B measured 2.5–3.5× coupling |
 | C16 | `test_arm_pole_baseline` | Concurrency with **no models applied** to either device | yes | 🔵 | **Delivered F9.** Phase 0 (singles) passes; every concurrent cell fails. This test *reporting failure* is the successful outcome |
 | C9 | `test_single_arm_locked` | Full concept sequence incl. arm+pole sync, one arm | yes | ✅ **closed by C17 2026-08-08** (they share the canfd path; both arms 7/7 with `--no-hands`). Remaining nice-to-have: one run WITH hands for the full sequence. The `planned` backend stays LOCKED (F9, vendor-confirmed) |
-| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | 🟡 Arm-only 6/6. Sync steps were blocked by F9 — **now unblocked by the canfd backend (C17)**; needs one re-run to close |
-| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | 🟡 **2026-08-08: ordering invariant PASSED, both chains completed.** The only failure was our own gate-latency assertion measuring steps whose leader completed by the position fallback rather than an arrival event — every hand step, since device-2 events never fire (F4). The check now scopes to event-gated steps; re-run to close |
-| C4 | `test_dual_free` | Free-running mode, independent completion | no | 🟡 | Arm-only 4/4; sync untested |
+| C2 | `test_dual_locked` | Locked dual-arm, barrier per step, dispatch skew | yes | ✅ **PASSED 2026-08-08 (7/7)** — full sequence incl. BOTH sync steps on canfd, both arms: max dispatch skew 27 ms, pole outlasts the arm +1.93 s, arrival events for every device |
+| C3 | `test_dual_chained` | Chained advance-on-finish ordering invariant | yes | ✅ **CLOSED on the 2026-08-08 data** — ordering invariant passed, both chains completed; event-gated follower latencies 0.2–10.8 ms. The 4.7–5.3 s figures were OUR polling on hand steps (no device-2 events — F4), not the arms; the check now scopes to event-gated steps. Newton: not an anomaly — arms from the same pose to the same target finish together |
+| C4 | `test_dual_free` | Free-running mode, independent completion | no | 🟡 Arm-only 4/4; sync untested — non-blocking, the cleaning tasks do not use free mode |
 
 **Honest read:** every gate that does not involve *simultaneous* arm+pole
 motion has passed on hardware. The sync gates are blocked not by a bug in our
@@ -147,8 +168,8 @@ None of C1–C16 sends a target that came from MoveIt. These close that gap.
 
 | ID | Test | Question | Blocking? | STATUS |
 |---|---|---|---|---|
-| C12 | **Segment collision verifier** (offline) | Predict the controller's motion per segment, FCL-sweep vs the commode meshes at scene pose + `rm_algo` self-collision | yes | ✅ **CLOSED 2026-08-08 at the C11-measured margin (5 mm).** All 4 arm stages OK: transits hold 19.9 mm = the MoveIt reference exactly; stroke and retreat are contact stages judged by touch fraction (48 % vs 42 %, 10 % vs 25 %); zero self-collisions. **Mode B not needed for this task.** Runs against the repo's `plans/` copy |
-| C14 | **Frame alignment** | URDF `*_ConnectorLink` vs RealMan `Arm_Tip` (Newton's design); recreate the glove/ik frames in the controller tree | yes | 🟡 **offline ✅, hardware half must be REDONE.** The trees are kinematically identical (0.000°, zero spread, both arms) — but the constant is **15.3 mm, not 32.5 mm**: the offline solver had been built as `RM_MODEL_RM_B_E` (no force sensor, 17.2 mm short). See F15. The frames written 2026-08-08 are 17.2 mm too long AND the active tool frame was not restored (`to_dictionary()` keys the name as `name`, not `frame_name`). Both bugs fixed; re-run `--create-frames` and confirm the active frame |
+| C12 | **Segment collision verifier** (offline) | Predict the controller's motion per segment, verify against the scene | yes | ✅ **REBUILT and re-closed 2026-08-08**: base state now comes from the PLAN (`plan_state_upto` — the pole carries the arm base; SRDF home had it 215 mm high, voiding all earlier numbers), fixture filtered to the task's declared articulation (`commode_fixture_type: closed` — checking against lid_open put phantom contacts in clear stages), and contact stages judged by the **config contract** (declared links × declared surface objects, `contact_links.yaml`) instead of touch fraction. All four tasks verify clean at the C11 margin (5 mm). Note: link groups are currently the full hand set per ik_frame (Newton: to be narrowed — the verdict reads the file, so it sharpens automatically) |
+| C14 | **Frame alignment** | URDF `*_ConnectorLink` vs RealMan `Arm_Tip`; recreate the glove/ik frames in the controller tree | yes | ✅ **CLOSED 2026-08-08 18:58, both arms.** Trees kinematically identical; constant = **15.3 mm** (ISF model — F15). All six URDF-named frames (`R_glove_1..4`, `R_tip`, `R_index_tip` + left mirrors) written with create-or-update, **read-back match table 0.00 mm on every row**, superseded `glove1..tip` deleted, active frames restored and verified (`Arm_Tip`/`Hand`). Model check: |p| agrees 0.00–0.01 mm, full vector 0.0 mm with install pose (0, 90, 0) mirrored. Frame chain further validated end to end: commanded-pose math vs both controllers' reported poses **0.0 mm / 0.07°** |
 | C10 | Chained-target execution (hardware) | `connect=1` queue depth, one arrival event vs N, blend-% reference, mid-chain failure behaviour, `rm_moves` spline | yes | ✅ **PASSED, and re-probed 2026-08-08: depth 100 accepted with no rejection.** Mode B is unblocked and a cleaning path can be queued whole (43 / 27 segments). Mid-chain invalid target returns ret=1 for THAT SEGMENT ONLY while the chain still completes — the dispatcher must check every return code. Blend effect was unmeasurable on the re-probe (F19) |
 | C11 | Rehearsal-validation loop (hardware) | SIM-execute → UDP capture → FCL; does the capture match the C12 predictor? | yes | ✅ **PASSED 2026-08-08, 7/7 capture + 3/3 analysis.** Right arm, SIM, the repo's plan, 26/26 targets, 10177 frames over 50.9 s. **Residual: 0.003–0.004° joint, 0.01 mm at the tool, on EVERY stage including the 20-target cleaning chain. Clearance optimism 0.00 mm.** `rm_movej` between two joint targets is joint-linear to four thousandths of a degree — the C12 model is not an approximation, it is exact for movej. Applied margin: 5 mm (measured 0 + safety) |
 | C17 | **CANFD sync** (hardware) | Does the shipped `RM_SYNC_BACKEND=canfd` path reproduce `bench_sync` — arm streamed while the pole runs, both complete, no faults? | yes | ✅ **PASSED BOTH ARMS 2026-08-08, 7/7 each.** Sync steps: lift 5.96 s / arm 4.01 s, dispatch skew 6–17 ms (budget 50), pole outlasts the arm by +1.90 s, arrival event for every device, zero latched faults. **R1b closed — the architecture is confirmed end to end** |
@@ -156,10 +177,11 @@ None of C1–C16 sends a target that came from MoveIt. These close that gap.
 
 ### 4.3 Approval rule
 
-> **Phase 2 is approved when C1, C5, C6, C7, C8, C15, C16, C2, C3 and
-> C10, C11, C12, C14, C17 are ✅/🔵.**
-> C4 (free mode) and C13 (fence) may stay open — the cleaning task needs
-> neither. C9 closes as ✅ once C17 passes (they share the canfd path).
+> **APPROVED 2026-08-08: every blocking gate is ✅/🔵** — C1 C2 C3 C5 C6
+> C7 C8 C10 C11 C12 C14 C15 C16 C17 (C9 closed with C17).
+> C4 (free mode) and C13 (fence) stay open by design — the cleaning tasks
+> use neither. Phase 2 is in progress; its remaining risk is R10
+> (under-voltage debug), which per Newton is NOT a gate.
 
 ---
 
@@ -272,24 +294,28 @@ The file sets `cleaning_path_mode: ruckig_pro_only`. Phase 2 adds a **new
 mode** (`controller_planned`) alongside it, so both are runnable on the same
 task — the strongest possible A/B evidence for the architecture.
 
-### 6.3 Work packages
+### 6.3 Work packages — re-scoped 2026-08-08
 
-| WP | Deliverable | Depends on | Hardware? | Est. |
-|---|---|---|---|---|
-| WP1 | Segment verifier (`rm_algo` predictor + FCL + self-collision) | — | no | 0.5 d |
-| WP2 | C12 report on the real 20-point hinge path; clearance map | WP1 | no | 0.5 d |
-| WP3 | MTC task builder for `hinge_area_right` | — | no | 1 d |
-| WP4 | Rehearsal validator (SIM + UDP capture + FCL) | C5 | yes (C11) | 1 d |
-| WP5 | Dispatcher integration + invariant assertions + wrist-force logging | C10, C14, C17 | yes | 1 d |
-| WP6 | End-to-end hinge run + acceptance | WP1–WP5 | yes | 1 d |
+The build took a shorter path than planned: the TASK CONFIG is the
+specification (F17), so no MTC task builder is needed for these tasks —
+`stage_runner.py` executes the config directly, taking named-pose joint
+values from the saved plans and the cleaning path from the config.
+
+| WP | Deliverable | Status |
+|---|---|---|
+| WP1 | Segment verifier | ✅ `segment_verifier.py` |
+| WP2 | Clearance map on the real path | ✅ `run_hinge_verify.py`, all four tasks, contract verdict |
+| ~~WP3~~ | ~~MTC task builder~~ | **obsolete** — the config is the source; revisit only if a task ever needs MoveIt-side replanning |
+| WP4 | Rehearsal validation | ✅ as C11 tooling (`test_rehearsal_validate.py`, capture + replay) |
+| WP5 | Dispatcher (serialized, invariants, speeds, frames) | ✅ **built + emulator-verified** — `stage_runner.py`; first clean hardware run pending R10 |
+| WP6 | End-to-end runs + acceptance | ⬜ **the remaining milestone** — blocked only by the R10 debug ladder |
 
 ### 6.4 Definition of done
 
-> `hinge_area_right` runs end-to-end from an MTC plan — verified,
-> rehearsal-validated, executed with planned moves (canfd where the pole
-> moves with the arm) — **5 consecutive times** with zero faults, every
-> waypoint within tolerance, and measured deviation inside the clearance
-> budget.
+> Each of the four tasks (hinge_area_right/left, toplid_right/left) runs
+> end-to-end from its task config — serialized stages, chained movel at
+> the policy speeds — **5 consecutive times** with zero faults, every
+> waypoint within tolerance, and contact only where the config allows.
 
 "Implemented" is not done; 5 clean consecutive runs is done.
 
@@ -297,85 +323,52 @@ task — the strongest possible A/B evidence for the architecture.
 
 ## 7. Schedule
 
-| Phase | Content | Hardware | Status |
-|---|---|---|---|
-| **1A** | Architecture, this plan, offline verification | no | ✅ **done** — dry run 97/97, emulated suite 13/13 (incl. backend + lock drills) |
-| **1B** | Hardware gate session | yes | 🟡 **partly done 2026-08-07**: C8 ✅, C15 ✅, C16 🔵, C9/C2/C3 characterised. **Remaining: C17, C14, C10, C11** |
-| **1C** | WP1+WP2 (C12), draft C14/C17 tests | no | ⬜ next |
-| **2** | WP3–WP6, hinge task | partly | 5 working days after 1B closes |
+| Phase | Content | Status |
+|---|---|---|
+| **1A** | Architecture, offline verification | ✅ |
+| **1B** | Hardware gates | ✅ **closed 2026-08-08** — every blocking gate passed (see §4) |
+| **2 build** | Config loader, path resolver, dispatcher, probes | ✅ dry run 208/208, emulated 19/19, four tasks end to end under emulation |
+| **2 execution** | R10 debug → first clean run → 4-task rollout → acceptance (5× clean each) | 🟡 **current** |
 
-### 7.1 Remaining 1B session (~30 min) — after the 2026-08-08 session
-
-C17, C10 and the C14 capture are **done**. What is left:
+### 7.1 Next hardware session — R10 debug ladder, then the first task
 
 ```bash
 cd RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src
 
-# 1. C14 — what tool frame is ACTIVE right now? (read-only, nothing moves)
-RM_ARM=left  python3 test_frame_alignment.py --mode REAL
-RM_ARM=right python3 test_frame_alignment.py --mode REAL
-#    read tool_frame.name in the C14CAP line. The 2026-08-08 run failed to
-#    restore it (F15), so the arms may be sitting on 'tip'.
+# 0. recover the wrist joints (support the wrist; NO teach mode while disabled)
+RM_ARM=left python3 recover_joints.py                 # report
+RM_ARM=left python3 recover_joints.py --enable 6,7    # clear + enable
+python3 test_dual_connect.py                          # now catches dead joints
 
-# 2. C14 — rewrite the frames with the CORRECTED 15.3 mm constant
-RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames
-RM_ARM=left  python3 test_frame_alignment.py --mode REAL --create-frames
-#    now verifies the restore by read-back and refuses to write if it
-#    cannot identify what to restore to.
+# 1. idle power baseline — if V(J6/J7) is low at rest, stop: hardware/support
+RM_ARM=left python3 power_probe.py --seconds 10 --label idle
 
-# 3. C11 — one SIM capture (no physical motion, no RM_HOST_IP needed)
-RM_ARM=right python3 test_rehearsal_validate.py
+# 2. reproduce the free-space chain with the probe attached, derate ladder
+RM_ARM=left python3 power_probe.py --seconds 90 --label derate04 &
+RM_SPEED_DERATE=0.4 python3 stage_runner.py --task hinge_area_left --mode REAL
+#    clean? step up: 0.7, then 1.0 — the CSV shows dip depth, joint, current
+#    (which joint's CURRENT spikes at the dip: J2/J4 -> supply margin;
+#     J6/J7 -> wrist-drive demand)
 
-# 4. C2 / C3 — sync steps, now unblocked by canfd
-python3 test_dual_locked.py  --mode REAL
-python3 test_dual_chained.py --mode REAL
+# 3. whatever derate is clean = the operating speed until R10 is resolved;
+#    then the rollout: all four tasks, then 5x acceptance runs each
 ```
-
-Then, on any machine with the ROS workspace:
-
-```bash
-python3 test_rehearsal_validate.py --replay rehearsal_right.json
-python3 run_hinge_verify.py --margin <the number it prints>
-```
-
-Stop at the first red gate — later gates assume earlier ones.
-
-**C11 is a capture, not a verdict.** It runs in SIMULATION (no physical
-motion) and writes `rehearsal_right.json`; the verdict comes from
-`--replay`, which needs no hardware. Its output is the **FCL margin** C12
-must then carry.
-
-**Portability:** the plan JSON lives in the ROS workspace, which the lab
-laptop may not have — so a copy is bundled at `plans/` and
-`segment_verifier.resolve_plan()` prefers the workspace, falls back to the
-bundle, and both scripts PRINT which source they used. Only the plan needs
-to travel: the capture half reads joint positions and nothing else, while
-the analysis half (URDF, SRDF, commode meshes) runs on the machine that
-already has the workspace.
-
-**The UDP push target is no longer an operator input.** `host_ip_for()`
-asks the kernel which local address routes to that arm, so C5 and C11 work
-from any machine or interface without `RM_HOST_IP` (which still pins it if
-routing is unusual). This matters because a wrong target is accepted with
-`ret=0` and delivers nothing — indistinguishable from "the arm never
-moved".
-
----
 
 ## 8. Risks and open questions
 
 | # | Risk / question | Impact | Mitigation |
 |---|---|---|---|
 | ~~R1~~ | ~~Sync fix unverified~~ | — | **Closed by C16**: planned-domain sync is impossible, not unverified. Superseded by R1b |
-| **R1b** | **CANFD sync backend unverified on hardware** | Blocks C17, C9, C2 | Implemented and emulator-proven; first item in the remaining 1B session. Fallback: strict sequencing (pole, then arm) — costs cycle time, not feasibility |
-| R2 | The controller's own motion between sparse targets collides | Architecture invalid as specified | C12 answers it offline for the real hinge path. Ladder: intermediate targets → pin stroke entry → canfd for that segment |
-| **R2c** | ~~Frame misalignment~~ — **largely RESOLVED offline 2026-08-08**: the kinematic trees agree exactly; the only difference is the constant 32.5 mm Z (now compensated in the generated tool frames). The GUI's old hand-entered tool frame (−35, 10, 260) matches none of the derived frames — replace it via `--create-frames`, don't trust it | residual: one hardware confirmation | C14 hardware half: create frames, verify a pose, restore |
-| R3 | `connect=1` chaining differs from the docs | Dispatcher redesign | C10 measures it |
+| ~~R1b~~ | ~~CANFD sync backend unverified on hardware~~ | — | **Closed by C17 (2026-08-08, both arms 7/7)** |
+| ~~R2~~ | ~~Controller motion between sparse targets collides~~ | — | **Closed**: C12 clearance maps on all four tasks + C11 measured the movej model EXACT (0.004°, optimism 0.00 mm) |
+| ~~R2c~~ | ~~Frame misalignment~~ | — | **Closed by C14 hardware (2026-08-08)**: frames written at the corrected 15.3 mm, read-back 0.00 mm, and the commanded-pose chain validated against both controllers to 0.0 mm / 0.07° |
+| ~~R3~~ | ~~`connect=1` chaining differs from the docs~~ | — | **Closed by C10**: depth 100 accepted; per-segment ret checking required (bad segment fails alone, chain completes) |
 | ~~R4~~ | ~~Firmware mismatch~~ | — | **Closed 2026-08-07**: both arms V1.7.4 / algo 1.5.9; lift gearing auto-detected |
 | R6 | Dual-arm concurrent collision validity | Locked/free modes could collide | Phase 2 scoped to one arm; `dual_arm_plan_collision.py` exists |
 | **R7** | ~~Awaiting RealMan reply~~ — **ANSWERED 2026-08-08**: the F9 conflict is a *documented Gen-3 defect*, engineers on it, **no ETA**; workaround = hoist in blocking mode. The `expand`-field and clear-error questions remain open with them | The planned-sync option stays closed until they ship a fix | **Planned backend LOCKED** (`RM_UNLOCK_PLANNED_SYNC=1` is the re-test hatch); no schedule dependency on RealMan — canfd is the path |
 | **R8** | `rm_clear_system_err` does not clear joint 16384 (F13) | Recovery needs the GUI | Add `rm_set_joint_clear_err` per joint to `clear_errors()` |
 | R9 | Right arm is 1.8× slower than left for identical moves (F14) | Per-arm timing models | Unexplained; matters if either arm's duration is ever estimated |
+| **R10** | **J6/J7 Under-Voltage during free-space motion at the 50/100 % speeds** (F21) — recurred at boot once | Blocks WP6 acceptance runs until debugged; **explicitly NOT a Phase 2 gate (Newton)**: ZIGZAG01 — our own RealMan-level MOVEL program — already executes this motion class on this hardware, so this is introspection + debugging, not feasibility | Ladder in §7.1: recover joints → idle probe (hardware verdict) → derate ladder with `power_probe` CSVs (which joint's current spikes at the dip: J2/J4 = supply margin, J6/J7 = wrist demand) → operate at the clean derate meanwhile; CSVs to the open RealMan thread |
 
 **Answered:** hinge pose is **fixture-taught** (no perception) · the glove is
 worn on the hand, so **hand pose = glove state**, cleaning with the **back of
@@ -386,41 +379,23 @@ from the **wrist 6-axis sensor** (`tool_zero_force_data`), not the hand.
 
 ## 9. Next actions
 
-**Offline (no hardware):**
-- [x] WP1: segment verifier — `src/segment_verifier.py` (reuses
-      butterfli_workspace FK/FCL, studio fixture meshes, rm_algo)
-- [x] WP2 / C12: clearance map for `hinge_area_right` — **all stages OK,
-      Mode B not needed**; transits 19.9 mm, contact stages judged
-      touch-fraction vs the MoveIt reference
-- [x] C14 draft: `test_frame_alignment.py` — captures C14CAP records
-      (joints, controller pose, tool/work frame, offline FK) for the
-      offline URDF comparison; flags a configured tool-frame offset on the
-      spot
-- [x] C10 draft: `test_waypoint_chain.py` — W1 chain/events, W2 queue
-      depth 2/5/10/20, W3 blend r=0 vs 50, W4 mid-chain invalid target
-      (skippable), W5 rm_moves spline
-- [x] R8: `clear_errors()` now clears flagged joints PER JOINT via
-      `rm_set_joint_clear_err` (the Web GUI button's API); emulator models
-      the rm_clear_system_err gap faithfully
-- [x] C14 offline: `frame_alignment_offline.py` — **trees identical**, one
-      constant 32.5 mm; compensated tool-frame table generated, and
-      `--create-frames` added to the hardware test
-- [x] WP4 / C11 draft: `test_rehearsal_validate.py` — SIM capture +
-      `--replay` analysis; per-stage residual → the C12 FCL margin
+**Hardware (the R10 ladder + rollout — §7.1 has the commands):**
+- [ ] Recover J6/J7, verify with the hardened connect test
+- [ ] Idle power baseline (decides hardware-vs-load in one measurement)
+- [ ] Derate ladder 0.4 → 0.7 → 1.0 with `power_probe` attached; CSVs to
+      the RealMan thread; adopt the clean derate as the operating speed
+- [ ] First clean `hinge_area_left` run, then all four tasks
+- [ ] WP6 acceptance: 5 consecutive clean runs per task
 
-**Hardware — the remaining ~30 min (see §7.1):**
-- [x] C17 — canfd sync, **both arms 7/7, 2026-08-08**
-- [x] C10 — waypoint chaining, **7/7, 2026-08-08**
-- [ ] C14 — read the active tool frame, then rewrite the frames at 15.3 mm
-- [ ] C11 — one SIM capture; the verdict is produced offline afterwards
-- [ ] C2 / C3 — re-run now that the sync steps work on canfd
-
-**Next build (no hardware needed):** WP3 — the MTC task builder for
-`hinge_area_right`, the first piece of Phase 2 proper. It is not blocked
-by any of the above: C12 has already declared the sparse-target execution
-collision-safe, and C11 only tightens the margin it is checked against.
+**Offline (opportunistic):**
+- [ ] Narrow `contact_link_groups` per ik_frame when Newton revises the
+      contract (the verdict sharpens automatically)
+- [ ] Blend radius: r=10 is unjustified by measurement (C10 re-probe saw
+      no effect); measure or drop to 0 during the rollout
+- [ ] R9 / F14: right arm 1.8× slower than left for identical moves —
+      still unexplained, matters for cycle-time estimates
 
 **External:**
-- [x] RealMan replied (2026-08-08): defect confirmed, no ETA, blocking-mode
-      workaround. Follow-ups still open: `expand` field purpose, clear-error
-      gap, and a timeline (asked)
+- [x] F9 vendor-confirmed (no ETA) — sync stays canfd-only
+- [ ] RealMan follow-ups: under-voltage CSVs (R10), `expand` field,
+      `rm_clear_system_err` gap, fix timeline

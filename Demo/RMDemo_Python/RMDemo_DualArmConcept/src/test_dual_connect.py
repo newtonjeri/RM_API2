@@ -61,9 +61,29 @@ def main() -> int:
             active = [c for c in codes if _nonzero(c)]
             # Real V1.7.1 fw pads a clean arm as err_len=1, err=['0']
             # (observed 2026-08-06) — only nonzero codes are actual errors.
-            if ret == 0 and not active:
+            #
+            # BUT the err array is not the whole story: on 2026-08-08 this
+            # check said "clean" while the GUI showed J6/J7 Under Voltage
+            # and DE-ENABLED — the arm state err codes stay '0' through a
+            # per-joint power fault. Check joint enable state too, since a
+            # disabled joint kills every motion command AND makes teach
+            # mode dangerous (brakes release, unpowered joints fall).
+            disabled = []
+            try:
+                enret, en = arm.robot.rm_get_joint_en_state()
+                if enret == 0 and en:
+                    disabled = [i + 1 for i, e in enumerate(en) if not e]
+            except Exception:
+                pass
+            if ret == 0 and not active and not disabled:
                 result("PASS", f"{arm.side}: arm state clean",
-                       f"err codes {codes or '[]'}")
+                       f"err codes {codes or '[]'}, all joints enabled")
+            elif disabled:
+                result("FAIL", f"{arm.side}: arm state",
+                       f"joints {disabled} DISABLED — recover with "
+                       f"recover_joints.py --enable "
+                       f"{','.join(map(str, disabled))}; do NOT use "
+                       "teach mode")
             else:
                 result("FAIL", f"{arm.side}: arm state",
                        f"ret={ret} active={active or errs}")

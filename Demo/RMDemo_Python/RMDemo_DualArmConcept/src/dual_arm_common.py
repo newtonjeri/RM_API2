@@ -1220,11 +1220,26 @@ def error_state(arm: "ConceptArm") -> dict:
             st["lift_err"] = lst.get("err_flag", 0)
     except Exception:
         pass
+    # DISABLED joints are an error surface of their own. On 2026-08-08 the
+    # left arm sat with J6/J7 "Under Voltage" and de-enabled — visible in
+    # the Web GUI — while rm_get_current_arm_state reported err ['0'] and
+    # the connect test declared it clean. Every motion command then failed
+    # (movej to move_to_start died in 0.07 s), and teach mode was DANGEROUS:
+    # pressing it releases all brakes, and unpowered wrist joints flop
+    # under gravity. A joint that is not enabled must fail the gate.
+    st["disabled"] = []
+    try:
+        ret, en = r.rm_get_joint_en_state()
+        if ret == 0 and en:
+            st["disabled"] = [i + 1 for i, e in enumerate(en) if not e]
+    except Exception:
+        pass
     return st
 
 
 def error_state_clean(st: dict) -> bool:
-    return not st["sys"] and not st["joints"] and not st["lift_err"]
+    return (not st["sys"] and not st["joints"] and not st["lift_err"]
+            and not st.get("disabled"))
 
 
 def describe_error_state(st: dict) -> str:
@@ -1239,6 +1254,12 @@ def describe_error_state(st: dict) -> str:
         bits.append("joints " + ",".join(f"J{i}={f}" for i, f in st["joints"]))
     if st["lift_err"]:
         bits.append(f"lift driver {st['lift_err']}")
+    if st.get("disabled"):
+        bits.append("DISABLED joints "
+                    + ",".join(f"J{i}" for i in st["disabled"])
+                    + " — do NOT use teach mode (brakes release, unpowered"
+                    " joints fall); recover with recover_joints.py or the"
+                    " GUI's Clear Error + Enable")
     return "; ".join(bits)
 
 

@@ -1157,6 +1157,107 @@ def main() -> int:
                                 "pose_name": "release"})
     check("SIM assumes the hand", _ok2 and "SIM assumed" in _why2)
 
+    # ── P9. Disabled joints fail the gate (the J6/J7 incident) ─────────
+    print("\nP9. Disabled-joint gate")
+
+    class _EnRobot(MockRobot):
+        def __init__(self, *a, disabled=(), **kw):
+            super().__init__(*a, **kw)
+            self._en = [0 if (i + 1) in disabled else 1 for i in range(7)]
+
+        def rm_get_joint_en_state(self):
+            return 0, list(self._en)
+
+        def rm_get_joint_err_flag(self):
+            return {"return_code": 0, "err_flag": [0] * 7}
+
+    _m = dac.ArrivalMonitor()
+    _dead = dac.ConceptArm("left", _EnRobot(31, _m, disabled=(6, 7)),
+                           _Handle(31))
+    _st = dac.error_state(_dead)
+    check("de-enabled joints are seen as an error surface",
+          _st.get("disabled") == [6, 7])
+    check("the gate REFUSES with disabled joints",
+          not dac.error_state_clean(_st))
+    check("the description warns about teach mode",
+          "teach mode" in dac.describe_error_state(_st))
+    _ok = dac.ConceptArm("left", _EnRobot(32, _m), _Handle(32))
+    check("all-enabled arm is clean",
+          dac.error_state_clean(dac.error_state(_ok)))
+    # An SDK without the getter (older fw) must not break the gate.
+    _plain = dac.ConceptArm("left", MockRobot(33, _m), _Handle(33))
+    check("a missing en-state getter degrades to the old gate",
+          dac.error_state_clean(dac.error_state(_plain)))
+
+    # ── P10. Hover A/B + power-probe math ───────────────────────────────
+    print("\nP10. Hover and power telemetry")
+    import numpy as _np2
+
+    # The hover direction is the TASK'S OWN retreat vector — the yaml
+    # header claims pre_start = start retreated along local +Z, but the
+    # data contradicts it (hinge alignment 0.198 — hand-edited values —
+    # and toplid -0.991, the opposite sign). These checks pin the DATA
+    # facts the hover implementation rests on instead of the comment.
+    from cleaning_path import quat_to_R as _q2R
+    for _t in ("hinge_area_right", "toplid_right", "toplid_left",
+               "hinge_area_left"):
+        _cp2 = cfgs[_t].cartesian_poses
+        check(f"{_t}: declares start AND pre_start (hover needs both)",
+              bool(_cp2.get("start_pose")) and
+              bool(_cp2.get("pre_start_pose")))
+    _sp = cfgs["toplid_right"].cartesian_poses["start_pose"]
+    _pp = cfgs["toplid_right"].cartesian_poses["pre_start_pose"]
+    _dp = _np2.asarray(_pp[:3], float) - _np2.asarray(_sp[:3], float)
+    _zloc = _q2R(_sp[3:7])[:, 2]
+    check("toplid's local +Z points INTO the surface (sign proof against "
+          "the local-axis convention)",
+          float(_dp @ _zloc / _np2.linalg.norm(_dp)) < -0.9)
+
+    _base = _CP(cfgs["hinge_area_right"]).movel_program(0.075)
+    _hov = _CP(cfgs["hinge_area_right"]).movel_program(0.075, hover_mm=10)
+    _deltas = [_np2.asarray(h[:3]) - _np2.asarray(b[:3])
+               for b, h in zip(_base["poses"], _hov["poses"])]
+    check("hover shifts every waypoint by exactly 10 mm",
+          all(abs(_np2.linalg.norm(d) - 0.010) < 1e-6 for d in _deltas))
+    check("the shift is one CONSTANT vector (the declared retreat)",
+          all(_np2.allclose(d, _deltas[0], atol=1e-9) for d in _deltas))
+    import copy as _cp3
+    _noretreat = _cp3.deepcopy(cfgs["hinge_area_right"])
+    _noretreat.cartesian_poses = {"start_pose":
+                                  _noretreat.cartesian_poses["start_pose"]}
+    _raised = False
+    try:
+        _CP(_noretreat).movel_program(0.075, hover_mm=10)
+    except SystemExit:
+        _raised = True
+    check("hover without a declared retreat REFUSES (never guesses)",
+          _raised)
+    check("orientations are untouched by hover",
+          all(b[3:] == h[3:]
+              for b, h in zip(_base["poses"], _hov["poses"])))
+    check("the program records its hover", _hov["hover_mm"] == 10.0)
+
+    # power probe summary math on synthetic frames: J6 sags, J1 clean
+    import power_probe as _pp2
+    _recs = []
+    for k in range(100):
+        v = [48.0] * 7
+        i = [400.0] * 7
+        en = [1] * 7
+        if 40 <= k < 50:
+            v[5] = 44.5           # 3.5 V sag on J6
+            i[5] = 6200.0
+        if k == 49:
+            en[5] = 0             # and the drive drops out once
+        _recs.append((k * 0.01, v, i, [35.0] * 7, en))
+    _rep = _pp2.summarize(_recs)
+    _j6, _j1 = _rep["joints"][5], _rep["joints"][0]
+    check("probe: the sagging joint is flagged with dip count and depth",
+          _j6["dips"] == 10 and abs(_j6["worst_dip_v"] - 3.5) < 1e-6
+          and _j6["en_dropped"])
+    check("probe: a clean joint stays clean",
+          _j1["dips"] == 0 and not _j1["en_dropped"])
+
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)
     print(f"Dry run: {n - f}/{n} passed")

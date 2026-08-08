@@ -338,6 +338,13 @@ class EmuController:
                        "angular_speed": 0.600, "angular_acc": 4.000}
         self.joint_max_speed = [180.0] * 6 + [225.0]
         self.joint_max_acc = [600.0] * 7
+        # per-joint drive enable; inject faults with
+        # emu_controller(ip).joint_en[5] = 0  (J6 dead)
+        self.joint_en = [1] * 7
+        # per-joint bus voltage / current for the realtime push. Fault
+        # injection: emu_controller(ip).joint_voltage[5] = 42.0 (J6 sag).
+        self.joint_voltage = [48.0] * 7
+        self.joint_current_idle_ma = 350.0
         # Web GUI screenshots (2026-05-07) show the arms shipped with this
         # OFF, so default to off and let the tests turn it on.
         self.self_collision = os.environ.get("RM_EMU_SELF_COLLISION") == "1"
@@ -746,7 +753,13 @@ class EmuController:
                     errCode=0, arm_ip=self.ip, arm_port=8080,
                     joint_status=SimpleNamespace(
                         joint_position=self.current_joints(),
-                        joint_speed=speed),
+                        joint_speed=speed,
+                        # power telemetry, as the real push carries (V, mA)
+                        joint_voltage=list(self.joint_voltage),
+                        joint_current=[self.joint_current_idle_ma
+                                       + (2200.0 if moving else 0.0)] * 7,
+                        joint_temperature=[35.0] * 7,
+                        joint_en_flag=list(self.joint_en)),
                     force_sensor=SimpleNamespace(
                         force=[0.0] * 6, zero_force=[0.0] * 6, coordinate=0),
                     waypoint=SimpleNamespace(
@@ -1104,6 +1117,15 @@ class RoboticArm:
         if not (1 <= int(joint_num) <= 7):
             return 1
         self._ctrl.joint_max_acc[int(joint_num) - 1] = float(acc)
+        return 0
+
+    def rm_get_joint_en_state(self):
+        return 0, list(self._ctrl.joint_en)
+
+    def rm_set_joint_en_state(self, joint_num, en_state):
+        if not (1 <= int(joint_num) <= 7):
+            return 1
+        self._ctrl.joint_en[int(joint_num) - 1] = 1 if en_state else 0
         return 0
 
     def rm_get_install_pose(self):
