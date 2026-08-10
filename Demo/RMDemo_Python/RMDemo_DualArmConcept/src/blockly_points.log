@@ -286,3 +286,122 @@ wrote ../blockly/toplid_right.json
 
 (--push writes these to the controller's global-waypoint store so Blockly can reference them by name)
 
+
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 16:18:29
+========================================================================
+==============================================================================
+BLOCKLY 1:1 — hinge_area_left  [left]
+==============================================================================
+SETUP (must match, or the experiment proves nothing):
+    lift        -> 75 mm, BLOCKING, before any arm motion
+    tool_frame  -> L_glove_4   (NOT 'Hand' — that is ZIGZAG01's)
+    frame       -> World
+    speed       -> 100 for MOVEL, blend r=10
+    arm         -> 192.168.1.10
+
+POINTS — 23 unique, poses in the CONTROLLER's World frame (mm, rad)
+  blockly name     src               X         Y         Z       RX       RY       RZ
+  HAL_point1       point1      835.000    22.900  -285.500   3.0423  -1.0529   0.0533
+  HAL_point2       point2      835.000   -70.600  -273.000   3.0423  -1.0529   0.0533
+  HAL_point3       point3      835.000  -158.100  -273.000   3.0423  -1.0529   0.0533
+  HAL_point8       point8      835.500   -81.100  -305.000   3.0423  -1.0529   0.0533
+  HAL_point7       point7      838.000  -142.600  -305.000   3.0423  -1.0529   0.0533
+  HAL_point5       point5      825.000    62.900  -280.500   3.0423  -1.0529   0.5769
+  HAL_point6       point6      835.000    -7.100  -285.500   3.0423  -1.0529   0.0533
+  HAL_point4       point4      820.000    62.900  -290.500   3.0423  -1.0529   0.5769
+  HAL_point11      point11     835.000    -0.600  -305.500   3.0804  -1.0432   0.1234
+  HAL_point9       point9      840.000    49.900  -297.500   3.0810  -1.0439   0.1578
+  HAL_point18      point18     856.500   -99.100  -305.000   3.0780  -1.0430   0.0207
+  HAL_point20      point20     857.000  -139.100  -305.000   3.0808  -1.0441  -0.0166
+  HAL_point13      point13     855.500   -48.600  -299.000   3.0793  -1.0443   0.0894
+  HAL_point105     point105    859.500    51.400  -303.500   3.0423  -1.0529   0.1929
+  HAL_point15      point15     869.500   -45.100  -299.000   3.0787  -1.0437   0.0551
+  HAL_point102     point102    883.500  -138.100  -304.500   3.0952  -1.0527  -0.0293
+  HAL_point106     point106    891.000    50.900  -303.500   3.0423  -1.0529   0.2104
+  HAL_point103     point103    911.000  -135.100  -303.000   3.0952  -1.0525  -0.0362
+  HAL_point107     point107    922.500    52.400  -303.000   3.0423  -1.0529   0.2278
+  HAL_point104     point104    933.500  -134.600  -302.500   3.0952  -1.0525  -0.0362
+  HAL_point10      point10     957.000    53.900  -303.000   3.0820  -1.0449   0.2110
+  HAL_point19      point19     957.000  -129.600  -302.500   3.0808  -1.0441  -0.0166
+  HAL_point101     point101    925.000    47.900  -255.500   3.0810  -1.0439   0.1578
+
+SEQUENCE — 44 moves (43 MOVEL segments)
+    1.  MOVEJ  HAL_point1     <- establishes the arm configuration
+    2   MOVEL  HAL_point2
+    3   MOVEL  HAL_point3
+    4   MOVEL  HAL_point1
+    5   MOVEL  HAL_point8
+    6   MOVEL  HAL_point7
+    7   MOVEL  HAL_point1
+    8   MOVEL  HAL_point5
+    9   MOVEL  HAL_point1
+    10  MOVEL  HAL_point6
+    11  MOVEL  HAL_point1
+    12  MOVEL  HAL_point4
+    13  MOVEL  HAL_point1
+    14  MOVEL  HAL_point11
+    15  MOVEL  HAL_point9
+    16  MOVEL  HAL_point8
+    17  MOVEL  HAL_point18
+    18  MOVEL  HAL_point20
+    19  MOVEL  HAL_point13
+    20  MOVEL  HAL_point105
+    21  MOVEL  HAL_point13
+    22  MOVEL  HAL_point15
+    23  MOVEL  HAL_point102
+    24  MOVEL  HAL_point106
+    25  MOVEL  HAL_point103
+    26  MOVEL  HAL_point107
+    27  MOVEL  HAL_point104
+    28  MOVEL  HAL_point10
+    29  MOVEL  HAL_point19
+    30  MOVEL  HAL_point107
+    31  MOVEL  HAL_point104
+    32  MOVEL  HAL_point106
+    33  MOVEL  HAL_point103
+    34  MOVEL  HAL_point105
+    35  MOVEL  HAL_point102
+    36  MOVEL  HAL_point18
+    37  MOVEL  HAL_point8
+    38  MOVEL  HAL_point11
+    39  MOVEL  HAL_point9
+    40  MOVEL  HAL_point19
+    41  MOVEL  HAL_point10
+    42  MOVEL  HAL_point9
+    43  MOVEL  HAL_point10
+    44  MOVEL  HAL_point101
+
+NOTE the sequence REVISITS points — that is the task's own
+cleaning_sequence (a chained polyline), not a mistake.
+ACCURACY — FK(point joints) vs the point's pose, all 23 solved points
+    worst residual 0.012 mm   OK
+
+current c api version:  1.1.6
+    HAL_point1       ret=0
+    HAL_point2       ret=0
+    HAL_point3       ret=0
+    HAL_point8       ret=0
+    HAL_point7       ret=0
+    HAL_point5       ret=0
+    HAL_point6       ret=0
+    HAL_point4       ret=0
+    HAL_point11      ret=0
+    HAL_point9       ret=0
+    HAL_point18      ret=0
+    HAL_point20      ret=0
+    HAL_point13      ret=0
+    HAL_point105     ret=0
+    HAL_point15      ret=0
+    HAL_point102     ret=0
+    HAL_point106     ret=0
+    HAL_point103     ret=0
+    HAL_point107     ret=0
+    HAL_point104     ret=0
+    HAL_point10      ret=0
+    HAL_point19      ret=0
+    HAL_point101     ret=0
+
+  23 written, 0 failed
