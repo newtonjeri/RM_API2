@@ -24,7 +24,7 @@ The output picks the target count each task needs, per command, for a given
 tolerance. That number is the input to the Phase-2 task builder.
 
 Usage:
-  python3 run_path_coverage.py [--task NAME]... [--tol MM] [--stage NAME]
+  python3 run_path_coverage.py [--task NAME] [--tol MM]
   python3 run_path_coverage.py --all
 """
 
@@ -32,11 +32,26 @@ import sys
 
 import numpy as np
 
+from dual_arm_common import handle_cli
 from segment_verifier import (
     SegmentVerifier, arm_stages, load_plan, resolve_plan, stage_maps,
     subsample)
 
-TASKS = ("hinge_area_right", "toplid_right", "toplid_left")
+USAGE = ("Usage: python3 run_path_coverage.py [--task NAME] [--tol MM] "
+         "[-h|--help]\n"
+         "       python3 run_path_coverage.py --all\n"
+         "  --task NAME   one of: " + ", ".join(
+             ("hinge_area_left", "hinge_area_right",
+              "toplid_left", "toplid_right")) + "\n"
+         "                (one task per run; --all sweeps every task)\n"
+         "  --tol MM      chain-vs-plan tolerance (default 5)\n"
+         "  --all         analyse every bundled task\n"
+         "  -h, --help    show this documentation and exit")
+
+# All FOUR bundled tasks. hinge_area_left was missing here, so `--all`
+# silently swept 3 of 4 and reported a complete-looking table.
+TASKS = ("hinge_area_left", "hinge_area_right", "toplid_left",
+         "toplid_right")
 COUNTS = (10, 20, 40, 80, 160, 320)
 DENSE_STRIDE = 10          # sample the reference every Nth waypoint
 
@@ -113,9 +128,12 @@ def analyse_stage(v, maps, joints, counts, link):
 
 
 def main() -> int:
-    if "-h" in sys.argv or "--help" in sys.argv:
-        print(__doc__)
-        return 0
+    # Shared parser: docs on -h/--help, unknown argument rejected (exit 2).
+    # `--stage` was in the old usage line but never read — every stage is
+    # always analysed — so it is gone from USAGE rather than accepted and
+    # ignored, which would have looked like a filter that did nothing.
+    handle_cli(__doc__, extra_flags=("--all",), allow_common=False,
+               usage=USAGE, value_flags=("--task", "--tol"))
     tol = float(_arg("--tol", 5.0))
     tasks = TASKS if "--all" in sys.argv else (
         [_arg("--task", TASKS[0])])

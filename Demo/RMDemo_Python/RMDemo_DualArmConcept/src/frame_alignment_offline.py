@@ -34,7 +34,15 @@ import sys
 
 import numpy as np
 
+from dual_arm_common import handle_cli
 from segment_verifier import WS, FORCE_MODEL_NAME  # ws path + arm variant
+
+USAGE = ("Usage: python3 frame_alignment_offline.py "
+         "[--side right|left] [--map] [-h|--help]\n"
+         "  --side right|left   which arm to survey (default: right)\n"
+         "  --map               print the URDF <-> controller frame table "
+         "only (no rm_algo)\n"
+         "  -h, --help          show this documentation and exit")
 
 RM_PY = pathlib.Path(__file__).resolve().parents[4] / "Python"
 if str(RM_PY) not in sys.path:
@@ -200,9 +208,12 @@ def algo_base_to_tip(algo, joints_deg):
 
 
 def main() -> int:
-    if "-h" in sys.argv or "--help" in sys.argv:
-        print(__doc__)
-        return 0
+    # Shared parser: prints the docs on -h/--help AND rejects an unknown
+    # argument (exit 2). The hand-rolled check this replaces did the
+    # first but not the second, so `--sied left` silently analysed the
+    # RIGHT arm and printed a confident verdict for the wrong one.
+    handle_cli(__doc__, extra_flags=("--map",), value_flags=("--side",),
+               allow_common=False, usage=USAGE)
     side = "left" if "--side" in sys.argv and \
         sys.argv[sys.argv.index("--side") + 1] == "left" else "right"
 

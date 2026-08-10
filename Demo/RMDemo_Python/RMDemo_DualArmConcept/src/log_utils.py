@@ -24,6 +24,20 @@ import pathlib
 import datetime
 
 
+HELP_FLAGS = ("-h", "--help")
+
+
+def wants_help(argv=None) -> bool:
+    """True when this invocation is a request for documentation.
+
+    Single source of truth, shared with ``dual_arm_common.handle_cli``,
+    so "print the help" and "do not open the run log" can never drift
+    apart: one predicate decides both.
+    """
+    args = sys.argv[1:] if argv is None else list(argv)
+    return any(a in HELP_FLAGS for a in args)
+
+
 class _Tee:
     """Mirror all writes to both the original stream and a log file."""
 
@@ -63,6 +77,17 @@ def setup_log(script_path: str) -> pathlib.Path:
     """
     script  = pathlib.Path(script_path).resolve()
     logpath = script.parent / f"{script.stem}.log"
+
+    # `--help` is not a run. Every script calls setup_log() from its
+    # __main__ block BEFORE main() reaches handle_cli(), so without this
+    # guard `--help` appends a "Started:" banner and the whole usage text
+    # to <script>.log — 2.7-6.2 KB per invocation. Read back a week later
+    # that log shows a session that never touched the arm, which is
+    # exactly the kind of false evidence these logs exist to prevent.
+    # Return the path without installing the Tee: help goes to stdout only.
+    if wants_help():
+        return logpath
+
     logfile = logpath.open("a", encoding="utf-8", errors="replace")
 
     sys.stdout = _Tee(sys.stdout, logfile)

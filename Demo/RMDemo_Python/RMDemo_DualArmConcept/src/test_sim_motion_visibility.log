@@ -88,3 +88,58 @@ current c api version:  1.1.6
   [INFO] run mode restored: SIMULATION (ret=0)
 
   Summary: 5 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_sim_motion_visibility.py
+  Log    : test_sim_motion_visibility.log
+  Started: 2026-08-10 13:02:01
+========================================================================
+C5 — Simulation-mode motion visibility probe. NO PHYSICAL MOTION.
+
+Answers the open question: when the arm is switched to SIMULATION mode (the
+Web GUI's sim toggle, rm_set_arm_run_mode(0)), is the simulated motion
+accessible programmatically — over the UDP realtime push, via arrival
+events, and via TCP state polling? The docs confirm the controller runs its
+planner in sim mode and animates the pendant's 3D model, but never document
+which feedback channels carry the simulated states; this probe settles it.
+
+Safety: motion is dispatched ONLY after the controller confirms it is in
+simulation mode (verified by readback), so the physical arm does not move.
+A small J7 delta (+5 deg at v=10) is used regardless, the joint is returned
+to its start value, and the original run mode is restored in `finally`.
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

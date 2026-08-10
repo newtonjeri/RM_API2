@@ -411,3 +411,88 @@ C11  Rehearsal validation — capture the controller, calibrate C12
   [PASS] predictor residual measured  (margin 0.0 mm, worst tool dev 0.0 mm)
 
   Summary: 3 PASS, 0 FAIL, 4 SKIP
+
+========================================================================
+  Script : test_rehearsal_validate.py
+  Log    : test_rehearsal_validate.log
+  Started: 2026-08-10 13:02:01
+========================================================================
+C11 / WP4 — Rehearsal validator: does the arm go where C12 predicted?
+
+C12 (`run_hinge_verify.py`) declares the controller's motion between sparse
+targets collision-free using a MODEL of that motion: joint-linear
+interpolation, plus an offline `rm_algo` that is v1.6.0 while the
+controllers run 1.5.9.  Nothing has ever checked that model against the
+machine.  This test does, and turns the answer into a number the verifier
+can carry forever:
+
+    SIM-execute the real sparse targets   (no physical motion, F2/C5)
+      -> capture the ACTUAL joints over the UDP realtime push
+        -> FCL-sweep the capture against the commode scene
+          -> compare capture vs prediction  ==>  RESIDUAL = the FCL margin
+
+Why simulation is enough: C5 established that sim mode runs the real
+planner and streams the interpolated states over UDP, so the captured
+trajectory is the controller's own geometry — which is exactly what C12
+models.  Sim does not execute lift or hand (F3), so non-arm stages are
+skipped; this gate is about arm geometry.
+
+Two halves, deliberately separable — the arms are only reachable from the
+lab machine, the analysis is not:
+
+    capture   (hardware, SIM)  writes rehearsal_<side>.json
+    analyse   (--replay FILE)  runs anywhere, no arm, no SDK connection
+
+so the lab session is a short capture and the verdict can be produced on
+any machine afterwards.
+
+The residual is reported three ways:
+  * joint-space deviation   max distance from the captured path to the
+                            predicted polyline (deg, 7-dim)
+  * Cartesian deviation     the same worst sample at the tool point (mm)
+  * CLEARANCE deviation     predicted min clearance MINUS captured min
+                            clearance — positive means the predictor was
+                            OPTIMISTIC by that much, and that number is
+                            the margin every future C12 verdict must add.
+
+Usage:
+    RM_ARM=right python3 test_rehearsal_validate.py            # SIM capture
+    python3 test_rehearsal_validate.py --replay rehearsal_right.json
+Options: --plan PATH  --targets N  --samples N  --speed PCT
+         --save PATH  --replay PATH  --mode SIM|REAL
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

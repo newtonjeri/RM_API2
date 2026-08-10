@@ -60,6 +60,64 @@ PHASE2_TASKS = ("hinge_area_right", "hinge_area_left", "toplid_right",
                 "toplid_left")
 
 
+def _caps_drill() -> int:
+    """Capabilities must ROUND-TRIP against the emulated SDK, not just a mock.
+
+    The dry run exercises controller_caps against a hand-written mock, so a
+    stale emulator can disagree with the real arms and nothing notices. It
+    did: a V1.7.1-era block of hard-coded getters sat AFTER the stateful
+    ones and silently overrode them — avoid_singularity always read 0, so a
+    setter would appear to work while the readback said OFF forever.
+    """
+    import controller_caps
+    from Robotic_Arm.rm_robot_interface import RoboticArm
+    from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
+    bad = []
+    for ip in (rm_emulator.EMU_LEFT_IP, rm_emulator.EMU_RIGHT_IP):
+        r = RoboticArm(rm_thread_mode_e.RM_TRIPLE_MODE_E)
+        h = r.rm_create_robot_arm(ip, 8080, 3)
+        if h is None or h.id <= 0:
+            bad.append(f"{ip}: no handle"); continue
+        found = controller_caps.read(r)
+        # Every capability must be READABLE, and the stage must match the
+        # real probe. NOT asserted: the on/off values as found — earlier
+        # suite entries legitimately enable self-collision, so pinning the
+        # initial state would couple this drill to suite ordering. The
+        # property that matters is the round trip.
+        for key in ("avoid_singularity", "self_collision",
+                    "endeff_collision", "collision_stage",
+                    "static_collision", "collision_remove"):
+            if isinstance(found.get(key), str):
+                bad.append(f"{ip}: {key} unreadable -> {found.get(key)!r}")
+        if not isinstance(found.get("collision_stage"), str) and \
+                int(found["collision_stage"]) != 4:
+            bad.append(f"{ip}: collision_stage={found['collision_stage']} "
+                       "want 4 (the V1.7.4 probe read 4 on both arms)")
+        # flip BOTH away from whatever they are, then restore to as-found
+        want_sing = 0 if int(found["avoid_singularity"]) else 1
+        want_self = not bool(found["self_collision"])
+        prev = controller_caps.apply(r, avoid_singularity=want_sing,
+                                     self_collision=want_self)
+        after = controller_caps.read(r)
+        if int(after["avoid_singularity"]) != want_sing or \
+                bool(after["self_collision"]) != want_self:
+            bad.append(f"{ip}: apply() did not take -> {after}")
+        controller_caps.restore(r, prev)
+        back = controller_caps.read(r)
+        if int(back["avoid_singularity"]) != int(found["avoid_singularity"]) \
+                or bool(back["self_collision"]) != bool(found["self_collision"]):
+            bad.append(f"{ip}: restore() did not return to as-found "
+                       f"{found} -> {back}")
+        r.rm_delete_robot_arm()
+    if bad:
+        print("  capability drill FAILURES:")
+        for b in bad:
+            print(f"    {b}")
+        return 1
+    print("  capabilities read/apply/restore round-trip on both arms -> OK")
+    return 0
+
+
 def _c11_rehearsal() -> int:
     """C11 under emulation, writing to a SCRATCH path.
 
@@ -247,6 +305,10 @@ def main() -> int:
     codes["C8 locked drill"] = _locked_pole_drill()
 
     # ── Phase 2, in the order hardware requires: frames, then tasks ──
+    print(f"\n{'#' * 68}\n# capability drill  (read/apply/restore)\n"
+          f"{'#' * 68}")
+    codes["capability drill"] = _caps_drill()
+
     print(f"\n{'#' * 68}\n# C14 glove frames  (both arms)\n{'#' * 68}")
     codes["C14 frames"] = _c14_frames()
     for task in PHASE2_TASKS:

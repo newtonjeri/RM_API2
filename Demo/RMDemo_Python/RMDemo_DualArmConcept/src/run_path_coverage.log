@@ -45,3 +45,154 @@ C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
   movel needs fewer targets wherever the surface is close to flat:
   a straight Cartesian segment already IS the path there, while a
   joint-linear move bows away from it between the same two points.
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-10 13:02:00
+========================================================================
+C12b — How faithfully does a SPARSE chain reproduce the cleaning path?
+
+C12 answers "is the controller's motion collision-free?". That is not the
+same question as "does it still clean the surface", and the hinge data
+showed the two can disagree loudly: a 20-target chain was collision-safe
+while departing the planned path by 58 mm.
+
+This tool answers the coverage question, for both candidate commands:
+
+  movej chain   the controller interpolates JOINT-linearly between targets,
+                so the tool traces a CURVE through Cartesian space. Modelled
+                exactly: FK of the joint-linear interpolation.
+  movel chain   the controller moves the TOOL in a straight Cartesian line
+                between targets. Modelled exactly too, and without IK: the
+                tool path IS the straight segment between the two tool
+                positions (that is what movel guarantees).
+
+Reference is MoveIt's own dense path — the surface-following trajectory the
+task actually wants. For each candidate we report how far the dense path
+strays from the commanded chain, i.e. how much of the intended wipe is not
+being followed.
+
+The output picks the target count each task needs, per command, for a given
+tolerance. That number is the input to the Phase-2 task builder.
+
+Usage:
+  python3 run_path_coverage.py [--task NAME]... [--tol MM] [--stage NAME]
+  python3 run_path_coverage.py --all
+
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-10 13:02:14
+========================================================================
+C12b — How faithfully does a SPARSE chain reproduce the cleaning path?
+
+C12 answers "is the controller's motion collision-free?". That is not the
+same question as "does it still clean the surface", and the hinge data
+showed the two can disagree loudly: a 20-target chain was collision-safe
+while departing the planned path by 58 mm.
+
+This tool answers the coverage question, for both candidate commands:
+
+  movej chain   the controller interpolates JOINT-linearly between targets,
+                so the tool traces a CURVE through Cartesian space. Modelled
+                exactly: FK of the joint-linear interpolation.
+  movel chain   the controller moves the TOOL in a straight Cartesian line
+                between targets. Modelled exactly too, and without IK: the
+                tool path IS the straight segment between the two tool
+                positions (that is what movel guarantees).
+
+Reference is MoveIt's own dense path — the surface-following trajectory the
+task actually wants. For each candidate we report how far the dense path
+strays from the commanded chain, i.e. how much of the intended wipe is not
+being followed.
+
+The output picks the target count each task needs, per command, for a given
+tolerance. That number is the input to the Phase-2 task builder.
+
+Usage:
+  python3 run_path_coverage.py [--task NAME]... [--tol MM] [--stage NAME]
+  python3 run_path_coverage.py --all
+
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-10 13:03:18
+========================================================================
+==============================================================================
+C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
+==============================================================================
+
+  hinge_area_right  [right]  stage 'execute_path'  2002 waypoints
+     targets |  movej max    mean |  movel max    mean   (mm)
+          10 |       92.6    18.5   |       92.6    17.4 
+          20 |       57.6    11.7   |       58.0    11.5 
+          40 |       22.1     4.9   |       22.1     2.6 
+          80 |       16.1     2.4   |       11.3     1.0 
+         160 |        3.9     0.8 OK|        2.4     0.3 OK
+         320 |        1.0     0.2 OK|        0.7     0.1 OK
+
+==============================================================================
+  TARGETS NEEDED to stay within 5 mm of the planned path
+  --------------------------------------------------------------------------
+  hinge_area_right     execute_path     movej:   160   movel:   160
+  --------------------------------------------------------------------------
+  Read this carefully: the MAX deviations for movej and movel are
+  nearly identical at every count. At coarse spacing the error is
+  dominated by the surface CURVING between targets — both commands
+  cut that corner the same way. Target DENSITY is the lever, not the
+  command.
+  movel wins consistently on MEAN deviation (~2x), because along
+  near-flat stretches a straight Cartesian segment already IS the
+  path while a joint-linear move bows away from it. That is a real
+  advantage for wipe quality — it is just not what sets the count.
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-10 13:07:17
+========================================================================
+unknown argument: '--nonsense-typo'
+
+Usage: python3 run_path_coverage.py [--task NAME] [--tol MM] [-h|--help]
+       python3 run_path_coverage.py --all
+  --task NAME   one of: hinge_area_left, hinge_area_right, toplid_left, toplid_right
+                (one task per run; --all sweeps every task)
+  --tol MM      chain-vs-plan tolerance (default 5)
+  --all         analyse every bundled task
+  -h, --help    show this documentation and exit
+
+========================================================================
+  Script : run_path_coverage.py
+  Log    : run_path_coverage.log
+  Started: 2026-08-10 13:07:40
+========================================================================
+==============================================================================
+C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
+==============================================================================
+
+  hinge_area_left  [left]  stage 'execute_path'  2008 waypoints
+     targets |  movej max    mean |  movel max    mean   (mm)
+          10 |       84.1    17.7   |       84.1    16.2 
+          20 |       57.7    11.8   |       58.0    11.7 
+          40 |       22.2     4.9   |       22.2     2.5 
+          80 |       15.3     2.2   |       15.3     0.8 
+         160 |        3.8     0.8 OK|        2.4     0.3 OK
+         320 |        1.1     0.2 OK|        0.8     0.1 OK
+
+==============================================================================
+  TARGETS NEEDED to stay within 5 mm of the planned path
+  --------------------------------------------------------------------------
+  hinge_area_left      execute_path     movej:   160   movel:   160
+  --------------------------------------------------------------------------
+  Read this carefully: the MAX deviations for movej and movel are
+  nearly identical at every count. At coarse spacing the error is
+  dominated by the surface CURVING between targets — both commands
+  cut that corner the same way. Target DENSITY is the lever, not the
+  command.
+  movel wins consistently on MEAN deviation (~2x), because along
+  near-flat stretches a straight Cartesian segment already IS the
+  path while a joint-linear move bows away from it. That is a real
+  advantage for wipe quality — it is just not what sets the count.

@@ -1,50 +1,34 @@
 
 ========================================================================
-  Script : test_dual_free.py
-  Log    : test_dual_free.log
-  Started: 2026-08-06 21:33:49
+  Script : recover_joints.py
+  Log    : recover_joints.log
+  Started: 2026-08-10 13:02:00
 ========================================================================
-====================================================================
-C4  Free-running dual-arm execution (no cross-arm gates)
-    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
-    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
-    mode: REAL
-    pole pre-positioning SKIPPED (--no-pole)
-    BOTH ARMS WILL MOVE (poles stay put)
-====================================================================
-current c api version:  1.1.6
-  [INFO] left: run mode set to REAL (--mode)
-  [INFO] right: run mode set to REAL (--mode)
-  [INFO] left: run mode = REAL
-  [INFO] right: run mode = REAL
-  starting in 3 ...
-  starting in 2 ...
-  starting in 1 ...
-  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+Joint recovery — clear errors and RE-ENABLE disabled joints. Deliberate.
 
-  per-arm timelines:
-  ────────────────────────────────────────────────────────────
-  left : 4/4 steps in 11.71 s
-  right: 4/4 steps in 11.70 s
-  [PASS] all dispatches accepted
-  [PASS] both arms completed independently
-  [PASS] concurrent free run  (window overlap 100% of shorter run)
-  [INFO] left: run mode restored to REAL
-  [INFO] right: run mode restored to REAL
+Why this exists (2026-08-08): after a trajectory abort at speed, the left
+arm's J6 and J7 latched "Under Voltage" and were DE-ENABLED. In that state
 
-  Summary: 4 PASS, 0 FAIL, 0 SKIP
+  * every motion command fails within ~0.1 s (any move touching a dead
+    joint is rejected), and
+  * TEACH MODE IS DANGEROUS: pressing the teach button releases the
+    brakes on ALL joints, and an unpowered joint has nothing holding it —
+    the wrist and hand drop under gravity, violently. Releasing the
+    button clamps the brakes again mid-fall.
 
-========================================================================
-  Script : test_dual_free.py
-  Log    : test_dual_free.log
-  Started: 2026-08-10 13:02:01
-========================================================================
-C4 — Free execution mode. BOTH ARMS AND BOTH POLES WILL MOVE.
+`rm_clear_system_err` does not touch this (F13), and a de-enabled joint is
+not an "error flag" either — recovery is PER JOINT: clear its error, then
+re-enable it, then verify.
 
-Both arms run the concept sequence independently, each advancing on its own
-arrivals with no cross-arm gates. The concept sequence (rest/ready/zero +
-pole strokes) is collision-free by construction; collision gating for
-arbitrary free-running tasks is future work, not this test.
+Default is REPORT-ONLY. Enabling drive power is an action:
+
+    RM_ARM=left python3 recover_joints.py                 # report state
+    RM_ARM=left python3 recover_joints.py --enable 6,7    # clear + enable
+
+SUPPORT THE ARM while enabling — if the underlying cause (supply sag,
+e-stop circuit, harness) is still present, the joint may fault again
+immediately. If Under Voltage returns at idle or right at boot, that is a
+hardware/power problem for RealMan, not a software state to clear.
 
 Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
                            [-h|--help]

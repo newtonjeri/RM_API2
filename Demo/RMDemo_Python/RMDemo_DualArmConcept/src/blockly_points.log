@@ -1,0 +1,367 @@
+
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 12:07:35
+========================================================================
+==============================================================================
+BLOCKLY 1:1 — hinge_area_left  [left]
+==============================================================================
+SETUP (must match, or the experiment proves nothing):
+    lift        -> 75 mm, BLOCKING, before any arm motion
+    tool_frame  -> L_glove_4   (NOT 'Hand' — that is ZIGZAG01's)
+    frame       -> World
+    speed       -> 100 for MOVEL, blend r=10
+    arm         -> 192.168.1.10
+
+POINTS — 23 unique, poses in the CONTROLLER's World frame (mm, rad)
+  blockly name     src               X         Y         Z       RX       RY       RZ
+  HAL_point1       point1      835.000    22.900  -285.500   3.0423  -1.0529   0.0533
+  HAL_point2       point2      835.000   -70.600  -273.000   3.0423  -1.0529   0.0533
+  HAL_point3       point3      835.000  -158.100  -273.000   3.0423  -1.0529   0.0533
+  HAL_point8       point8      835.500   -81.100  -305.000   3.0423  -1.0529   0.0533
+  HAL_point7       point7      838.000  -142.600  -305.000   3.0423  -1.0529   0.0533
+  HAL_point5       point5      825.000    62.900  -280.500   3.0423  -1.0529   0.5769
+  HAL_point6       point6      835.000    -7.100  -285.500   3.0423  -1.0529   0.0533
+  HAL_point4       point4      820.000    62.900  -290.500   3.0423  -1.0529   0.5769
+  HAL_point11      point11     835.000    -0.600  -305.500   3.0804  -1.0432   0.1234
+  HAL_point9       point9      840.000    49.900  -297.500   3.0810  -1.0439   0.1578
+  HAL_point18      point18     856.500   -99.100  -305.000   3.0780  -1.0430   0.0207
+  HAL_point20      point20     857.000  -139.100  -305.000   3.0808  -1.0441  -0.0166
+  HAL_point13      point13     855.500   -48.600  -299.000   3.0793  -1.0443   0.0894
+  HAL_point105     point105    859.500    51.400  -303.500   3.0423  -1.0529   0.1929
+  HAL_point15      point15     869.500   -45.100  -299.000   3.0787  -1.0437   0.0551
+  HAL_point102     point102    883.500  -138.100  -304.500   3.0952  -1.0527  -0.0293
+  HAL_point106     point106    891.000    50.900  -303.500   3.0423  -1.0529   0.2104
+  HAL_point103     point103    911.000  -135.100  -303.000   3.0952  -1.0525  -0.0362
+  HAL_point107     point107    922.500    52.400  -303.000   3.0423  -1.0529   0.2278
+  HAL_point104     point104    933.500  -134.600  -302.500   3.0952  -1.0525  -0.0362
+  HAL_point10      point10     957.000    53.900  -303.000   3.0820  -1.0449   0.2110
+  HAL_point19      point19     957.000  -129.600  -302.500   3.0808  -1.0441  -0.0166
+  HAL_point101     point101    925.000    47.900  -255.500   3.0810  -1.0439   0.1578
+
+SEQUENCE — 44 moves (43 MOVEL segments)
+    1.  MOVEJ  HAL_point1     <- establishes the arm configuration
+    2   MOVEL  HAL_point2
+    3   MOVEL  HAL_point3
+    4   MOVEL  HAL_point1
+    5   MOVEL  HAL_point8
+    6   MOVEL  HAL_point7
+    7   MOVEL  HAL_point1
+    8   MOVEL  HAL_point5
+    9   MOVEL  HAL_point1Exception ignored in: Exception ignored in sys.unraisablehook
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 12:07:47
+========================================================================
+==============================================================================
+BLOCKLY 1:1 — toplid_right  [right]
+==============================================================================
+SETUP (must match, or the experiment proves nothing):
+    lift        -> 75 mm, BLOCKING, before any arm motion
+    tool_frame  -> R_glove_2   (NOT 'Hand' — that is ZIGZAG01's)
+    frame       -> World
+    speed       -> 100 for MOVEL, blend r=10
+    arm         -> 192.168.1.103
+
+POINTS — 15 unique, poses in the CONTROLLER's World frame (mm, rad)
+  blockly name     src               X         Y         Z       RX       RY       RZ
+  TLR_point1       point1      550.000   -43.700  -272.500   3.1139   0.0298   3.1378
+  TLR_point2       point2      842.500   -48.200  -269.500   3.0101   0.5441   2.9328
+  TLR_point3       point3      512.500   -16.700  -272.000   3.1137   0.0821   3.1378
+  TLR_point4       point4      847.500   -16.700  -269.000   3.1117   0.5534   3.1371
+  TLR_point5       point5      477.500    19.800  -271.500   3.1258   0.0985  -2.9701
+  TLR_point6       point6      846.000    25.300  -269.500   3.0605   0.5509   3.0347
+  TLR_point7       point7      456.500    47.800  -272.000   3.1183   0.0819  -3.0579
+  TLR_point8       point8      845.000    64.300  -270.000  -3.1407   0.5527  -3.0846
+  TLR_point9       point9      446.000    72.300  -272.000   3.1258   0.1162  -3.0049
+  TLR_point10      point10     849.000    96.800  -272.000   3.0092   0.5506   3.0834
+  TLR_point11      point11     442.500    99.800  -271.500   3.0690   0.0886  -3.0098
+  TLR_point12      point12     845.500   137.800  -270.500   2.9480   0.5467   3.0514
+  TLR_point13      point13     441.000   128.300  -271.500   3.0582  -0.1393  -3.0171
+  TLR_point20      point20     675.500   -56.200  -276.000  -3.1273   0.3023   2.9817
+  TLR_point101     point101    750.000   -54.200  -232.500   3.1203   0.5084   2.9859
+
+SEQUENCE — 28 moves (27 MOVEL segments)
+    1.  MOVEJ  TLR_point1     <- establishes the arm configuration
+    2   MOVEL  TLR_point2
+    3   MOVEL  TLR_point3
+    4   MOVEL  TLR_point4
+    5   MOVEL  TLR_point5
+    6   MOVEL  TLR_point6
+    7   MOVEL  TLR_point7
+    8   MOVEL  TLR_point8
+    9   MOVEL  TLR_point9
+    10  MOVEL  TLR_point10
+    11  MOVEL  TLR_point11
+    12  MOVEL  TLR_point12
+    13  MOVEL  TLR_point13
+    14  MOVEL  TLR_point12
+    15  MOVEL  TLR_point2
+    16  MOVEL  TLR_point1
+    17  MOVEL  TLR_point3
+    18  MOVEL  TLR_point5
+    19  MOVEL  TLR_point7
+    20  MOVEL  TLR_point11
+    21  MOVEL  TLR_point13
+    22  MOVEL  TLR_point7
+    23  MOVEL  TLR_point5
+    24  MOVEL  TLR_point3
+    25  MOVEL  TLR_point1
+    26  MOVEL  TLR_point20
+    27  MOVEL  TLR_point2
+    28  MOVEL  TLR_point101
+
+NOTE the sequence REVISITS points — that is the task's own
+cleaning_sequence (a chained polyline), not a mistake.
+
+(--push writes these to the controller's global-waypoint store so Blockly can reference them by name)
+
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 12:52:25
+========================================================================
+==============================================================================
+BLOCKLY 1:1 — hinge_area_left  [left]
+==============================================================================
+SETUP (must match, or the experiment proves nothing):
+    lift        -> 75 mm, BLOCKING, before any arm motion
+    tool_frame  -> L_glove_4   (NOT 'Hand' — that is ZIGZAG01's)
+    frame       -> World
+    speed       -> 100 for MOVEL, blend r=10
+    arm         -> 192.168.1.10
+
+POINTS — 23 unique, poses in the CONTROLLER's World frame (mm, rad)
+  blockly name     src               X         Y         Z       RX       RY       RZ
+  HAL_point1       point1      835.000    22.900  -285.500   3.0423  -1.0529   0.0533
+  HAL_point2       point2      835.000   -70.600  -273.000   3.0423  -1.0529   0.0533
+  HAL_point3       point3      835.000  -158.100  -273.000   3.0423  -1.0529   0.0533
+  HAL_point8       point8      835.500   -81.100  -305.000   3.0423  -1.0529   0.0533
+  HAL_point7       point7      838.000  -142.600  -305.000   3.0423  -1.0529   0.0533
+  HAL_point5       point5      825.000    62.900  -280.500   3.0423  -1.0529   0.5769
+  HAL_point6       point6      835.000    -7.100  -285.500   3.0423  -1.0529   0.0533
+  HAL_point4       point4      820.000    62.900  -290.500   3.0423  -1.0529   0.5769
+  HAL_point11      point11     835.000    -0.600  -305.500   3.0804  -1.0432   0.1234
+  HAL_point9       point9      840.000    49.900  -297.500   3.0810  -1.0439   0.1578
+  HAL_point18      point18     856.500   -99.100  -305.000   3.0780  -1.0430   0.0207
+  HAL_point20      point20     857.000  -139.100  -305.000   3.0808  -1.0441  -0.0166
+  HAL_point13      point13     855.500   -48.600  -299.000   3.0793  -1.0443   0.0894
+  HAL_point105     point105    859.500    51.400  -303.500   3.0423  -1.0529   0.1929
+  HAL_point15      point15     869.500   -45.100  -299.000   3.0787  -1.0437   0.0551
+  HAL_point102     point102    883.500  -138.100  -304.500   3.0952  -1.0527  -0.0293
+  HAL_point106     point106    891.000    50.900  -303.500   3.0423  -1.0529   0.2104
+  HAL_point103     point103    911.000  -135.100  -303.000   3.0952  -1.0525  -0.0362
+  HAL_point107     point107    922.500    52.400  -303.000   3.0423  -1.0529   0.2278
+  HAL_point104     point104    933.500  -134.600  -302.500   3.0952  -1.0525  -0.0362
+  HAL_point10      point10     957.000    53.900  -303.000   3.0820  -1.0449   0.2110
+  HAL_point19      point19     957.000  -129.600  -302.500   3.0808  -1.0441  -0.0166
+  HAL_point101     point101    925.000    47.900  -255.500   3.0810  -1.0439   0.1578
+
+SEQUENCE — 44 moves (43 MOVEL segments)
+    1.  MOVEJ  HAL_point1     <- establishes the arm configuration
+    2   MOVEL  HAL_point2
+    3   MOVEL  HAL_point3
+    4   MOVEL  HAL_point1
+    5   MOVEL  HAL_point8
+    6   MOVEL  HAL_point7
+    7   MOVEL  HAL_point1
+    8   MOVEL  HAL_point5
+    9   MOVEL  HAL_point1
+    10  MOVEL  HAL_point6
+    11  MOVEL  HAL_point1
+    12  MOVEL  HAL_point4
+    13  MOVEL  HAL_point1
+    14  MOVEL  HAL_point11
+    15  MOVEL  HAL_point9
+    16  MOVEL  HAL_point8
+    17  MOVEL  HAL_point18
+    18  MOVEL  HAL_point20
+    19  MOVEL  HAL_point13
+    20  MOVEL  HAL_point105
+    21  MOVEL  HAL_point13
+    22  MOVEL  HAL_point15
+    23  MOVEL  HAL_point102
+    24  MOVEL  HAL_point106
+    25  MOVEL  HAL_point103
+    26  MOVEL  HAL_point107
+    27  MOVEL  HAL_point104
+    28  MOVEL  HAL_point10
+    29  MOVEL  HAL_point19
+    30  MOVEL  HAL_point107
+    31  MOVEL  HAL_point104
+    32  MOVEL  HAL_point106
+    33  MOVEL  HAL_point103
+    34  MOVEL  HAL_point105
+    35  MOVEL  HAL_point102
+    36  MOVEL  HAL_point18
+    37  MOVEL  HAL_point8
+    38  MOVEL  HAL_point11
+    39  MOVEL  HAL_point9
+    40  MOVEL  HAL_point19
+    41  MOVEL  HAL_point10
+    42  MOVEL  HAL_point9
+    43  MOVEL  HAL_point10
+    44  MOVEL  HAL_point101
+
+NOTE the sequence REVISITS points — that is the task's own
+cleaning_sequence (a chained polyline), not a mistake.
+ACCURACY — FK(point joints) vs the point's pose, all 23 solved points
+    worst residual 0.012 mm   OK
+
+wrote ../blockly/hinge_area_left.json
+
+(--push writes these to the controller's global-waypoint store so Blockly can reference them by name)
+
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 12:52:28
+========================================================================
+==============================================================================
+BLOCKLY 1:1 — toplid_right  [right]
+==============================================================================
+SETUP (must match, or the experiment proves nothing):
+    lift        -> 75 mm, BLOCKING, before any arm motion
+    tool_frame  -> R_glove_2   (NOT 'Hand' — that is ZIGZAG01's)
+    frame       -> World
+    speed       -> 100 for MOVEL, blend r=10
+    arm         -> 192.168.1.103
+
+POINTS — 15 unique, poses in the CONTROLLER's World frame (mm, rad)
+  blockly name     src               X         Y         Z       RX       RY       RZ
+  TLR_point1       point1      550.000   -43.700  -272.500   3.1139   0.0298   3.1378
+  TLR_point2       point2      842.500   -48.200  -269.500   3.0101   0.5441   2.9328
+  TLR_point3       point3      512.500   -16.700  -272.000   3.1137   0.0821   3.1378
+  TLR_point4       point4      847.500   -16.700  -269.000   3.1117   0.5534   3.1371
+  TLR_point5       point5      477.500    19.800  -271.500   3.1258   0.0985  -2.9701
+  TLR_point6       point6      846.000    25.300  -269.500   3.0605   0.5509   3.0347
+  TLR_point7       point7      456.500    47.800  -272.000   3.1183   0.0819  -3.0579
+  TLR_point8       point8      845.000    64.300  -270.000  -3.1407   0.5527  -3.0846
+  TLR_point9       point9      446.000    72.300  -272.000   3.1258   0.1162  -3.0049
+  TLR_point10      point10     849.000    96.800  -272.000   3.0092   0.5506   3.0834
+  TLR_point11      point11     442.500    99.800  -271.500   3.0690   0.0886  -3.0098
+  TLR_point12      point12     845.500   137.800  -270.500   2.9480   0.5467   3.0514
+  TLR_point13      point13     441.000   128.300  -271.500   3.0582  -0.1393  -3.0171
+  TLR_point20      point20     675.500   -56.200  -276.000  -3.1273   0.3023   2.9817
+  TLR_point101     point101    750.000   -54.200  -232.500   3.1203   0.5084   2.9859
+
+SEQUENCE — 28 moves (27 MOVEL segments)
+    1.  MOVEJ  TLR_point1     <- establishes the arm configuration
+    2   MOVEL  TLR_point2
+    3   MOVEL  TLR_point3
+    4   MOVEL  TLR_point4
+    5   MOVEL  TLR_point5
+    6   MOVEL  TLR_point6
+    7   MOVEL  TLR_point7
+    8   MOVEL  TLR_point8
+    9   MOVEL  TLR_point9
+    10  MOVEL  TLR_point10
+    11  MOVEL  TLR_point11
+    12  MOVEL  TLR_point12
+    13  MOVEL  TLR_point13
+    14  MOVEL  TLR_point12
+    15  MOVEL  TLR_point2
+    16  MOVEL  TLR_point1
+    17  MOVEL  TLR_point3
+    18  MOVEL  TLR_point5
+    19  MOVEL  TLR_point7
+    20  MOVEL  TLR_point11
+    21  MOVEL  TLR_point13
+    22  MOVEL  TLR_point7
+    23  MOVEL  TLR_point5
+    24  MOVEL  TLR_point3
+    25  MOVEL  TLR_point1
+    26  MOVEL  TLR_point20
+    27  MOVEL  TLR_point2
+    28  MOVEL  TLR_point101
+
+NOTE the sequence REVISITS points — that is the task's own
+cleaning_sequence (a chained polyline), not a mistake.
+ACCURACY — FK(point joints) vs the point's pose, all 15 solved points
+    worst residual 0.007 mm   OK
+
+wrote ../blockly/toplid_right.json
+
+(--push writes these to the controller's global-waypoint store so Blockly can reference them by name)
+
+========================================================================
+  Script : blockly_points.py
+  Log    : blockly_points.log
+  Started: 2026-08-10 13:01:59
+========================================================================
+Generate the points + sequence for a 1:1 Blockly version of a task.
+
+Newton's experiment (2026-08-08): build a Blockly program identical in
+every respect to one of the cleaning tasks, and see whether the controller
+executes it. It isolates cleanly —
+
+  Blockly MOVEL through OUR points fails too  -> the points/geometry are
+      the problem, independent of our dispatcher
+  Blockly succeeds, our dispatcher fails      -> the difference is in HOW
+      we issue them (chaining, blend, connect flags, tool selection)
+
+Neither answer is available from more offline analysis, and ZIGZAG01
+already proves MOVEL chains work on this hardware with HAND-TAUGHT points.
+What it does not prove is that our COMPUTED points work.
+
+HOW BLOCKLY REFERENCES POINTS. A `point` block carries only a NAME
+(`pointName`, `pointType 0`); the coordinates live in the controller's
+global-waypoint store. So the poses do not go in the XML — they are
+written to the controller, and the program refers to them. That store is
+writable over the API (`rm_add_global_waypoint`), so this tool can push
+all of them rather than have you type 27 poses into the GUI.
+
+`rm_waypoint_t` carries point_name, joint[7], pose, work_frame AND
+tool_frame — so each point records the frame it was defined against,
+which is what makes the comparison honest.
+
+WHAT MUST MATCH for the experiment to mean anything:
+  * pole at 75 mm BEFORE the moves — the poses are resolved at that
+    height, and the pole carries the arm base (215 mm at SRDF home)
+  * tool frame = the task's ik_frame (L_glove_4 / R_glove_2), NOT `Hand`
+    as ZIGZAG01 uses
+  * work frame = World
+  * speed 100 for the stroke, blend r=10 (the dispatcher's current values)
+
+Usage:
+    python3 blockly_points.py --task hinge_area_left
+    python3 blockly_points.py --task toplid_right --prefix TLR
+    python3 blockly_points.py --task hinge_area_left --push --mode REAL
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+

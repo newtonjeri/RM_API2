@@ -1,0 +1,266 @@
+{
+  "task_name": "toplid_right",
+  "side": "right",
+  "timestamp_human": "2026-08-10 12:52:32",
+  "setup": {
+    "lift_mm": 75,
+    "lift_blocking": true,
+    "tool_frame": "R_glove_2",
+    "work_frame": "World",
+    "movel_speed_pct": 100,
+    "blend_r_pct": 10,
+    "arm_ip": "192.168.1.103"
+  },
+  "units": "position mm, orientation rad, joints deg",
+  "num_points": 15,
+  "points": [
+    {
+      "name": "TLR_point1",
+      "source_point": "point1",
+      "pose_mm_rad": [550.000000, -43.700000, -272.500000, 3.113933, 0.029752, 3.137781],
+      "joints_deg": [11.404000, -53.822000, -10.556000, 92.232000, -4.314000, 48.984000, -5.614000],
+      "fk_residual_mm": 0.001100
+    },
+    {
+      "name": "TLR_point2",
+      "source_point": "point2",
+      "pose_mm_rad": [842.500000, -48.200000, -269.500000, 3.010080, 0.544077, 2.932834],
+      "joints_deg": [21.609000, -23.465000, -18.771000, 40.630000, 2.379000, 39.708000, -0.130000],
+      "fk_residual_mm": 0.006700
+    },
+    {
+      "name": "TLR_point3",
+      "source_point": "point3",
+      "pose_mm_rad": [512.500000, -16.700000, -272.000000, 3.113732, 0.082113, 3.137769],
+      "joints_deg": [7.338000, -62.735000, -4.988000, 110.629000, -5.101000, 37.157000, -0.551000],
+      "fk_residual_mm": 0.002000
+    },
+    {
+      "name": "TLR_point4",
+      "source_point": "point4",
+      "pose_mm_rad": [847.500000, -16.700000, -269.000000, 3.111692, 0.553364, 3.137114],
+      "joints_deg": [13.558000, -21.331000, -8.320000, 38.091000, -2.680000, 41.193000, -3.381000],
+      "fk_residual_mm": 0.006900
+    },
+    {
+      "name": "TLR_point5",
+      "source_point": "point5",
+      "pose_mm_rad": [477.500000, 19.800000, -271.500000, 3.125841, 0.098548, -2.970108],
+      "joints_deg": [2.421000, -68.425000, 4.510000, 122.089000, -5.037000, 31.137000, -1.674000],
+      "fk_residual_mm": 0.001100
+    },
+    {
+      "name": "TLR_point6",
+      "source_point": "point6",
+      "pose_mm_rad": [846.000000, 25.300000, -269.500000, 3.060536, 0.550935, 3.034690],
+      "joints_deg": [-3.981000, -21.670000, 5.781000, 40.153000, -1.389000, 39.604000, 7.364000],
+      "fk_residual_mm": 0.004800
+    },
+    {
+      "name": "TLR_point7",
+      "source_point": "point7",
+      "pose_mm_rad": [456.500000, 47.800000, -272.000000, 3.118310, 0.081930, -3.057894],
+      "joints_deg": [-0.977000, -70.309000, 12.663000, 125.497000, -5.011000, 30.321000, 11.164000],
+      "fk_residual_mm": 0.002200
+    },
+    {
+      "name": "TLR_point8",
+      "source_point": "point8",
+      "pose_mm_rad": [845.000000, 64.300000, -270.000000, -3.140741, 0.552676, -3.084570],
+      "joints_deg": [-14.523000, -21.143000, 21.153000, 37.672000, -10.239000, 41.500000, 8.538000],
+      "fk_residual_mm": 0.003100
+    },
+    {
+      "name": "TLR_point9",
+      "source_point": "point9",
+      "pose_mm_rad": [446.000000, 72.300000, -272.000000, 3.125813, 0.116213, -3.004911],
+      "joints_deg": [-4.316000, -73.143000, 20.989000, 129.498000, -5.405000, 26.616000, 16.757000],
+      "fk_residual_mm": 0.004000
+    },
+    {
+      "name": "TLR_point10",
+      "source_point": "point10",
+      "pose_mm_rad": [849.000000, 96.800000, -272.000000, 3.009247, 0.550625, 3.083359],
+      "joints_deg": [-17.909000, -19.326000, 25.622000, 34.345000, -5.943000, 41.879000, 10.904000],
+      "fk_residual_mm": 0.005700
+    },
+    {
+      "name": "TLR_point11",
+      "source_point": "point11",
+      "pose_mm_rad": [442.500000, 99.800000, -271.500000, 3.068965, 0.088626, -3.009812],
+      "joints_deg": [-3.409000, -70.816000, 24.052000, 126.488000, -3.839000, 28.629000, 18.016000],
+      "fk_residual_mm": 0.003400
+    },
+    {
+      "name": "TLR_point12",
+      "source_point": "point12",
+      "pose_mm_rad": [845.500000, 137.800000, -270.500000, 2.948047, 0.546742, 3.051432],
+      "joints_deg": [-26.704000, -20.175000, 35.423000, 33.686000, -5.531000, 41.494000, 14.690000],
+      "fk_residual_mm": 0.005800
+    },
+    {
+      "name": "TLR_point13",
+      "source_point": "point13",
+      "pose_mm_rad": [441.000000, 128.300000, -271.500000, 3.058218, -0.139311, -3.017115],
+      "joints_deg": [-8.735000, -57.523000, 28.202000, 103.013000, 0.220000, 50.338000, 17.087000],
+      "fk_residual_mm": 0.005800
+    },
+    {
+      "name": "TLR_point20",
+      "source_point": "point20",
+      "pose_mm_rad": [675.500000, -56.200000, -276.000000, -3.127307, 0.302303, 2.981742],
+      "joints_deg": [4.683000, -44.829000, -9.064000, 81.514000, 0.064000, 35.896000, 3.125000],
+      "fk_residual_mm": 0.003600
+    },
+    {
+      "name": "TLR_point101",
+      "source_point": "point101",
+      "pose_mm_rad": [750.000000, -54.200000, -232.500000, 3.120276, 0.508383, 2.985947],
+      "joints_deg": [4.318000, -45.706000, -8.959000, 77.311000, 3.498000, 29.142000, 0.092000],
+      "fk_residual_mm": 0.006600
+    }
+  ],
+  "num_moves": 28,
+  "sequence": [
+    {
+      "index": 0,
+      "move": "MOVEJ",
+      "point": "TLR_point1"
+    },
+    {
+      "index": 1,
+      "move": "MOVEL",
+      "point": "TLR_point2"
+    },
+    {
+      "index": 2,
+      "move": "MOVEL",
+      "point": "TLR_point3"
+    },
+    {
+      "index": 3,
+      "move": "MOVEL",
+      "point": "TLR_point4"
+    },
+    {
+      "index": 4,
+      "move": "MOVEL",
+      "point": "TLR_point5"
+    },
+    {
+      "index": 5,
+      "move": "MOVEL",
+      "point": "TLR_point6"
+    },
+    {
+      "index": 6,
+      "move": "MOVEL",
+      "point": "TLR_point7"
+    },
+    {
+      "index": 7,
+      "move": "MOVEL",
+      "point": "TLR_point8"
+    },
+    {
+      "index": 8,
+      "move": "MOVEL",
+      "point": "TLR_point9"
+    },
+    {
+      "index": 9,
+      "move": "MOVEL",
+      "point": "TLR_point10"
+    },
+    {
+      "index": 10,
+      "move": "MOVEL",
+      "point": "TLR_point11"
+    },
+    {
+      "index": 11,
+      "move": "MOVEL",
+      "point": "TLR_point12"
+    },
+    {
+      "index": 12,
+      "move": "MOVEL",
+      "point": "TLR_point13"
+    },
+    {
+      "index": 13,
+      "move": "MOVEL",
+      "point": "TLR_point12"
+    },
+    {
+      "index": 14,
+      "move": "MOVEL",
+      "point": "TLR_point2"
+    },
+    {
+      "index": 15,
+      "move": "MOVEL",
+      "point": "TLR_point1"
+    },
+    {
+      "index": 16,
+      "move": "MOVEL",
+      "point": "TLR_point3"
+    },
+    {
+      "index": 17,
+      "move": "MOVEL",
+      "point": "TLR_point5"
+    },
+    {
+      "index": 18,
+      "move": "MOVEL",
+      "point": "TLR_point7"
+    },
+    {
+      "index": 19,
+      "move": "MOVEL",
+      "point": "TLR_point11"
+    },
+    {
+      "index": 20,
+      "move": "MOVEL",
+      "point": "TLR_point13"
+    },
+    {
+      "index": 21,
+      "move": "MOVEL",
+      "point": "TLR_point7"
+    },
+    {
+      "index": 22,
+      "move": "MOVEL",
+      "point": "TLR_point5"
+    },
+    {
+      "index": 23,
+      "move": "MOVEL",
+      "point": "TLR_point3"
+    },
+    {
+      "index": 24,
+      "move": "MOVEL",
+      "point": "TLR_point1"
+    },
+    {
+      "index": 25,
+      "move": "MOVEL",
+      "point": "TLR_point20"
+    },
+    {
+      "index": 26,
+      "move": "MOVEL",
+      "point": "TLR_point2"
+    },
+    {
+      "index": 27,
+      "move": "MOVEL",
+      "point": "TLR_point101"
+    }
+  ]
+}

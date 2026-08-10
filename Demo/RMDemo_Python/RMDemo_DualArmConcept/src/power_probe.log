@@ -1,50 +1,43 @@
 
 ========================================================================
-  Script : test_dual_free.py
-  Log    : test_dual_free.log
-  Started: 2026-08-06 21:33:49
+  Script : power_probe.py
+  Log    : power_probe.log
+  Started: 2026-08-10 13:02:00
 ========================================================================
-====================================================================
-C4  Free-running dual-arm execution (no cross-arm gates)
-    left=192.168.1.10  right=192.168.1.103  arm v=20%  lift v=50%
-    sequence: [('arm', 'ready'), ('arm', 'zero'), ('arm', 'ready'), ('arm', 'rest')]   [--no-hands: hand steps stripped]   [--no-pole: pole/sync-lift steps stripped]
-    mode: REAL
-    pole pre-positioning SKIPPED (--no-pole)
-    BOTH ARMS WILL MOVE (poles stay put)
-====================================================================
-current c api version:  1.1.6
-  [INFO] left: run mode set to REAL (--mode)
-  [INFO] right: run mode set to REAL (--mode)
-  [INFO] left: run mode = REAL
-  [INFO] right: run mode = REAL
-  starting in 3 ...
-  starting in 2 ...
-  starting in 1 ...
-  [PASS] poles pre-positioned to full length  (SKIPPED — poles disabled (--no-pole))
+Per-joint VOLTAGE / CURRENT recorder — turn the power question into data.
 
-  per-arm timelines:
-  ────────────────────────────────────────────────────────────
-  left : 4/4 steps in 11.71 s
-  right: 4/4 steps in 11.70 s
-  [PASS] all dispatches accepted
-  [PASS] both arms completed independently
-  [PASS] concurrent free run  (window overlap 100% of shorter run)
-  [INFO] left: run mode restored to REAL
-  [INFO] right: run mode restored to REAL
+The UDP realtime push carries joint_voltage (0.001 V), joint_current
+(mA), joint_temperature and joint_en_flag for all seven joints at up to
+100 Hz — everything needed to say WHY J6/J7 report Under Voltage instead
+of guessing between speed, contact and supply.
 
-  Summary: 4 PASS, 0 FAIL, 0 SKIP
+This tool only listens. Run it in one terminal while any test runs in
+another, or alone for an idle baseline:
 
-========================================================================
-  Script : test_dual_free.py
-  Log    : test_dual_free.log
-  Started: 2026-08-10 13:02:01
-========================================================================
-C4 — Free execution mode. BOTH ARMS AND BOTH POLES WILL MOVE.
+    RM_ARM=left python3 power_probe.py --seconds 10 --label idle
+    RM_ARM=left python3 power_probe.py --seconds 120 --label chain_hover10
 
-Both arms run the concept sequence independently, each advancing on its own
-arrivals with no cross-arm gates. The concept sequence (rest/ready/zero +
-pole strokes) is collision-free by construction; collision gating for
-arbitrary free-running tasks is future work, not this test.
+It prints a 1 Hz live line (min voltage / max current and which joint),
+reports the collision-protection stage and joint enable states at start
+(read-only), and on exit writes a CSV plus a per-joint summary.
+
+HOW TO READ IT (the three candidate mechanisms):
+
+  supply/harness   V(J6/J7) sits visibly below V(J1) ALREADY AT IDLE
+                   — resistance in the arm's power chain, hardware.
+  speed            V dips track motion in FREE SPACE as v% rises,
+                   current high on the big joints (J2/J4).
+  contact          V healthy in free space at any speed; the dip appears
+                   only when the glove meets the fixture, current spiking
+                   on the WRIST joints. NOTE: the 2026-08-08 incident was
+                   FREE SPACE (Newton) — contact did not cause it; this
+                   mechanism matters for the future, when contact begins.
+
+WHICH JOINT'S CURRENT SPIKES AT THE DIP is the discriminator: J2/J4
+(shoulder/elbow accel transients loading the shared bus) point at supply
+margin; J6/J7 themselves point at wrist-drive demand. Under-voltage at
+IDLE or straight after boot needs no motion story at all — that is
+supply/harness/e-stop-circuit hardware, a RealMan support case.
 
 Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
                            [-h|--help]

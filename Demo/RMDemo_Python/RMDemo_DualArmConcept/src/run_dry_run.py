@@ -9,8 +9,11 @@ hardware run. Run this first.
 
 import math
 import sys
+import tempfile
 import threading
 import time
+
+import log_utils
 
 from log_utils import setup_log as _setup_log
 _log_path = _setup_log(__file__)
@@ -548,6 +551,60 @@ def main() -> int:
         check("unregistered extra flag still exits 2", False)
     except SystemExit as e:
         check("unregistered extra flag still exits 2", e.code == 2)
+
+    # allow_common=False: an OFFLINE analysis script must reject --mode
+    # rather than ignore it, so `--mode REAL` can never read as "that
+    # check ran against the real arm".
+    for flags, allow, code, name in (
+            (["--mode", "REAL"], True, None, "--mode accepted when common on"),
+            (["--mode", "REAL"], False, 2, "--mode REJECTED when common off"),
+            (["--no-hands"], False, 2, "--no-hands rejected when common off")):
+        try:
+            dac.handle_cli("doc", flags, allow_common=allow)
+            check(name, code is None)
+        except SystemExit as e:
+            check(name, e.code == code, f"exit {e.code}")
+
+    # A per-script usage block replaces the shared motion USAGE.
+    import io
+    import contextlib
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            dac.handle_cli("doc", ["--help"], usage="OFFLINE USAGE LINE")
+    except SystemExit:
+        pass
+    check("usage= overrides the shared motion USAGE",
+          "OFFLINE USAGE LINE" in buf.getvalue()
+          and "--no-hands" not in buf.getvalue())
+
+    # --help must not open the run log. Every script calls setup_log()
+    # from __main__ BEFORE main() reaches handle_cli(), so an unguarded
+    # setup_log appends a "Started:" banner to <script>.log and a run
+    # that never happened shows up in the evidence trail.
+    check("wants_help sees -h", log_utils.wants_help(["-h"]))
+    check("wants_help sees --help", log_utils.wants_help(["--help"]))
+    check("wants_help ignores other flags",
+          not log_utils.wants_help(["--mode", "REAL"]))
+    # _pathlib, not pathlib: main() has a local `import pathlib` further
+    # down, which makes the bare name local to the whole function.
+    probe = _pathlib.Path(tempfile.mkdtemp()) / "cli_probe.py"
+    probe.write_text("x = 1\n")
+    logfile = probe.parent / "cli_probe.log"
+    saved_argv, saved_out, saved_err = sys.argv, sys.stdout, sys.stderr
+    try:
+        sys.argv = ["cli_probe.py", "--help"]
+        log_utils.setup_log(str(probe))
+        check("--help does NOT create the run log", not logfile.exists())
+    finally:
+        sys.argv, sys.stdout, sys.stderr = saved_argv, saved_out, saved_err
+    try:
+        sys.argv = ["cli_probe.py"]
+        log_utils.setup_log(str(probe))
+        sys.stdout, sys.stderr = saved_out, saved_err
+        check("a real run DOES create the run log", logfile.exists())
+    finally:
+        sys.argv, sys.stdout, sys.stderr = saved_argv, saved_out, saved_err
 
     # ── F2. --mode argument parser ──────────────────────────────────────
     print("\nF2. --mode SIM|REAL parser")
@@ -1257,6 +1314,152 @@ def main() -> int:
           and _j6["en_dropped"])
     check("probe: a clean joint stays clean",
           _j1["dips"] == 0 and not _j1["en_dropped"])
+
+    # ── P11. Capabilities, mount-from-controller, diagnostics ───────────
+    print("\nP11. Controller capabilities + mount source")
+    import controller_caps as _cc
+
+    class _CapRobot:
+        def __init__(self):
+            self.v = {"avoid_singularity": 0, "self_collision": False,
+                      "endeff_collision": False, "collision_stage": 4,
+                      "static_collision": 0, "collision_remove": False}
+            self.install = {"return_code": 0, "x": 0.0, "y": 90.0, "z": 0.0}
+
+        def rm_get_avoid_singularity_mode(self):
+            return 0, self.v["avoid_singularity"]
+
+        def rm_set_avoid_singularity_mode(self, m):
+            self.v["avoid_singularity"] = int(m); return 0
+
+        def rm_get_self_collision_enable(self):
+            return 0, self.v["self_collision"]
+
+        def rm_set_self_collision_enable(self, e):
+            self.v["self_collision"] = bool(e); return 0
+
+        def rm_get_self_endeffector_collision_enable(self):
+            return 0, self.v["endeff_collision"]
+
+        def rm_set_self_endeffector_collision_enable(self, e):
+            self.v["endeff_collision"] = bool(e); return 0
+
+        def rm_get_collision_stage(self):
+            return 0, self.v["collision_stage"]
+
+        def rm_set_collision_state(self, x):
+            self.v["collision_stage"] = int(x); return 0
+
+        def rm_get_collision_detection(self):
+            return 0, self.v["static_collision"]
+
+        def rm_set_collision_detection(self, m):
+            self.v["static_collision"] = int(m); return 0
+
+        def rm_get_collision_remove_enable(self):
+            return 0, self.v["collision_remove"]
+
+        def rm_set_collision_remove_enable(self, e):
+            self.v["collision_remove"] = bool(e); return 0
+
+        def rm_get_install_pose(self):
+            return self.install
+    r = _CapRobot()
+    caps = _cc.read(r)
+    check("every capability reads back",
+          all(not isinstance(caps[k], str) for k in
+              ("avoid_singularity", "self_collision", "endeff_collision",
+               "collision_stage", "static_collision", "collision_remove")))
+    check("the report flags what is OFF but wanted",
+          "Phase 2 wants it ON" in _cc.describe(caps))
+    # Singularity avoidance is the capability this whole exercise turns on:
+    # supported since V1.7.3 for 7-axis, arms on V1.7.4, shipped OFF.
+    prev = _cc.prepare(r, "(test)")
+    check("prepare() switches singularity avoidance ON",
+          r.v["avoid_singularity"] == 1 and r.v["self_collision"] is True)
+    _cc.restore(r, prev)
+    check("restore() puts the controller back as found",
+          r.v["avoid_singularity"] == 0 and r.v["self_collision"] is False)
+
+    # The mounting angle must come from the ARM, not the constant.
+    _p = _CP(cfgs["hinge_area_right"])
+    got = _p.set_mount_from_controller(r)
+    check("mount angle is read from rm_get_install_pose", got == (0.0, 90.0, 0.0)
+          and abs(_p.MOUNT_RY_DEG - 90.0) < 1e-9)
+    r.install = {"return_code": 0, "x": 0.0, "y": 75.0, "z": 0.0}
+    _p2 = _CP(cfgs["hinge_area_right"])
+    _p2.set_mount_from_controller(r)
+    check("a DIFFERENT install pose wins over the constant",
+          abs(_p2.MOUNT_RY_DEG - 75.0) < 1e-9
+          and abs(_CP.MOUNT_RY_DEG - 90.0) < 1e-9)
+    r.install = {"return_code": 0, "x": 5.0, "y": 90.0, "z": 0.0}
+    _raised = False
+    try:
+        _CP(cfgs["hinge_area_right"]).set_mount_from_controller(r)
+    except SystemExit:
+        _raised = True
+    check("a non-Ry mounting REFUSES rather than mis-modelling", _raised)
+    r.install = {"return_code": 1}
+    _p3 = _CP(cfgs["hinge_area_right"])
+    check("an unreadable install pose falls back to the measured constant",
+          _p3.set_mount_from_controller(r) is None
+          and abs(_p3.MOUNT_RY_DEG - 90.0) < 1e-9)
+
+    # ── P12. Run recorder: format, alignment, provenance ────────────────
+    print("\nP12. Run recorder")
+    import run_recorder as _rr
+
+    # The saved MoveIt plans keep scalar arrays on ONE line and floats at
+    # %.6f; a run must be diffable against them side by side.
+    _j = _rr.dumps({"task_name": "t", "v": 1.5, "flag": True, "none": None,
+                    "names": ["a", "b"], "poses": [[1.0, 2.0], [3.0, 4.0]],
+                    "nested": {"k": 2}})
+    check("scalar arrays stay inline (plan style)",
+          '"names": ["a", "b"]' in _j)
+    check("floats render at 6 decimals", '"v": 1.500000' in _j)
+    check("bools/None render as JSON literals",
+          '"flag": true' in _j and '"none": null' in _j)
+    check("nested arrays-of-arrays expand one per line",
+          "[1.000000, 2.000000],\n" in _j)
+    import json as _js
+    check("output is valid JSON", isinstance(_js.loads(_j), dict))
+
+    class _RecRobot:
+        def rm_realtime_arm_state_call_back(self, cb):
+            self.cb = cb
+
+        def rm_set_realtime_push(self, cfg):
+            return 0
+    _rec = _rr.RunRecorder(_RecRobot(), "t", "left", "1.2.3.4", 8095,
+                           out_dir=str(_pathlib.Path(
+                               _os.environ.get("TMPDIR", "/tmp")) / "rec_t"))
+    check("header width matches a row's width",
+          len(_rec.header()) == 1 + 5 * 7 + 7 + 7 + 5 + 6 + 1)
+    # hand is NOT requested: measured ALL-ZERO on the arm's UDP line
+    _src = (_pathlib.Path(__file__).resolve().parent
+            / "run_recorder.py").read_text()
+    check("the recorder does NOT request hand_state (bench: ALL-ZERO)",
+          "hand_state=1" not in _src and "lift_state=1" in _src)
+    check("100 Hz default (cycle=2, 5 ms units)",
+          _rr.DEFAULT_CYCLE == 2)
+    # runs/ holds recorded HARDWARE data and is committed as such; an
+    # emulated run must never land there (the emulated suite wrote four
+    # such directories on 2026-08-10 before this guard existed).
+    check("an EMULATED recorder writes outside runs/",
+          "rm_emulator" not in sys.modules or
+          str(_rr.RUNS_DIR) not in str(
+              _rr.RunRecorder(_RecRobot(), "t", "left", "1.2.3.4", 8095).dir))
+    _under_runs = str(_rr.RunRecorder(
+        _RecRobot(), "t", "left", "1.2.3.4", 8095).dir)
+    check("a HARDWARE recorder writes INTO runs/",
+          ("rm_emulator" in sys.modules) or
+          str(_rr.RUNS_DIR) in _under_runs, _under_runs[-48:])
+
+    # a recorder that silently records nothing is worse than one that errors
+    _rec._t0 = 0.0
+    _rec._on_state(object())          # no joint_status -> must be counted
+    check("an unparseable frame is COUNTED, not swallowed",
+          _rec._dropped == 1 and _rec._first_error)
 
     n, f = _checks["run"], _checks["fail"]
     print("\n" + "=" * 68)

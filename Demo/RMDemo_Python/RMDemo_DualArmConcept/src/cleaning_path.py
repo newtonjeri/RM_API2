@@ -66,6 +66,164 @@ def _Rz(a):
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 
+def _R_to_quat(R):
+    """Rotation matrix -> [w, x, y, z]. Used for orientation slerp."""
+    import numpy as _np
+    t = R[0, 0] + R[1, 1] + R[2, 2]
+    if t > 0:
+        s = math.sqrt(t + 1.0) * 2
+        w, x = 0.25 * s, (R[2, 1] - R[1, 2]) / s
+        y, z = (R[0, 2] - R[2, 0]) / s, (R[1, 0] - R[0, 1]) / s
+    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        s = math.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2
+        w, x = (R[2, 1] - R[1, 2]) / s, 0.25 * s
+        y, z = (R[0, 1] + R[1, 0]) / s, (R[0, 2] + R[2, 0]) / s
+    elif R[1, 1] > R[2, 2]:
+        s = math.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2
+        w, x = (R[0, 2] - R[2, 0]) / s, (R[0, 1] + R[1, 0]) / s
+        y, z = 0.25 * s, (R[1, 2] + R[2, 1]) / s
+    else:
+        s = math.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2
+        w, x = (R[1, 0] - R[0, 1]) / s, (R[0, 2] + R[2, 0]) / s
+        y, z = (R[1, 2] + R[2, 1]) / s, 0.25 * s
+    q = _np.array([w, x, y, z])
+    return q / _np.linalg.norm(q)
+
+
+def _quat_to_R(q):
+    import numpy as _np
+    w, x, y, z = q / _np.linalg.norm(q)
+    return _np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]])
+
+
+def _slerp(qa, qb, t):
+    import numpy as _np
+    d = float(_np.dot(qa, qb))
+    if d < 0:
+        qb, d = -qb, -d
+    if d > 0.9995:
+        return (qa + t * (qb - qa)) / _np.linalg.norm(qa + t * (qb - qa))
+    th0 = math.acos(max(-1.0, min(1.0, d)))
+    th = th0 * t
+    q2 = qb - qa * d
+    q2 = q2 / _np.linalg.norm(q2)
+    return qa * math.cos(th) + q2 * math.sin(th)
+
+
+def movel_joint_timeline(cfg, prog, seed_joints_deg, step_mm=10.0,
+                         quiet=False):
+    """Joint configurations along the ACTUAL movel path (R11, option a).
+
+    C12 used to sweep the SAVED PLAN interpolated joint-linearly, while the
+    dispatcher sends Cartesian `movel` through the CONFIG's waypoints with
+    the controller solving IK — two different paths, measured 57 mm apart.
+    This models what is actually executed:
+
+      * position interpolated LINEARLY between consecutive waypoints and
+        orientation by SLERP — that is what a Cartesian move does
+      * IK solved per sample, SEEDED from the previous solution, which is
+        how a controller tracks a Cartesian path continuously
+      * seeded initially from MoveIt's move_to_start solution, matching
+        the movej entry the dispatcher pins
+
+    Caveats, stated because they bound what the result proves:
+      * the offline library is 1.6.0, the controllers run 1.5.9
+      * a seeded numerical IK is a MODEL of the controller's tracker, not
+        the tracker itself; disagreement is possible near singularities
+      * an IK failure here means "this solver, from this seed" — it is a
+        flag to investigate, not proof the controller cannot do it
+
+    Returns (joint_maps_urdf_radians, failures, samples) — failures lists
+    (segment_index, fraction) for samples with no solution.
+    """
+    import numpy as _np
+    sys_path_marker = "/home/newtonjeri/realman_API/RM_API2/Python"
+    if sys_path_marker not in sys.path:
+        sys.path.insert(0, sys_path_marker)
+    from Robotic_Arm.rm_robot_interface import (
+        Algo, rm_robot_arm_model_e, rm_force_type_e,
+        rm_inverse_kinematics_params_t)
+    from Robotic_Arm.rm_ctypes_wrap import (
+        rm_frame_t, rm_pose_t, rm_position_t, rm_euler_t)
+    from frame_alignment_offline import IK_FRAMES, ARM_TIP_TO_CONNECTOR_M
+    from segment_verifier import FORCE_MODEL_NAME
+
+    # Algo LAST — every frame setter in this library is process-global.
+    algo = Algo(rm_robot_arm_model_e.RM_MODEL_RM_75_E,
+                getattr(rm_force_type_e, FORCE_MODEL_NAME))
+    algo.handle = None
+    xyz, rpy = IK_FRAMES[cfg.side][cfg.ik_frame]
+    f = rm_frame_t()
+    f.frame_name = b"ik"
+    f.pose = rm_pose_t()
+    f.pose.position = rm_position_t(xyz[0], xyz[1],
+                                    xyz[2] + ARM_TIP_TO_CONNECTOR_M)
+    f.pose.euler = rm_euler_t(*rpy)
+    algo.rm_algo_set_toolframe(f)
+
+    Rm = _Ry(math.radians(-CleaningPath.MOUNT_RY_DEG))
+
+    def to_algo(p):
+        pos = Rm @ _np.asarray(p[:3])
+        R = Rm @ (_Rz(p[5]) @ _Ry(p[4]) @ _Rx(p[3]))
+        return _np.asarray(pos), R
+
+    P = prog["poses"]
+    p0, _R0 = to_algo(P[0])
+    assert_toolframe_intact(algo, seed_joints_deg, p0, tol_mm=5.0)
+
+    pref = "R_" if cfg.side == "right" else "L_"
+    names = [f"{pref}joint{i}" for i in range(1, 8)]
+    maps, fails, q, n = [], [], list(seed_joints_deg), 0
+    for si, (a, b) in enumerate(zip(P, P[1:])):
+        pa, Ra = to_algo(a)
+        pb, Rb = to_algo(b)
+        qa, qb = _R_to_quat(Ra), _R_to_quat(Rb)
+        dist_mm = float(_np.linalg.norm(pb - pa)) * 1000.0
+        steps = max(2, int(math.ceil(dist_mm / max(step_mm, 0.5))))
+        for k in range(1, steps + 1):
+            t = k / steps
+            pos = pa + t * (pb - pa)
+            rx, ry, rz = R_to_euler(_quat_to_R(_slerp(qa, qb, t)))
+            pr = rm_inverse_kinematics_params_t(
+                q_in=list(q),
+                q_pose=[float(pos[0]), float(pos[1]), float(pos[2]),
+                        float(rx), float(ry), float(rz)], flag=1)
+            ret, sol = algo.rm_algo_inverse_kinematics(pr)
+            n += 1
+            if ret != 0:
+                fails.append((si, round(t, 3)))
+                continue
+            q = list(sol)[:7]
+            maps.append({nm: math.radians(v) for nm, v in zip(names, q)})
+    if not quiet:
+        print(f"  [movel] {len(P)} waypoints -> {n} samples at "
+              f"{step_mm:.0f} mm, {len(fails)} without an IK solution")
+    return maps, fails, n
+
+
+def assert_toolframe_intact(algo, joints_deg, expect_xyz, tol_mm=1.0):
+    """Guard against the global-tool-frame trap (see segment_verifier).
+
+    Call after configuring an Algo and before trusting any FK/IK: it
+    checks that the tool frame still produces the expected point. Cheap,
+    and it converts a silent 227 mm error into an immediate failure.
+    """
+    import numpy as _np
+    got = list(algo.rm_algo_forward_kinematics(list(joints_deg), 1))[:3]
+    err = float(_np.linalg.norm(_np.asarray(got) - _np.asarray(expect_xyz)))
+    if err * 1000.0 > tol_mm:
+        raise SystemExit(
+            f"tool frame was reset under us: FK gives {_np.round(got, 4)}, "
+            f"expected {_np.round(expect_xyz, 4)} ({err * 1000:.1f} mm). "
+            "rm_algo_* frame setters are GLOBAL — construct every Algo "
+            "first, set the tool frame last.")
+    return err
+
+
 def quat_to_R(q):
     """[qx, qy, qz, qw] -> rotation matrix (the config's pose convention)."""
     x, y, z, w = q
@@ -168,7 +326,48 @@ class CleaningPath:
     # the same rotation the controller reports as install pose (0, 90, 0).
     # Sending URDF-base poses straight to the SDK put every cleaning target
     # 90 deg out; the chain was accepted and then failed in execution.
-    MOUNT_RY_DEG = 90.0
+    # Three independent sources agree on this and all are exact:
+    #   URDF   R_base_link <- R_Sliding_Plate  rpy="0 1.5707963 0"
+    #   controller  rm_get_install_pose() -> (0.0, 90.0, 0.0)
+    #   measured    Kabsch fit over 16 C14CAP captures: 90.00 deg about
+    #               +Y, |translation| <= 0.038 mm, residual <= 0.032 mm
+    # -> a PURE rotation, zero translation: *_base_link sits at the same
+    #    origin as the controller's base/World frame.
+    MOUNT_RY_DEG = 90.0          # fallback only — prefer the controller's
+
+    def set_mount_from_controller(self, robot):
+        """Take the mounting angle from the ARM, not from this constant.
+
+        A hard-coded 90 deg goes silently stale the day an arm is
+        re-mounted or its install pose is re-configured, and the failure
+        mode is not an error — it is every cleaning target rotated, which
+        is what broke the first REAL run. The controller always knows the
+        truth; ask it, and only fall back with a loud warning.
+
+        Returns (rx, ry, rz) actually adopted, or None if unreadable.
+        """
+        try:
+            ip = robot.rm_get_install_pose()
+            if not isinstance(ip, dict) or ip.get("return_code") != 0:
+                raise RuntimeError(f"ret={ip}")
+            rx, ry, rz = (float(ip["x"]), float(ip["y"]), float(ip["z"]))
+        except Exception as exc:
+            print(f"  [WARN] install pose unreadable ({exc!r}) — falling "
+                  f"back to the measured constant "
+                  f"{self.MOUNT_RY_DEG:.1f} deg about Y. If either arm has "
+                  "been re-mounted this is WRONG.")
+            return None
+        if abs(rx) > 1e-6 or abs(rz) > 1e-6:
+            raise SystemExit(
+                f"install pose ({rx}, {ry}, {rz}) is not a pure Y rotation. "
+                "The path resolver models the mounting as Ry only; extend "
+                "_mount() before running this arm.")
+        if abs(ry - self.MOUNT_RY_DEG) > 0.5:
+            print(f"  [WARN] install pose Y={ry:.2f} deg differs from the "
+                  f"measured {self.MOUNT_RY_DEG:.1f} deg — using the "
+                  "CONTROLLER's value (it is the authority)")
+        self.MOUNT_RY_DEG = ry
+        return (rx, ry, rz)
 
     def _mount(self):
         a = math.radians(self.MOUNT_RY_DEG)

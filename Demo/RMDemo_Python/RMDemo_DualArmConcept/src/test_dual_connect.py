@@ -7,6 +7,8 @@ single-process topology the motion tests rely on.
 
 import sys
 
+import controller_caps
+
 from dual_arm_common import (
     handle_cli,
     LEFT_IP, LIFT_GEAR, RIGHT_IP, ArrivalMonitor, connect_both, teardown,
@@ -101,6 +103,11 @@ def main() -> int:
             ret, mode = arm.robot.rm_get_arm_run_mode()
             label = {0: "SIMULATION", 1: "REAL"}.get(mode, f"? ({mode})")
             print(f"  [INFO] {arm.side}: run mode = {label}")
+            # Read-only capability census. The arms ship with every
+            # assist OFF; knowing the state BEFORE a run is what
+            # makes a later result interpretable.
+            print(controller_caps.describe(
+                controller_caps.read(arm.robot)))
             if mode == 0:
                 print(f"  [WARN] {arm.side} is in SIMULATION mode — motion "
                       "tests will not move hardware")

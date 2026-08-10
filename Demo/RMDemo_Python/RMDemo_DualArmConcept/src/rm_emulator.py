@@ -292,7 +292,8 @@ class EmuController:
         self.hand_force_set = 500
         self._hand_motion = None
         self.run_mode = 1                     # 1 = REAL, 0 = SIMULATION
-        self.collision_stage = 2 if ip == EMU_LEFT_IP else 3   # observed
+        # (was 2/3 from a V1.7.1-era read; the V1.7.4 capability probe
+        #  reports 4 on BOTH arms — see self.caps below)
         # (still unaligned on the fleet — see PHASE_PLAN R4)
         side = "left" if ip == EMU_LEFT_IP else "right"
         # Both arms run true-mm 1:1 since the right's 2026-08-07 upgrade;
@@ -338,6 +339,11 @@ class EmuController:
                        "angular_speed": 0.600, "angular_acc": 4.000}
         self.joint_max_speed = [180.0] * 6 + [225.0]
         self.joint_max_acc = [600.0] * 7
+        # As read from both arms 2026-08-08: every assist OFF,
+        # dynamics collision stage 4.
+        self.caps = {"avoid_singularity": 0, "endeff_collision": False,
+                     "collision_stage": 4, "static_collision": 0,
+                     "collision_remove": False}
         # per-joint drive enable; inject faults with
         # emu_controller(ip).joint_en[5] = 0  (J6 dead)
         self.joint_en = [1] * 7
@@ -762,9 +768,21 @@ class EmuController:
                         joint_en_flag=list(self.joint_en)),
                     force_sensor=SimpleNamespace(
                         force=[0.0] * 6, zero_force=[0.0] * 6, coordinate=0),
+                    # the REAL push carries the controller's own TCP
+                    # pose here, position AND euler — a recorder reading
+                    # wp.euler must not fault on the emulated frame
                     waypoint=SimpleNamespace(
-                        position=SimpleNamespace(x=0.0, y=0.0, z=0.0)),
-                    liftState=SimpleNamespace(height=lift_now, pos=lift_now),
+                        position=SimpleNamespace(*(), **dict(zip(
+                            ("x", "y", "z"),
+                            self.current_pose()[:3]))),
+                        euler=SimpleNamespace(*(), **dict(zip(
+                            ("rx", "ry", "rz"),
+                            self.current_pose()[3:6])))),
+                    liftState=SimpleNamespace(
+                        height=lift_now, pos=float(lift_now),
+                        current=0,
+                        err_flag=int(bool(self.lift_locked)),
+                        en_flag=1),
                     handState=SimpleNamespace(     # absent on fw 1.7.2
                         hand_pos=[0] * 6, hand_angle=[0] * 6,
                         hand_force=[0] * 6, hand_state=[0] * 6, hand_err=0),
@@ -1120,12 +1138,55 @@ class RoboticArm:
         return 0
 
     def rm_get_joint_en_state(self):
-        return 0, list(self._ctrl.joint_en)
+        return 0, [bool(x) for x in self._ctrl.joint_en]
 
     def rm_set_joint_en_state(self, joint_num, en_state):
         if not (1 <= int(joint_num) <= 7):
             return 1
         self._ctrl.joint_en[int(joint_num) - 1] = 1 if en_state else 0
+        return 0
+
+    # ── safety/assist capabilities (V1.7.4). The arms ship with these
+    #    OFF; Phase 2 turns singularity avoidance on for Cartesian paths.
+    def rm_get_avoid_singularity_mode(self):
+        return 0, int(self._ctrl.caps["avoid_singularity"])
+
+    def rm_set_avoid_singularity_mode(self, mode):
+        if int(mode) not in (0, 1):
+            return 1
+        self._ctrl.caps["avoid_singularity"] = int(mode)
+        return 0
+
+    def rm_get_self_endeffector_collision_enable(self):
+        return 0, bool(self._ctrl.caps["endeff_collision"])
+
+    def rm_set_self_endeffector_collision_enable(self, set_enable):
+        self._ctrl.caps["endeff_collision"] = bool(set_enable)
+        return 0
+
+    def rm_get_collision_stage(self):
+        return 0, int(self._ctrl.caps["collision_stage"])
+
+    def rm_set_collision_state(self, stage):
+        if not (0 <= int(stage) <= 8):
+            return 1
+        self._ctrl.caps["collision_stage"] = int(stage)
+        return 0
+
+    def rm_get_collision_detection(self):
+        return 0, int(self._ctrl.caps["static_collision"])
+
+    def rm_set_collision_detection(self, mode):
+        if int(mode) not in (0, 1):
+            return 1
+        self._ctrl.caps["static_collision"] = int(mode)
+        return 0
+
+    def rm_get_collision_remove_enable(self):
+        return 0, bool(self._ctrl.caps["collision_remove"])
+
+    def rm_set_collision_remove_enable(self, set_enable):
+        self._ctrl.caps["collision_remove"] = bool(set_enable)
         return 0
 
     def rm_get_install_pose(self):
@@ -1292,27 +1353,9 @@ class RoboticArm:
     def rm_algo_version(self):
         return "1.6.0-emu"
 
-    def rm_get_collision_stage(self):
-        return 0, self._ctrl.collision_stage
-
-    def rm_get_collision_detection(self):
-        return 0, 0
-
-    def rm_get_avoid_singularity_mode(self):
-        return 0, 0
-
-    def rm_get_self_collision_enable(self):
-        return 0, False
-
-    def rm_get_self_endeffector_collision_enable(self):
-        return 0, False
-
     def rm_get_electronic_fence_enable(self):
         return 0, {"enable_state": False, "in_out_side": 0,
                    "effective_region": 0}
-
-    def rm_get_collision_remove_enable(self):
-        return -2, None                # V1.7.4 feature, absent on V1.7.1
 
     def rm_get_torque_data(self):
         return -2, [], 0               # no joint torque sensors on RM75-6FB

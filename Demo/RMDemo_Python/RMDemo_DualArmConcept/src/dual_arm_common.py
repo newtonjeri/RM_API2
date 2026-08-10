@@ -36,6 +36,8 @@ import os
 import pathlib
 import socket
 import sys
+
+import log_utils                # wants_help(): one predicate for -h/--help
 import threading
 import time
 
@@ -568,7 +570,8 @@ Environment overrides:
 """
 
 
-def handle_cli(doc: str, argv=None, extra_flags=(), value_flags=()):
+def handle_cli(doc: str, argv=None, extra_flags=(), value_flags=(),
+               usage=None, allow_common=True):
     """-h/--help prints the script docs and exits BEFORE anything runs;
     any unknown argument is rejected (exit 2) rather than silently
     ignored — an ignored typo would otherwise move the robot.
@@ -577,14 +580,23 @@ def handle_cli(doc: str, argv=None, extra_flags=(), value_flags=()):
     pole diagnostic's --diagnose-only / --clear-errors).
     value_flags: flags that CONSUME the next argument (e.g. C15's
     --speeds / --stroke), so their value is not mistaken for a stray
-    positional and rejected."""
+    positional and rejected.
+    usage: replace the shared motion USAGE block — for OFFLINE analysis
+    scripts, whose flags have nothing to do with --mode/--no-hands.
+    allow_common: accept the shared motion flags (--mode/--no-hands/
+    --no-pole/--clear-errors). Set False on offline scripts so that
+    `--mode REAL` is REJECTED there rather than silently ignored, which
+    would otherwise read as "I ran that offline check in REAL mode"."""
     args = list(sys.argv[1:] if argv is None else argv)
-    if "-h" in args or "--help" in args:
+    text = usage if usage is not None else USAGE
+    if log_utils.wants_help(args):
         print((doc or "").strip())
         print()
-        print(USAGE)
+        print(text)
         raise SystemExit(0)
-    consuming = ("--mode",) + tuple(value_flags)
+    common = ("--no-hands", "--no-pole", "--clear-errors") if allow_common \
+        else ()
+    consuming = (("--mode",) if allow_common else ()) + tuple(value_flags)
     skip = False
     for a in args:
         if skip:
@@ -595,13 +607,13 @@ def handle_cli(doc: str, argv=None, extra_flags=(), value_flags=()):
             continue
         if any(a.startswith(f + "=") for f in value_flags):
             continue
-        if a.startswith("--mode=") \
-                or a in ("--no-hands", "--no-pole", "--clear-errors") \
+        if (allow_common and a.startswith("--mode=")) \
+                or a in common \
                 or a in extra_flags:
             continue
         print(f"unknown argument: {a!r}")
         print()
-        print(USAGE)
+        print(text)
         raise SystemExit(2)
 
 

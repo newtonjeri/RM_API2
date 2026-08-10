@@ -141,6 +141,16 @@ class SegmentVerifier:
 
         Shared by every offline consumer so the modelled arm variant is
         defined in exactly ONE place — see FORCE_MODEL_NAME above.
+
+        WARNING — GLOBAL STATE. `rm_algo_set_toolframe` / `_set_workframe`
+        / `_set_angle` configure the C library process-wide, not per Algo
+        instance. Constructing an Algo here RESETS whatever tool frame a
+        caller had set. On 2026-08-08 this silently invalidated an entire
+        analysis: the tool frame was set, then a SegmentVerifier was built
+        (clobbering it), so every IK target sat 227 mm beyond the real
+        tool point and every solution came back with a straight elbow.
+        Rule: construct all Algo instances FIRST, set the tool frame LAST,
+        and assert FK of a known configuration before trusting results.
         """
         try:
             rm = pathlib.Path(__file__).resolve().parents[4] / "Python"

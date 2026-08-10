@@ -32,6 +32,7 @@ Usage: python3 run_hinge_verify.py [--plan PATH] [--samples N]
        [--stroke-targets N] [--margin MM]
 """
 
+import math
 import sys
 import time
 
@@ -39,6 +40,29 @@ from segment_verifier import (
     BUNDLED_PLANS, SegmentVerifier, arm_stages, load_plan, plan_state_upto,
     resolve_plan, stage_maps, subsample)
 from task_config import TaskConfig
+from cleaning_path import CleaningPath, movel_joint_timeline
+from dual_arm_common import handle_cli
+
+USAGE = (
+    "Usage: python3 run_hinge_verify.py [--task NAME] [--side right|left]\n"
+    "       [--plan PATH] [--samples N] [--stroke-targets N] [--margin MM]\n"
+    "       [--movel-step MM] [--path-stage NAME] [-h|--help]\n"
+    "  --task NAME         hinge_area_left|hinge_area_right|toplid_left|"
+    "toplid_right\n"
+    "  --side right|left   override the side inferred from the plan\n"
+    "  --plan PATH         use this plan instead of the task's bundled one\n"
+    "  --samples N         interpolation samples per movej segment "
+    "(default 40)\n"
+    "  --stroke-targets N  chain targets across the cleaning stroke "
+    "(default 20)\n"
+    "  --margin MM         clearance margin required of every sample "
+    "(default 10)\n"
+    "  --movel-step MM     R11(a) movel sweep resolution (default 10)\n"
+    "  --path-stage NAME   stage holding the cleaning path "
+    "(default execute_path)\n"
+    "  -h, --help          show this documentation and exit")
+
+POLE_M = 0.075          # what every commode task commands
 
 # The config names MoveIt collision objects; the offline scene names its
 # meshes. One explicit bridge, so a rename in either system fails loudly
@@ -133,9 +157,14 @@ def _arg(flag, default):
 
 
 def main() -> int:
-    if "-h" in sys.argv or "--help" in sys.argv:
-        print(__doc__)
-        return 0
+    # Shared parser: docs on -h/--help, and an unknown argument is
+    # REJECTED (exit 2). `_arg` silently falls back to its default, so
+    # before this a typo'd `--tsak toplid_right` analysed hinge_area_left
+    # and printed a verdict headed with the wrong task name.
+    handle_cli(__doc__, allow_common=False, usage=USAGE,
+               value_flags=("--task", "--side", "--plan", "--samples",
+                            "--stroke-targets", "--margin", "--movel-step",
+                            "--path-stage"))
     task = _arg("--task", DEFAULT_TASK)
     plan_path = _arg("--plan", str(plan_for(task)))
     samples = int(_arg("--samples", 40))
@@ -154,6 +183,18 @@ def main() -> int:
 
     plan = load_plan(plan_path)
     cfg = TaskConfig.load(task)
+    movel_step = float(_arg("--movel-step", 10))
+    movel_prog = CleaningPath(cfg).movel_program(POLE_M)
+    path_stage = _arg("--path-stage", "execute_path")
+    # Seed the Cartesian tracker exactly where the dispatcher pins it: the
+    # movej to move_to_start on MoveIt's own joint solution (F22 — the one
+    # thing the saved plan legitimately supplies).
+    _pref = "R_" if cfg.side == "right" else "L_"
+    _J = [f"{_pref}joint{i}" for i in range(1, 8)]
+    _st = [x for x in arm_stages(plan, prefix=f"{_pref}joint")
+           if x["stage_name"] == "move_to_start"]
+    seed_deg = ([math.degrees(stage_maps(_st[0])[-1][j]) for j in _J]
+                if _st else [0.0] * 7)
     surface, contact_stages = cfg.contact_window()
     side = _arg("--side", side_of(plan))
     pref = "R_" if side == "right" else "L_"
@@ -192,6 +233,23 @@ def main() -> int:
             [dict(base, **m)
              for m in v.movej_timeline(maps[0], maps[-1], samples)],
             arm_joints, tag="modeA")
+        # ── R11 (a): sweep what is ACTUALLY EXECUTED ──
+        # For the cleaning stroke the dispatcher sends Cartesian movel
+        # through the CONFIG's waypoints, not the saved plan's joints.
+        # That is the path that must be collision-checked; the rows above
+        # are kept as the MoveIt cross-reference, no longer the verdict.
+        movel = movel_fails = None
+        mm_maps = []
+        if name == path_stage:
+            try:
+                mm_maps, movel_fails, _n = movel_joint_timeline(
+                    cfg, movel_prog, seed_deg, step_mm=movel_step)
+                movel = v.verify_timeline(
+                    [dict(base, **m) for m in mm_maps],
+                    arm_joints, tag="movel")
+            except SystemExit as exc:
+                print(f"    [WARN] movel sweep unavailable: {exc}")
+
         sparse = None
         # by SIZE, not by stage name — see build_targets in C11
         if len(maps) > stroke_n:
@@ -207,6 +265,8 @@ def main() -> int:
         rows = [("dense (MoveIt ref)", dense), ("Mode A (2 targets)", mode_a)]
         if sparse:
             rows.append((f"sparse-{stroke_n} chain", sparse))
+        if movel:
+            rows.append(("movel AS EXECUTED", movel))
         print(f"\n  {name}  ({st['num_waypoints']} wp, "
               f"{time.perf_counter() - t0:.1f}s to verify)   [{pole}]")
         for label, rep in rows:
@@ -226,14 +286,18 @@ def main() -> int:
         #     substantially larger FRACTION of its samples than the dense
         #     path does — i.e. it touches where the task touches, and no
         #     new collision regions appear.
-        cand = sparse if sparse else mode_a
+        # Judge the EXECUTED path when we have it; fall back to the
+        # sparse/ModeA models for the stages that are plain movej.
+        cand = movel if movel else (sparse if sparse else mode_a)
         # A stage inside the allow_collision bracket is judged by the
         # CONFIG CONTRACT — declared links may touch declared objects,
         # nothing else may touch anything. Touch fraction was only ever a
         # proxy; this is the rule the task itself states.
         contact_stage = name in contact_stages
         if contact_stage:
-            timeline = (subsample(maps, samples) if sparse is None
+            # judge contact on the EXECUTED path where we have it
+            timeline = ([dict(base, **m) for m in
+                         subsample(mm_maps, samples)] if movel
                         else [dict(base, **m) for m in
                               subsample(maps, samples)])
             cv = contact_verdict(v, timeline, arm_joints, cfg, surface)
@@ -255,7 +319,8 @@ def main() -> int:
                          or cand["min_clearance_m"] >= ref - 0.002))
             basis = f"free-space stage: margin {margin_m * 1000:.0f} mm"
         verdicts.append((name, safe, cand["min_clearance_m"], ref,
-                         "sparse chain" if sparse else "Mode A", basis))
+                         "movel EXECUTED" if movel else
+                         ("sparse chain" if sparse else "Mode A"), basis))
 
     print("\n" + "=" * 70)
     print("  CLEARANCE MAP — execution-mode decision per stage")

@@ -42,11 +42,15 @@ from cleaning_path import CleaningPath
 from task_config import TaskConfig
 from dual_arm_common import (
     handle_cli, parse_mode_arg, countdown, preflight_error_gate,
+    host_ip_for, UDP_PORT,
+    error_state, describe_error_state,
     apply_run_mode, mode_label, report_run_modes, restore_run_modes,
     teardown, ArrivalMonitor, ConceptArm,
     ARM_TIMEOUT_S, DEV_JOINT, DEV_LIFT, LEFT_IP, LIFT_TIMEOUT_S,
     RIGHT_IP, ROBOT_PORT, hand_dwell_s, lift_hw_mm,
 )
+import controller_caps
+import run_recorder
 import speed_limits
 from segment_verifier import (
     arm_stages, load_plan, resolve_plan, stage_maps)
@@ -74,6 +78,56 @@ def _arg(flag, default=None):
     return default
 
 
+def diagnose_failure(arm, arrived, ok):
+    """Why did a dispatch fail? Read every surface, at the moment it did.
+
+    `arrived and ok` is a verdict, not a reason. The 2026-08-08 runs
+    reported only "43 segments, tool R_glove_4" on failure, which left us
+    inferring the cause from screenshots hours later. Everything below is
+    a read the controller answers immediately.
+    """
+    bits = []
+    bits.append("no arrival event within the timeout"
+                if not arrived else "arrival event reported FAILURE")
+    try:
+        st = error_state(arm)
+        d = describe_error_state(st)
+        bits.append(f"errors: {d}" if d else "errors: none reported")
+    except Exception as exc:
+        bits.append(f"error state unreadable: {exc!r}")
+    try:
+        ret, en = arm.robot.rm_get_joint_en_state()
+        if ret == 0:
+            dead = [i + 1 for i, e in enumerate(en) if not e]
+            bits.append(f"joints DISABLED {dead}" if dead
+                        else "all joints enabled")
+    except Exception:
+        pass
+    for label, getter in (("run mode", "rm_get_arm_run_mode"),
+                          ("collision stage", "rm_get_collision_stage"),
+                          ("avoid singularity", "rm_get_avoid_singularity_mode")):
+        try:
+            r = getattr(arm.robot, getter)()
+            val = r[1] if isinstance(r, tuple) else r
+            bits.append(f"{label}={val}")
+        except Exception:
+            pass
+    try:
+        ret, cur = arm.robot.rm_get_current_tool_frame()
+        if ret == 0:
+            bits.append(f"tool={cur.get('name') or cur.get('frame_name')}")
+    except Exception:
+        pass
+    try:
+        ret, st2 = arm.robot.rm_get_current_arm_state()
+        if ret == 0 and isinstance(st2, dict) and st2.get("joint"):
+            bits.append("joints at failure: "
+                        + str([round(float(x), 1) for x in st2["joint"]]))
+    except Exception:
+        pass
+    return "; ".join(bits)
+
+
 class DeviceBusy(RuntimeError):
     """A dispatch was attempted while another device was in flight."""
 
@@ -82,7 +136,8 @@ class StageRunner:
     """Walks a task's active stages, one device at a time."""
 
     def __init__(self, cfg, arm, monitor, plan, dry=False,
-                 serialize=SERIALIZE, sim=False, hover_mm=0.0):
+                 serialize=SERIALIZE, sim=False, hover_mm=0.0,
+                 recorder=None):
         self.cfg = cfg
         self.arm = arm
         self.monitor = monitor
@@ -97,6 +152,7 @@ class StageRunner:
         # call signature) WITHOUT the arm ever moving for real.
         self.sim = sim
         self.hover_mm = hover_mm
+        self.recorder = recorder
         self.in_flight = None          # the invariant, as state
         self.log = []
         self.pole_m = None
@@ -240,8 +296,15 @@ class StageRunner:
         if self.pole_m is None:
             return False, ("pole height unknown — the path is a function of "
                            "it; run the pole stage first")
-        prog = CleaningPath(self.cfg).movel_program(
-            self.pole_m, hover_mm=self.hover_mm)
+        path = CleaningPath(self.cfg)
+        if not self.dry and self.arm is not None:
+            # The mounting angle comes from the ARM, not a constant —
+            # a re-mount would otherwise rotate every target silently.
+            got = path.set_mount_from_controller(self.arm.robot)
+            if got:
+                print(f"    install pose from controller: "
+                      f"Ry={got[1]:.2f} deg")
+        prog = path.movel_program(self.pole_m, hover_mm=self.hover_mm)
         n = prog["segments"]
         self._claim("arm", "execute_path")
         original_tool = None
@@ -291,6 +354,13 @@ class StageRunner:
                                f"{rejects[:5]} — check queue depth (C10)")
             arrived, ok = self.monitor.wait(self.arm.handle_id, DEV_JOINT,
                                             max(ARM_TIMEOUT_S, 120.0))
+            if not (arrived and ok):
+                # "it failed" is not a diagnosis. Read every surface the
+                # controller exposes, at the moment of failure, so the
+                # next run tells us the reason instead of us inferring it.
+                why = diagnose_failure(self.arm, arrived, ok)
+                return False, (f"{n} segments, tool {prog['tool_frame']}"
+                               f" — {why}")
             return bool(arrived and ok), (
                 f"{n} segments, tool {prog['tool_frame']}"
                 + (f", HOVER {prog['hover_mm']:.0f} mm"
@@ -340,7 +410,10 @@ class StageRunner:
                     ok, detail = self.run_arm_pose(stage)
             except DeviceBusy as exc:
                 ok, detail = False, str(exc)
-            dt = time.perf_counter() - t0
+            t1 = time.perf_counter()
+            dt = t1 - t0
+            if self.recorder is not None:
+                self.recorder.mark(name, dev, t0, t1, ok, detail)
             self.log.append((name, dev, ok, detail))
             tag = {True: "ok  ", False: "FAIL", None: "skip"}[ok]
             print(f"    {tag} {name:28s} [{dev:4s}] {dt:6.2f}s  {detail}")
@@ -356,8 +429,9 @@ class StageRunner:
 def main() -> int:
     for k in _results:
         _results[k] = 0
-    handle_cli(__doc__, extra_flags=("--dry",),
-               value_flags=("--task", "--fixture", "--hover"))
+    handle_cli(__doc__, extra_flags=("--dry", "--no-record"),
+               value_flags=("--task", "--fixture", "--hover",
+                            "--udp-cycle"))
     task = _arg("--task", "hinge_area_right")
     fixture = _arg("--fixture", "commode_c")
     hover_mm = float(_arg("--hover", "0"))
@@ -399,6 +473,8 @@ def main() -> int:
 
     arm = None
     originals = {}
+    caps_before = {}
+    rec = None
     try:
         robot = RoboticArm(rm_thread_mode_e.RM_TRIPLE_MODE_E)
         handle = robot.rm_create_robot_arm(ip, ROBOT_PORT, 3)
@@ -414,6 +490,13 @@ def main() -> int:
             result("FAIL", "run-mode selection", "did not engage")
             return 1
         report_run_modes(arm)
+        caps_before = controller_caps.prepare(arm.robot, f"({cfg.side})")
+        if "--no-record" not in sys.argv:
+            rec = run_recorder.RunRecorder(
+                arm.robot, task, cfg.side, host_ip_for(ip), UDP_PORT,
+                cycle=int(_arg("--udp-cycle", run_recorder.DEFAULT_CYCLE)))
+            if not rec.start():
+                rec = None
         # What mode are we ACTUALLY in? --mode wins; otherwise ask.
         try:
             _r, mode_now = robot.rm_get_arm_run_mode()
@@ -437,9 +520,42 @@ def main() -> int:
                   "stages are ASSUMED successful (the controller models "
                   "neither — F3)")
         ok = StageRunner(cfg, arm, monitor, plan, sim=sim_mode,
-                         hover_mm=hover_mm).run()
+                         hover_mm=hover_mm, recorder=rec).run()
         return 0 if ok else 1
     finally:
+        try:
+            if rec is not None:
+                prog = CleaningPath(cfg).movel_program(
+                    POLE_QUARTER_M, hover_mm=hover_mm)
+                rec.meta.update({
+                    "mode": mode_label(forced),
+                    "sim": bool(sim_mode),
+                    "speeds": {"cleaning_pct": cfg.cleaning_speed_pct,
+                               "transit_pct": cfg.arm_speed_pct,
+                               "approach_pct": cfg.approach_speed_pct,
+                               "pole_pct": cfg.pole_speed_pct},
+                    "ik_frame": cfg.ik_frame,
+                    "capabilities_as_found": {
+                        k: (v if not isinstance(v, str) else str(v))
+                        for k, v in (caps_before or {}).items()},
+                    "commanded": {
+                        "tool_frame": prog["tool_frame"],
+                        "pole_m": prog["pole_m"],
+                        "blend_pct": prog["blend_pct"],
+                        "hover_mm": prog["hover_mm"],
+                        "num_waypoints": len(prog["poses"]),
+                        "segments": prog["segments"],
+                        "waypoint_names": prog["waypoint_names"],
+                        "poses": prog["poses"]}})
+                rec.stop()
+        except Exception as exc:
+            print(f"  [WARN] recorder stop failed: {exc!r}")
+        try:
+            if arm is not None and caps_before:
+                controller_caps.restore(arm.robot, caps_before)
+                print("  [INFO] controller capabilities restored")
+        except Exception as exc:
+            print(f"  [WARN] capability restore failed: {exc!r}")
         restore_run_modes(originals)
         teardown(arm)
         print(f"\n  Summary: {_results['PASS']} PASS, {_results['FAIL']} "
