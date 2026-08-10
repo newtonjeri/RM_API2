@@ -16,11 +16,10 @@ corrected or retracted here — see F22-F25 and the gate notes.)*
 |---|---|
 | **Architecture** | ROS 2 plans and validates; the RealMan controller executes. Frame chain now proven against both controllers: **0.0 mm / 0.07 deg**. |
 | **Phase 1** | All blocking gates ✅/🔵. Caveat recorded: C2/C3/C9/C17 were measured at **arm v=20 %**, while the tasks now run 50/100 % — the evidence is at a setting that no longer ships. |
-| **Phase 2 build** | `task_config.py`, `cleaning_path.py`, `stage_runner.py`, `controller_caps.py`, `speed_limits.py`, `power_probe.py`, `recover_joints.py`. Four tasks: hinge_area_{right,left}, toplid_{right,left}. Dry run **216/216**, emulated suite **20/20**. |
-| **Hardware status** | **No task has yet completed on hardware.** `execute_path` failed in REAL *and* in SIMULATION (F21b). J6/J7 latched Under-Voltage in a separate, free-space incident (F21a). |
-| **Root cause** | **NOT established.** An earlier claim that the movel chain is Cartesian-infeasible was **RETRACTED** — it was an artifact of global tool-frame state (F24). |
-| **Prepared for the next run** | Mount angle read from `rm_get_install_pose()`; **singularity avoidance enabled** (was supported-but-OFF, F23); failure diagnostics that name the reason; the global-state trap guarded. |
-| **Open risks** | R10 under-voltage (needs the probe ladder) · R11 C12 verifies a different path than we execute, and neither side is hardware truth (F22) · R12 blend r=10 unmeasured. |
+| **Phase 2 build** | `task_config.py`, `cleaning_path.py`, `stage_runner.py`, `controller_caps.py`, `speed_limits.py`, `power_probe.py`, `recover_joints.py`, `run_recorder.py`, `error_codes.py`, `payload_audit.py`, `blockly_points.py`. Four tasks: hinge_area_{right,left}, toplid_{right,left}. Dry run **249/249**, emulated suite **20/20**. |
+| **Hardware status** | ✅ **ALL FOUR TASKS COMPLETE, 13/13 runs, every one with `collision_stage=3` APPLIED** (2026-08-10 22:00–22:19). `hinge_area_left`, `toplid_left`, `hinge_area_right`, `toplid_right` all pass in SIMULATION; `toplid_left` and `hinge_area_left` also pass in REAL. Speed stepped **38 % → 68 % → 94 %** with REAL runs completing at each. |
+| **Root cause** | ✅ **ESTABLISHED and FIXED: the payload centroid.** Six tool frames carried a centre of mass written 1000× too large — 128 metres — so the controller's torque model predicted a force the joints never produced and reported it as `0x100D`, *arm collision detected* (F26–F28, F31). RealMan's own remedy for that code says re-establish the tool coordinate system when there is a load at the end. |
+| **Open risks** | R10 under-voltage — **untested since**, and the only thing SIM cannot cover · WP6 acceptance not started · the right arm has had **no REAL run** · R12 blend r=10 still unmeasured (F27 shows it is not what 0x100D reported). |
 
 ---
 
@@ -142,6 +141,9 @@ demonstrated on this machine.
 | **F28** | **The BLOCKLY program hits the same collision — our SDK layer is eliminated.** Newton, 2026-08-10: the hand-built pendant program, running the points `blockly_points.py` generated, in SIMULATION, aborts with a collision error too. A controller-native program shares none of our dispatch code, so this **rules out** `rm_movel` invocation, `connect=1` chaining, blend, the speed policy, serialization, and the Python SDK entirely. What our runs and the Blockly run still share is exactly three things: **the points, the tool frame, and the physical arm** | Every remaining hypothesis must explain a failure that happens with NO code of ours involved. That is a much smaller space, and it is where §7.1 now points |
 | **F29** | **J3-J7 UNDERVOLTAGE, and the arm will not re-enable.** `recover_joints.log` 2026-08-10 16:56, left arm: `J3..J7 DISABLED err_flag=4`. Decoded against the newly transcribed table (`ERROR_CODES.md`), **joint bit `0x0004` = 欠压, undervoltage** — five joints, every one distal of J2. `clear_err ret=0` cleared the flags (`err_flag` 4 -> 0) but **`enable ret=1` was REFUSED on all five** and they stayed DISABLED; per the API2 table `ret=1` is "controller returns false — parameters wrong or arm state wrong". **Timeline: 16:08 connect CLEAN, all joints enabled -> 16:09 collision abort -> 16:39 collision abort -> Blockly collision abort -> 16:53 five joints down.** This is F21a/R10 escalated from J6/J7 to J3-J7; the J3-and-outward pattern is a shared-supply/harness signature, not five independent faults | **BLOCKING — the left arm cannot run anything until this clears.** The recovery script's own advice stands: a joint that will not re-enable means the CAUSE is still present (e-stop fully released, supply, harness) and that is RealMan-support territory. **The right arm is CLEAN and its pole is at the commanded 75 mm**, so testing can continue there — see F30 for why that is more than a workaround |
 | **F30** | **Two measurements that reframe the collision, both from the recordings.** (1) **`joint_voltage` is unusable**: a flat **22.00 V on all 7 joints, zero variance across 2085 samples**, in both failing runs. It is a nominal placeholder, not a measurement — so no recording can ever show the undervoltage sag, and `power_probe.py`'s voltage premise needs revisiting before the R10 ladder is trusted. (2) **Current IS live and J4 is working hard**: peaks of **2150 mA / 2541 mA** on J4 and ~860 mA on J2, *in SIMULATION where the arm never moves* — that is pure holding torque of an extended arm. Meanwhile the tool frames carry a payload of **0.706 kg on the LEFT with centroid (0, 0, 0)** (copied from the pre-existing `Hand` frame by C14) and **0.0 kg on the RIGHT** | **Hypothesis, not yet a finding:** RealMan collision detection compares MEASURED joint current against its MODEL's prediction. A payload declared at centroid (0,0,0) puts the mass at the flange and understates the moment arm, so predicted current sits below the 2.5 A J4 actually draws — and the controller calls the difference an external collision. It fits the SIM occurrence (holding current is real), the Blockly reproduction (same physical arm), and `collision_stage=3`. **The left/right payload difference makes this free to test: 0.706 kg vs 0.0 kg on otherwise identical arms.** Run `hinge_area_right` — if it also aborts, payload is NOT the cause |
+| **F31** | **ROOT CAUSE CONFIRMED, and the confound is closed.** 2026-08-10 22:00–22:19, **13 runs, every one with `collision_stage=3` applied** (`enabling: avoid_singularity=1, collision_stage=3` in every session header) — **13/13 PASS**. The earlier successes had detection OFF and could not distinguish "the frame fix worked" from "detection was disabled"; these cannot be read any other way. All four tasks complete: `hinge_area_left`, `toplid_left`, `hinge_area_right`, `toplid_right` in SIMULATION; `hinge_area_left` and `toplid_left` also in REAL. **The payload centroid was the cause** — F26/F27/F28 are closed by this, and R12 (blend) and R11 (movel-vs-plan) are not implicated | The failure that consumed 2026-08-08 and most of 2026-08-10 was a **configuration defect on the controller, not a defect in the motion**: six tool frames carrying a centre of mass 1000× too large. Every downstream hypothesis — chain length, `connect=1`, blend radius, 180° reversals, Cartesian infeasibility, singularity — was a symptom being mistaken for a cause. **The generalisable lesson is F32** |
+| **F32** | **The controller holds configuration that no repository records, and it fails REMOTELY from its cause.** Tool frames, payload mass and centroid, capability flags, speed limits — all set by hand in a GUI, all able to drift silently. `collision_stage` reads **0 as-found on every single session** and had to be re-applied per run; `avoid_singularity` likewise. A payload typo surfaced two days later as a collision verdict. `payload_audit.py`, `controller_caps.py`, `speed_limits.py` and `test_frame_alignment.py` all exist purely because there was no other way to find out | **Declare it and reconcile it.** A per-arm `robot_state.yaml` in the repo listing expected frames, payload records, capabilities and limits, plus a reconciler that reads the controller, diffs, and gates bringup on the difference. Carried into the alix codebase plan (`alix_ws/src/alix/LAYERS.md` §5) as `alix_commissioning`. The payload record must also carry **what it comprises** — the right arm reads 0.711 kg against the left's 0.567 kg solely because a D435 sits on `R_CameraHolderLink`, distal of J7 and therefore payload |
+| **F33** | **The pendant speed override is PER ARM, and it is now measurable.** In one session the left arm ran at 38 % of the commanded cap while the right ran at 49–50 % — two sliders, two values, neither readable by the SDK. Stepping the left 38 % → 68 % → 94 % produced achieved speeds of **95.5 → 169.4 → 234.9 mm/s** against a 250 mm/s cap: linear in the slider, to within a percent. `toplid_left` REAL fell from **84 s to 48 s** | The recorder's achieved-speed measurement is now **calibrated against a known input**, so it can be trusted as the read-back for a control the SDK cannot query. Two consequences: **never compare timings across arms or sessions without it**, and a task's duration is not a property of the task. The 1.75× speed-up for a 2.5× slider change is the acceleration limit, exactly as the trapezoid model predicts — most segments are too short to reach cruise |
 | F14 | Right arm
 
 ---
@@ -340,91 +342,43 @@ values from the saved plans and the cleaning path from the config.
 | **2 build** | Config loader, path resolver, dispatcher, probes, run recorder, Blockly point generator | ✅ dry run 236/236, emulated 20/20, four tasks end to end under emulation |
 | **2 execution** | R10 debug → first clean run → 4-task rollout → acceptance (5× clean each) | 🟡 **current** |
 
-### 7.1 Next hardware session — diagnose, then run
+### 7.1 Next hardware session — what is LEFT
 
-Everything below is prepared: mount angle read from the controller,
-singularity avoidance enabled and restored, failure diagnostics that name
-the reason, and a capability census at connect.
+*Rewritten 2026-08-10 22:30. The diagnostic ladder that used to live here is
+spent: F31 closed it. What remains is coverage, not investigation.*
 
 ```bash
 cd RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src
 
-# 0. health + capability census (read-only, nothing moves)
-python3 test_dual_connect.py
-RM_ARM=left python3 recover_joints.py                # report; --enable 6,7 to act
+# 1. REAL runs the right arm has never had. SIM has passed on both
+#    right tasks with collision_stage=3, which DOES exercise the payload
+#    and collision model (the original 0x100D fired in SIM) — but not
+#    real current draw, and the right arm carries a different payload.
+RM_COLLISION_STAGE=3 python3 stage_runner.py --task hinge_area_right --mode REAL
+RM_COLLISION_STAGE=3 python3 stage_runner.py --task toplid_right     --mode REAL
 
-# 1. RUN 2026-08-10 16:09 — FAILED, and the recorder named the reason.
-#    system 0x100D on the FIRST segment, joints clean, SIM mode (F26).
-python3 stage_runner.py --task hinge_area_left --mode SIM
+# 2. The one question SIM cannot answer: R10, supply margin at speed.
+#    The J3-J7 under-voltage has NOT recurred, but nothing since has
+#    drawn full current — the highest REAL runs were toplid_left only.
+RM_ARM=left python3 power_probe.py --seconds 120 --label full_speed &
+RM_COLLISION_STAGE=3 python3 stage_runner.py --task hinge_area_left --mode REAL
+#    with the pendant at ~100 %. hinge_area_left is the longer path
+#    (43 segments vs toplid's 27) and has only ever run REAL at 39 %.
 
-# 1a. THE LEFT ARM IS DOWN. J3-J7 undervoltage, enable REFUSED (F29).
-#     Nothing below runs on the left arm until this clears. Confirm, do
-#     not keep re-clearing:
-python3 test_dual_connect.py
-RM_ARM=left python3 recover_joints.py --enable 3,4,5,6,7
-#     If enable is refused again: e-stop fully released? supply? harness?
-#     That is RealMan support, not a state to keep clearing.
-#     Also note: the LEFT pole reads 223 mm while every task path is
-#     computed for 75 mm (F30). No REAL left-arm run until it is at 75.
-
-# 1b. MEANWHILE, USE THE RIGHT ARM — it is clean, its pole is at 75 mm,
-#     and its tool frames carry payload 0.0 kg against the left's
-#     0.706 kg. That difference is the free test of the F30 hypothesis.
-python3 stage_runner.py --task hinge_area_right --mode SIM --max-segments 1
-#     -> aborts with 0x100D too?  payload is NOT the cause; it is the
-#        points or the tool frame, on both arms.
-#     -> passes?  the payload/centroid model is implicated, and the fix
-#        is to declare the hand's real mass and centroid, not to switch
-#        collision detection off.
-
-# 1c. ATTRIBUTE THE COLLISION VERDICT. 0x100D = "arm collision
-#     detected", raised in SIMULATION where nothing can be touched, so a
-#     MODEL raised it. Turn the models off one at a time; all are
-#     restored on exit. Stop at the first run that PASSES — that names
-#     the check that owns the abort.
-TASK=hinge_area_right       # the healthy arm; hinge_area_left once J3-J7 are back
-RM_ENDEFF_COLLISION=0 python3 stage_runner.py --task $TASK --mode SIM --max-segments 1
-#     -> END-EFFECTOR self-collision, evaluated against the active tool
-#        frame (L_glove_4, far off the flange). START HERE: it is the one
-#        check our offline sweep does NOT model, since rm_algo's
-#        self-collision takes joint angles and knows no tool.
-RM_SELF_COLLISION=0 python3 stage_runner.py --task $TASK --mode SIM --max-segments 1
-#     -> the arm's own self-collision model. Offline says self=0 on all
-#        976 movel samples, so a PASS here would mean our model and the
-#        controller's disagree — which is a finding in itself.
-RM_COLLISION_STAGE=0 python3 stage_runner.py --task $TASK --mode SIM --max-segments 1
-#     -> the 0..8 detection sensitivity (as-found 3).
-RM_ENDEFF_COLLISION=0 RM_SELF_COLLISION=0 RM_COLLISION_STAGE=0 \
-    python3 stage_runner.py --task $TASK --mode SIM --max-segments 1
-#     -> all three off. If this STILL fails, the abort is not the
-#        collision system and the chain itself is next (--max-segments).
-
-# 1d. TOOL-FRAME attribution — movej passes and movel fails in the SAME
-#     run, and the tool frame is the only thing movel uses that movej
-#     does not (F27). SIM, single segment, nothing moves for real.
-python3 test_frame_alignment.py --mode REAL --poses
-#     -> read back the glove frame as the controller holds it. C14 wrote it and
-#        verified 0.00 mm, but that was 2026-08-08 and a payload or a
-#        re-write since would not have been noticed.
-#     Then, in the Web GUI with the arm idle: select tool frame
-#     L_glove_4 and jog -Y by 90 mm. If the GUI ALSO reports a collision,
-#     the frame/payload is the defect and no amount of SDK work fixes it.
-
-# 1e. only if the above do not explain it — chain shape (R12 still
-#     unmeasured, but F27 shows it is not what 0x100D reports)
-python3 stage_runner.py --task $TASK --mode SIM --blend 0
-
-# 2. the under-voltage ladder (only once step 1 passes)
-RM_ARM=left python3 power_probe.py --seconds 10 --label idle
-RM_ARM=left python3 power_probe.py --seconds 90 --label derate04 &
-RM_SPEED_DERATE=0.4 python3 stage_runner.py --task hinge_area_left --mode REAL
-#    step 0.4 -> 0.7 -> 1.0; the clean derate is the operating speed
-
-# 3. rollout: the other three tasks, then WP6 acceptance (5x clean each)
+# 3. WP6 acceptance — 5x clean per task, four tasks, REAL
+for i in 1 2 3 4 5; do
+  for t in hinge_area_left hinge_area_right toplid_left toplid_right; do
+    RM_COLLISION_STAGE=3 python3 stage_runner.py --task $t --mode REAL
+  done
+done
 ```
 
-**If step 1 fails, do not proceed to step 2** — a chain that cannot
-complete in simulation will not be fixed by changing speed.
+**Set both pendant sliders to the same value before any timing comparison**
+— F33: they are independent, and they were 38 % and 49 % in the same
+session.
+
+**Still true:** a chain that cannot complete in SIMULATION will not be
+fixed by changing speed. SIM remains the first gate for anything new.
 
 Every run above writes `runs/<runid>/{stream.csv,run.json}` — 100 Hz arm +
 pole + the controller's own TCP pose, stage marks on the same `t_mono`

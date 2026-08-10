@@ -91,21 +91,60 @@ class SegmentVerifier:
 
     def __init__(self, fixture: str = "commode_c", side: str = "right",
                  quiet: bool = False, articulation: str = None):
+        """Kinematics now; the COLLISION SCENE only when something asks.
+
+        Splitting these matters on the robot, not in the analysis. The
+        runtime dispatcher calls `CleaningPath._ref_to_arm_base()` to place
+        the reference frame at the commanded pole height, and that needs
+        `self.model` and `self.home` — FK and the SRDF home state, ~50 ms.
+        It does NOT need the fixture meshes. Building them eagerly meant
+        every `movel_program()` constructed 43 mesh BVH trees first:
+        measured **2.4-3.2 s**, twice per run (once for the recorder's
+        commanded block, once to execute), and it showed up on hardware as
+        ~4.6 s of dead time between `execute_path` starting and the first
+        joint moving (2026-08-10 22:18 recording).
+
+        Nothing about the offline verification changes — the first call to
+        a collision method builds exactly what it used to.
+        """
         from butterfli_workspace.urdf_kinematics import UrdfModel
-        from butterfli_workspace.collision import (
-            RobotCollisionModel, PosedRobotCollision, build_fixture_manager)
+        from butterfli_workspace.collision import RobotCollisionModel
         from butterfli_workspace.dual_arm_plan_collision import _build_home
         self.side = side
+        self.fixture = fixture
+        self.articulation = articulation
+        self.quiet = quiet
         self.model = UrdfModel.from_file(str(URDF))
-        rcm = RobotCollisionModel.from_file(str(URDF))
-        self.home = _build_home(rcm, str(SRDF) if SRDF.exists() else None)
-        self.posed = PosedRobotCollision(rcm, self.model,
-                                         link_filter=_arm_link_filter(side))
-        # fixture meshes at their scene pose (BVH built once, then reused)
+        self._rcm = RobotCollisionModel.from_file(str(URDF))
+        self.home = _build_home(self._rcm, str(SRDF) if SRDF.exists() else None)
+        self._posed = None
+        self._fixture_mgrs = None
+        self._algo = self._load_algo()
+
+    # ── the collision scene, built on first use ──────────────────────────
+    @property
+    def posed(self):
+        if self._posed is None:
+            self._build_collision()
+        return self._posed
+
+    @property
+    def fixture_mgrs(self):
+        if self._fixture_mgrs is None:
+            self._build_collision()
+        return self._fixture_mgrs
+
+    def _build_collision(self):
+        """43 mesh BVH trees. ~3 s. Only worth paying to answer a
+        collision question — never to look up a transform."""
+        from butterfli_workspace.collision import (
+            PosedRobotCollision, build_fixture_manager)
         import trimesh
         import numpy as np
         from cleaning_path_gen.server import scene_manifest_cached
-        manifest = scene_manifest_cached(fixture)
+        self._posed = PosedRobotCollision(
+            self._rcm, self.model, link_filter=_arm_link_filter(self.side))
+        manifest = scene_manifest_cached(self.fixture)
         # The commode is ARTICULATED: scene.yaml gives lid and seat a joint
         # with closed=0 deg and open=-110 deg, and the manifest exposes BOTH
         # posed variants. Only one exists at a time. Every commode task
@@ -115,25 +154,25 @@ class SegmentVerifier:
         # move_to_pre_start and move_to_rest, stages that run OUTSIDE the
         # allow_collision bracket and must be clear.
         keys = list(manifest["meshes"])
-        if articulation:
-            other = "open" if articulation == "closed" else "closed"
+        if self.articulation:
+            other = "open" if self.articulation == "closed" else "closed"
             keys = [k for k in keys if not k.endswith(f"_{other}")]
-            if not quiet:
+            if not self.quiet:
                 dropped = set(manifest["meshes"]) - set(keys)
-                print(f"  [verifier] articulation {articulation!r}: using "
-                      f"{sorted(keys)}, ignoring {sorted(dropped)}")
-        self.fixture_mgrs = {}
+                print(f"  [verifier] articulation {self.articulation!r}: "
+                      f"using {sorted(keys)}, ignoring {sorted(dropped)}")
+        self._fixture_mgrs = {}
         for key, md in manifest["meshes"].items():
             if key not in keys:
                 continue
             mesh = trimesh.Trimesh(
                 np.asarray(md["vertices"], dtype=float),
                 np.asarray(md["faces"], dtype=np.int64), process=False)
-            self.fixture_mgrs[key] = build_fixture_manager(mesh)
-        if not quiet:
-            print(f"  [verifier] URDF {URDF.name}, fixture '{fixture}': "
-                  f"{len(self.fixture_mgrs)} meshes, side={side}")
-        self._algo = self._load_algo()
+            self._fixture_mgrs[key] = build_fixture_manager(mesh)
+        if not self.quiet:
+            print(f"  [verifier] URDF {URDF.name}, fixture "
+                  f"'{self.fixture}': {len(self._fixture_mgrs)} meshes, "
+                  f"side={self.side}")
 
     @staticmethod
     def _load_algo():
