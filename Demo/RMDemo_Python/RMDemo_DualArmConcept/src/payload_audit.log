@@ -1,0 +1,39 @@
+
+========================================================================
+  Script : payload_audit.py
+  Log    : payload_audit.log
+  Started: 2026-08-10 21:58:42
+========================================================================
+========================================================================
+Payload + centroid audit — is one hand described consistently?
+========================================================================
+current c api version:  1.1.6
+
+  LEFT arm — payload record per tool frame
+    frame               kg        CX      CY      CZ   note
+    L_glove_1        0.626      -0.0     0.0     0.2   <-- 0 mm from the consensus
+    L_glove_2        0.567      -0.0     0.0     0.2   
+    L_glove_3        0.565      -0.0     0.0     0.2   
+    L_glove_4        0.639       0.0     0.0     0.2   <-- 0 mm from the consensus
+    L_tip            0.568      -0.0     0.0     0.2   
+    L_index_tip      0.565      -0.0     0.0     0.2   
+    consensus from 4 of 6 agreeing frames: 0.566 kg at (-0.0, 0.0, 0.2) mm   they agree to 0.1 mm
+current c api version:  1.1.6
+
+  RIGHT arm — payload record per tool frame
+    frame               kg        CX      CY      CZ   note
+    R_glove_1        0.784      -0.0     0.0     0.1   <-- 0 mm from the consensus
+    R_glove_2        0.717      -0.0     0.0     0.2   
+    R_glove_3        0.708      -0.0     0.0     0.2   
+    R_glove_4        0.711      -0.0     0.0     0.2   
+    R_tip            0.712      -0.0     0.0     0.2   
+    R_index_tip      0.706      -0.0     0.0     0.2   
+    consensus from 5 of 6 agreeing frames: 0.711 kg at (-0.0, 0.0, 0.2) mm   they agree to 0.0 mm
+
+  MIRROR LAW — negate X, keep Y and Z (exact for glove_3, glove_4, tip, index_tip)
+    right consensus   0.711 kg at (-0.0, 0.0, 0.2) mm
+    -> left predicted 0.711 kg at (0.0, 0.0, 0.2) mm
+    left MEASURED  0.566 kg at (-0.0, 0.0, 0.2) mm (from 4 of 6 frames)
+    measured vs predicted: 0.1 mm, 0.145 kg  ->  the mirror law does NOT hold here — trust the measurement, not the prediction
+
+  read-only. --apply writes the consensus onto every frame (each write is read back and verified).
