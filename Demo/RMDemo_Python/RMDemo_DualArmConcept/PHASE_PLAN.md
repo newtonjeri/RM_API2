@@ -332,7 +332,7 @@ values from the saved plans and the cleaning path from the config.
 |---|---|---|
 | **1A** | Architecture, offline verification | ✅ |
 | **1B** | Hardware gates | ✅ **closed 2026-08-08** — every blocking gate passed (see §4) |
-| **2 build** | Config loader, path resolver, dispatcher, probes | ✅ dry run 208/208, emulated 19/19, four tasks end to end under emulation |
+| **2 build** | Config loader, path resolver, dispatcher, probes, run recorder, Blockly point generator | ✅ dry run 236/236, emulated 20/20, four tasks end to end under emulation |
 | **2 execution** | R10 debug → first clean run → 4-task rollout → acceptance (5× clean each) | 🟡 **current** |
 
 ### 7.1 Next hardware session — diagnose, then run
@@ -368,6 +368,43 @@ RM_SPEED_DERATE=0.4 python3 stage_runner.py --task hinge_area_left --mode REAL
 **If step 1 fails, do not proceed to step 2** — a chain that cannot
 complete in simulation will not be fixed by changing speed.
 
+Every run above writes `runs/<runid>/{stream.csv,run.json}` — 100 Hz arm +
+pole + the controller's own TCP pose, stage marks on the same `t_mono`
+clock. That directory is the evidence for whatever happens next, and it is
+committed, not ignored.
+
+### 7.2 Blockly track — runs in PARALLEL, independent of §7.1
+
+The 1:1 Blockly comparison Newton asked for (R11 cross-check): the same
+cleaning path, entered by hand on the pendant, so a controller-native
+program and our dispatcher can be compared on identical geometry.
+
+```bash
+cd RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src
+
+# offline — regenerate the hand-off files, no hardware
+python3 blockly_points.py --task hinge_area_left --out ../blockly/hinge_area_left.json
+python3 blockly_points.py --task toplid_right   --out ../blockly/toplid_right.json
+
+# hardware, nothing moves — the tool frames must EXIST before the points
+RM_ARM=left  python3 test_frame_alignment.py --mode REAL --create-frames
+RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames
+
+# push into the controller's global-waypoint store
+python3 blockly_points.py --task hinge_area_left --push
+python3 blockly_points.py --task toplid_right   --push
+```
+
+The hand-off JSONs are self-describing (setup block, per-point pose +
+joints + FK residual, numbered move sequence), so whoever builds the
+program needs nothing else. Accuracy is verified, not asserted: FK of each
+point's joint solution vs the point's own pose, worst residual **0.012 mm**
+(hinge_area_left, 23 points) and **0.007 mm** (toplid_right, 15 points).
+
+Two things the program must get right, both easy to miss:
+**lift to 75 mm before any arm motion**, and `tool_frame` =
+`L_glove_4` / `R_glove_2` — *not* ZIGZAG01's `Hand`.
+
 ---
 
 ## 8. Risks and open questions
@@ -385,7 +422,7 @@ complete in simulation will not be fixed by changing speed.
 | **R8** | `rm_clear_system_err` does not clear joint 16384 (F13) | Recovery needs the GUI | Add `rm_set_joint_clear_err` per joint to `clear_errors()` |
 | R9 | Right arm is 1.8× slower than left for identical moves (F14) | Per-arm timing models | Unexplained; matters if either arm's duration is ever estimated |
 | **R10** | **J6/J7 Under-Voltage (F21a)** — free-space motion, recurred at rest after a power cycle | Blocks acceptance runs. **Not a Phase 2 gate** (Newton): ZIGZAG01 executes this motion class on this hardware. NOTE the supporting argument is weaker than first written — ZIGZAG01 uses HAND-TAUGHT points in one arm configuration at `tool_frame=Hand`, whereas we generate computed Cartesian targets and let the controller re-solve each. It proves MOVEL chains work on this arm; it does not prove OUR points do | Ladder in §7.1: recover joints → idle probe (decides hardware-vs-load in one measurement) → derate ladder with `power_probe` CSVs (which joint's CURRENT spikes at the dip: J2/J4 = supply margin, J6/J7 = wrist demand) → operate at the clean derate meanwhile |
-| **R11** | **C12 verifies a path we do not execute, and neither side is hardware truth** (F22). Verified: saved-plan waypoints, joint-linear. Executed: config waypoints, Cartesian movel, controller IK. Separation **57.1 mm** / **46.8 mm** | The clearance map does not currently support the safety claim in §1. Self-collision detection (now ON) is the only online backstop | Decide: (a) extend C12 to sweep the actual movel program with a Cartesian interpolation model, or (b) execute the stroke as chained `movej` on MoveIt's joint solution — exactly what C11/C12 already model and validate, and it pins the arm angle along the stroke, which nothing does today |
+| **R11** | **C12 verifies a path we do not execute, and neither side is hardware truth** (F22). Verified: saved-plan waypoints, joint-linear. Executed: config waypoints, Cartesian movel, controller IK. Separation **57.1 mm** / **46.8 mm** | The clearance map does not currently support the safety claim in §1. Self-collision detection (now ON) is the only online backstop | **Newton chose (a) 2026-08-10 — "this is what will be executed, so we need to check on this motion".** IMPLEMENTED: `movel_joint_timeline()` (cleaning_path.py) interpolates position linearly and orientation by SLERP, re-solving seeded IK per sample, and `run_hinge_verify.py` now drives its verdict from that sweep rather than from the saved plan. `--movel-step` sets the resolution (default 10 mm). **Not yet run on all four tasks:** hinge_area_left is clean (0/430 IK failures); hinge_area_right 55/430, toplid_right 31/270, toplid_left 20/270 need reading before those tasks execute. Option (b) remains the fallback if the failures are real rather than seeding artifacts |
 | **R12** | **Blend radius `r=10` is unjustified** — C10's two probes disagree (0.64 s vs 0.01 s benefit) | Unknown effect on corner geometry during contact | Measure it, or set r=0 until measured |
 | **R13** | **Nothing pins the 7-DOF arm angle ALONG the cleaning stroke.** `move_to_start` pins the entry; the 43 movel targets are then re-solved independently by the controller | A branch change mid-stroke would move the elbow through space no offline check has seen. NOTE: the claim that this DOES happen was RETRACTED (F24) — it is an open question, not an established failure | Singularity avoidance (now ON, F23) is the controller's own mitigation; option (b) of R11 removes the ambiguity entirely |
 
@@ -405,6 +442,11 @@ from the **wrist 6-axis sensor** (`tool_zero_force_data`), not the hand.
       equation; singularity avoidance now ON, diagnostics now name the cause
 - [ ] Only then: the under-voltage probe ladder (idle → 0.4 → 0.7 → 1.0)
 - [ ] Rollout to all four tasks, then WP6 acceptance (5× clean each)
+
+**In parallel (§7.2), no dependency on the above:**
+- [ ] Write the frames, push the Blockly points, build the program
+- [ ] Read the R11(a) movel sweep on the three tasks that showed IK
+      failures — before those tasks are executed, not after
 
 **Decision needed (R11) — the verification gap:**
 - [ ] (a) extend C12 to sweep the actual movel program, **or**

@@ -49,76 +49,6 @@ C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
 ========================================================================
   Script : run_path_coverage.py
   Log    : run_path_coverage.log
-  Started: 2026-08-10 13:02:00
-========================================================================
-C12b — How faithfully does a SPARSE chain reproduce the cleaning path?
-
-C12 answers "is the controller's motion collision-free?". That is not the
-same question as "does it still clean the surface", and the hinge data
-showed the two can disagree loudly: a 20-target chain was collision-safe
-while departing the planned path by 58 mm.
-
-This tool answers the coverage question, for both candidate commands:
-
-  movej chain   the controller interpolates JOINT-linearly between targets,
-                so the tool traces a CURVE through Cartesian space. Modelled
-                exactly: FK of the joint-linear interpolation.
-  movel chain   the controller moves the TOOL in a straight Cartesian line
-                between targets. Modelled exactly too, and without IK: the
-                tool path IS the straight segment between the two tool
-                positions (that is what movel guarantees).
-
-Reference is MoveIt's own dense path — the surface-following trajectory the
-task actually wants. For each candidate we report how far the dense path
-strays from the commanded chain, i.e. how much of the intended wipe is not
-being followed.
-
-The output picks the target count each task needs, per command, for a given
-tolerance. That number is the input to the Phase-2 task builder.
-
-Usage:
-  python3 run_path_coverage.py [--task NAME]... [--tol MM] [--stage NAME]
-  python3 run_path_coverage.py --all
-
-
-========================================================================
-  Script : run_path_coverage.py
-  Log    : run_path_coverage.log
-  Started: 2026-08-10 13:02:14
-========================================================================
-C12b — How faithfully does a SPARSE chain reproduce the cleaning path?
-
-C12 answers "is the controller's motion collision-free?". That is not the
-same question as "does it still clean the surface", and the hinge data
-showed the two can disagree loudly: a 20-target chain was collision-safe
-while departing the planned path by 58 mm.
-
-This tool answers the coverage question, for both candidate commands:
-
-  movej chain   the controller interpolates JOINT-linearly between targets,
-                so the tool traces a CURVE through Cartesian space. Modelled
-                exactly: FK of the joint-linear interpolation.
-  movel chain   the controller moves the TOOL in a straight Cartesian line
-                between targets. Modelled exactly too, and without IK: the
-                tool path IS the straight segment between the two tool
-                positions (that is what movel guarantees).
-
-Reference is MoveIt's own dense path — the surface-following trajectory the
-task actually wants. For each candidate we report how far the dense path
-strays from the commanded chain, i.e. how much of the intended wipe is not
-being followed.
-
-The output picks the target count each task needs, per command, for a given
-tolerance. That number is the input to the Phase-2 task builder.
-
-Usage:
-  python3 run_path_coverage.py [--task NAME]... [--tol MM] [--stage NAME]
-  python3 run_path_coverage.py --all
-
-
-========================================================================
-  Script : run_path_coverage.py
-  Log    : run_path_coverage.log
   Started: 2026-08-10 13:03:18
 ========================================================================
 ==============================================================================
@@ -148,21 +78,6 @@ C12b  Sparse-chain COVERAGE of the cleaning path (tolerance 5 mm)
   near-flat stretches a straight Cartesian segment already IS the
   path while a joint-linear move bows away from it. That is a real
   advantage for wipe quality — it is just not what sets the count.
-
-========================================================================
-  Script : run_path_coverage.py
-  Log    : run_path_coverage.log
-  Started: 2026-08-10 13:07:17
-========================================================================
-unknown argument: '--nonsense-typo'
-
-Usage: python3 run_path_coverage.py [--task NAME] [--tol MM] [-h|--help]
-       python3 run_path_coverage.py --all
-  --task NAME   one of: hinge_area_left, hinge_area_right, toplid_left, toplid_right
-                (one task per run; --all sweeps every task)
-  --tol MM      chain-vs-plan tolerance (default 5)
-  --all         analyse every bundled task
-  -h, --help    show this documentation and exit
 
 ========================================================================
   Script : run_path_coverage.py
