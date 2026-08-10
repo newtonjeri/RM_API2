@@ -137,6 +137,7 @@ demonstrated on this machine.
 | **F23** | **V1.7.4 capabilities exist and were never switched on.** Probe of both arms: singularity avoidance *supported, OFF* (7-axis support landed V1.7.3); static-state collision, payload self-collision, electronic fence, manual collision-release all *supported, OFF*; dynamics `collision_stage` 4 | Singularity avoidance is the controller's own answer to resolving 7-DOF redundancy along a Cartesian path — precisely the regime `execute_path` runs in. `controller_caps.py` now censuses all six, enables singularity avoidance + self-collision for the run, and restores the arm as found |
 | **F24** | **RETRACTED: "the movel chain is Cartesian-infeasible".** An analysis claimed straight-line segments force ~180 deg J7 flips and 100 % singular configurations. It was an ARTIFACT: `rm_algo_set_toolframe` is GLOBAL C state, and constructing a `SegmentVerifier` (which builds its own `Algo`) silently reset it, so every IK target sat 227 mm beyond the real tool point — forcing a straight elbow (J4=0.000 in every solution) which then read as singular | Redone with the tool frame set last and a guard asserting FK of a known configuration: **hinge_area_left is completely clean (0/430 IK failures, 0 singular, 11 deg max joint step) — and hinge_area_left is the task that failed in SIM.** The mechanism is therefore NOT established. Lesson recorded in `segment_verifier._load_algo` and enforced by `cleaning_path.assert_toolframe_intact()` |
 | **F25** | **The emulator can certify bugs the hardware rejects.** Three reached the arms this way: `rm_set_hand_angle` missing its positional `timeout`, `rm_movel` handed an `rm_pose_t` when it indexes `pose[:3]`, and a V1.7.1-era block of hard-coded capability getters defined AFTER the stateful ones — so `avoid_singularity` always read 0 and a setter appeared to work forever | The emulator now mirrors the real signatures exactly, and the dry run audits **every SDK call site (125) against the real signature arity**. A capability drill in the suite asserts read/apply/restore round-trips against the EMULATED SDK, not a mock — the dry run's mock agreed with reality while the emulator did not, and the suite runs the emulator |
+| **F26** | **`execute_path` aborts on the FIRST movel segment with controller system error `0x100D` (4109) — the arm is NOT the problem.** First run with the 100 Hz recorder (`runs/20260810T160921_hinge_area_left_left`, SIMULATION mode, hinge_area_left, left arm). What the stream shows, sample by sample: all 43 `rm_movel` calls returned **ret=0** (the dispatcher checks every one and reports rejects — it reported none); dispatch of the chain took **5.44 s** (~126 ms per call) with the arm stationary; the first segment then ran for **0.14 s**, moving the joints ~1.4 deg, before `arm_current_status` went to **9 = `RM_STOP_E` (急停 / emergency-stop state)**. At the abort: **no joint error codes, no disabled joints**, `avoid_singularity=1`, `self_collision=True`, `collision_stage=3`, tool `L_glove_4`, joints `[-4.6, -33.9, 14.3, 100.9, 21.4, -40.2, 159.3]`. Total travel **49.9 mm of a 4763 mm program — 1.0 %**. **`0x100D` is the same code that latched on 2026-08-08** (`test_dual_connect.log` `active=['4109']`, `stage_runner.log` `LATCHED ERRORS — system 4109`), so this is a reproduction of the original failure, now instrumented. Distinguish it from `0x1002`/4098, which appeared WITH joint errors `16384` during the F9 pole/arm truncation — a drive fault. `0x100D` arrives with the joints clean, in SIMULATION, so it is a **controller planning/kinematics rejection, not a drive or power event** | **Two things it is NOT.** Not F21a under-voltage: no joint disabled, no joint error, and SIM mode draws no load. Not a bad start pose: `move_to_start` left the TCP **0.0 mm** from waypoint 0 once measured in the correct tool frame (the apparent 44.5 mm gap is a reporting artifact — the joints are bit-identical across it, so it is the tool-frame change, not motion). **Prime suspect is R12, the blend radius.** The cleaning path reverses direction at **23 of its 42 interior corners, five of them at exactly 180.0 deg**, where a blend arc is geometrically undefined; `r=10` has never been justified. `stage_runner.py` now takes **`--blend PCT`** and **`--max-segments N`** so this is settled by measurement, not argument — see §7.1 |
 | F14 | Right arm
 
 ---
@@ -348,13 +349,23 @@ cd RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src
 python3 test_dual_connect.py
 RM_ARM=left python3 recover_joints.py                # report; --enable 6,7 to act
 
-# 1. the chain failure, WITHOUT power in the equation.
-#    hinge_area_left is the sharpest test: it failed here before, and the
-#    corrected analysis (F24) says it is geometrically clean.
+# 1. RUN 2026-08-10 16:09 — FAILED, and the recorder named the reason.
+#    system 0x100D on the FIRST segment, joints clean, SIM mode (F26).
 python3 stage_runner.py --task hinge_area_left --mode SIM
-#    watch for:  install pose from controller: Ry=90.00 deg
-#                avoid_singularity  1
-#    if it still fails, diagnose_failure() now NAMES the reason.
+
+# 1b. THE BISECT — three runs, each answering one question. SIM, nothing
+#     touches the commode. Run them in this order and stop at the first
+#     one that FAILS; that is the answer.
+python3 stage_runner.py --task hinge_area_left --mode SIM --max-segments 1
+#     -> does ONE movel work at all? If this fails, the target or the
+#        tool frame is wrong and the chain is irrelevant.
+python3 stage_runner.py --task hinge_area_left --mode SIM --blend 0
+#     -> full 43-segment chain with NO blend. If this PASSES, R12 is the
+#        cause: a blend arc is undefined at the 5 exact-180-deg reversals,
+#        and r=0 is the fix.
+python3 stage_runner.py --task hinge_area_left --mode SIM --max-segments 4
+#     -> if --blend 0 also fails, walk the chain up (1, 2, 4, 8, ...) to
+#        find the N where it breaks; the corner at that N is the defect.
 
 # 2. the under-voltage ladder (only once step 1 passes)
 RM_ARM=left python3 power_probe.py --seconds 10 --label idle

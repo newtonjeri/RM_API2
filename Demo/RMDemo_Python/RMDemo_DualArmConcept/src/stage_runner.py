@@ -32,12 +32,23 @@ and the saved plan (joint values for named poses).
 Usage:
     python3 stage_runner.py --task hinge_area_right [--mode REAL] [--dry]
     RM_SERIALIZE=0 python3 stage_runner.py --task toplid_left --dry
+
+Chain diagnostics (added 2026-08-10 after the run aborted with system
+0x100D on the first segment — see PHASE_PLAN F26):
+    --blend PCT        override the movel blend radius. The cleaning path
+                       reverses direction at 23 of 42 corners, five of them
+                       EXACTLY 180 deg, where a blend arc is undefined.
+                       `--blend 0` removes that variable.
+    --max-segments N   dispatch only the first N segments of the chain, so
+                       "does one movel work" and "at which N does it break"
+                       become measurements. N=1 is the smallest test.
 """
 
 import os
 import sys
 import time
 
+import cleaning_path
 from cleaning_path import CleaningPath
 from task_config import TaskConfig
 from dual_arm_common import (
@@ -137,7 +148,7 @@ class StageRunner:
 
     def __init__(self, cfg, arm, monitor, plan, dry=False,
                  serialize=SERIALIZE, sim=False, hover_mm=0.0,
-                 recorder=None):
+                 recorder=None, blend_pct=None, max_segments=None):
         self.cfg = cfg
         self.arm = arm
         self.monitor = monitor
@@ -152,6 +163,16 @@ class StageRunner:
         # call signature) WITHOUT the arm ever moving for real.
         self.sim = sim
         self.hover_mm = hover_mm
+        # R12 knobs, added after the 2026-08-10 16:09 run aborted with
+        # system 0x100D on the FIRST segment of the 43-movel chain.
+        # blend_pct: the path reverses direction at 23 of 42 corners, five
+        #   of them EXACTLY 180 deg, where a blend arc is undefined.
+        #   r=0 removes that variable in one run.
+        # max_segments: dispatch only the first N of the chain, so "does a
+        #   single movel work at all" and "at which N does it break" are
+        #   measurements rather than guesses.
+        self.blend_pct = blend_pct
+        self.max_segments = max_segments
         self.recorder = recorder
         self.in_flight = None          # the invariant, as state
         self.log = []
@@ -304,7 +325,19 @@ class StageRunner:
             if got:
                 print(f"    install pose from controller: "
                       f"Ry={got[1]:.2f} deg")
-        prog = path.movel_program(self.pole_m, hover_mm=self.hover_mm)
+        kw = {"hover_mm": self.hover_mm}
+        if self.blend_pct is not None:
+            kw["blend_pct"] = self.blend_pct
+        prog = path.movel_program(self.pole_m, **kw)
+        if self.max_segments is not None:
+            # Truncate the CHAIN, not the path: keep the start pose plus
+            # the first N targets, so the program is a valid prefix.
+            keep = int(self.max_segments)
+            prog["poses"] = prog["poses"][:keep + 1]
+            prog["waypoint_names"] = prog["waypoint_names"][:keep + 1]
+            prog["segments"] = len(prog["poses"]) - 1
+            print(f"    BISECT: dispatching only the first "
+                  f"{prog['segments']} of the chain")
         n = prog["segments"]
         self._claim("arm", "execute_path")
         original_tool = None
@@ -431,10 +464,14 @@ def main() -> int:
         _results[k] = 0
     handle_cli(__doc__, extra_flags=("--dry", "--no-record"),
                value_flags=("--task", "--fixture", "--hover",
-                            "--udp-cycle"))
+                            "--udp-cycle", "--blend", "--max-segments"))
     task = _arg("--task", "hinge_area_right")
     fixture = _arg("--fixture", "commode_c")
     hover_mm = float(_arg("--hover", "0"))
+    blend_arg = _arg("--blend", None)
+    blend_pct = int(blend_arg) if blend_arg is not None else None
+    seg_arg = _arg("--max-segments", None)
+    max_segments = int(seg_arg) if seg_arg is not None else None
     dry = "--dry" in sys.argv
     forced = parse_mode_arg()
 
@@ -449,6 +486,14 @@ def main() -> int:
           f"{cfg.arm_speed_intended_pct}% before the transit/derate policy)")
     print(f"    serialization: {'ENFORCED' if SERIALIZE else 'report-only'}"
           "   (RM_SERIALIZE=0 to relax)")
+    if blend_pct is not None or max_segments is not None:
+        bits = []
+        if blend_pct is not None:
+            bits.append(f"blend r={blend_pct}% (default "
+                        f"{cleaning_path.BLEND_PCT_DEFAULT}%)")
+        if max_segments is not None:
+            bits.append(f"first {max_segments} segment(s) only")
+        print("    CHAIN DIAGNOSTIC: " + "; ".join(bits))
     if hover_mm:
         print(f"    HOVER {hover_mm:.0f} mm — the whole cleaning path is "
               "lifted OFF the surface\n    (contact A/B rehearsal: same "
@@ -465,7 +510,8 @@ def main() -> int:
 
     if dry:
         runner = StageRunner(cfg, None, None, plan, dry=True,
-                             hover_mm=hover_mm)
+                             hover_mm=hover_mm, blend_pct=blend_pct,
+                             max_segments=max_segments)
         ok = runner.run()
         print(f"\n  Summary: {_results['PASS']} PASS, {_results['FAIL']} "
               f"FAIL, {_results['SKIP']} SKIP")
@@ -520,7 +566,9 @@ def main() -> int:
                   "stages are ASSUMED successful (the controller models "
                   "neither — F3)")
         ok = StageRunner(cfg, arm, monitor, plan, sim=sim_mode,
-                         hover_mm=hover_mm, recorder=rec).run()
+                         hover_mm=hover_mm, recorder=rec,
+                         blend_pct=blend_pct,
+                         max_segments=max_segments).run()
         return 0 if ok else 1
     finally:
         try:
