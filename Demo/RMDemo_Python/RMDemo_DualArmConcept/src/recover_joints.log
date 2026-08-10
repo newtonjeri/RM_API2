@@ -1,1 +1,38 @@
 
+
+========================================================================
+  Script : recover_joints.py
+  Log    : recover_joints.log
+  Started: 2026-08-10 16:56:45
+========================================================================
+====================================================================
+Joint recovery — left arm @ 192.168.1.10
+    will clear + ENABLE joints [3, 4, 5, 6, 7] — SUPPORT THE ARM
+====================================================================
+current c api version:  1.1.6
+  as-found:
+    J1: ENABLED   err_flag=0
+    J2: ENABLED   err_flag=0
+    J3: DISABLED  err_flag=4
+    J4: DISABLED  err_flag=4
+    J5: DISABLED  err_flag=4
+    J6: DISABLED  err_flag=4
+    J7: DISABLED  err_flag=4
+  gate: joints J3=4,J4=4,J5=4,J6=4,J7=4; DISABLED joints J3,J4,J5,J6,J7 — do NOT use teach mode (brakes release, unpowered joints fall); recover with recover_joints.py or the GUI's Clear Error + Enable
+  J3: clear_err ret=0, enable ret=1
+  J4: clear_err ret=0, enable ret=1
+  J5: clear_err ret=0, enable ret=1
+  J6: clear_err ret=0, enable ret=1
+  J7: clear_err ret=0, enable ret=1
+  after:
+    J1: ENABLED   err_flag=0
+    J2: ENABLED   err_flag=0
+    J3: DISABLED  err_flag=0  <-- STILL FAULTED
+    J4: DISABLED  err_flag=0  <-- STILL FAULTED
+    J5: DISABLED  err_flag=0  <-- STILL FAULTED
+    J6: DISABLED  err_flag=0  <-- STILL FAULTED
+    J7: DISABLED  err_flag=0  <-- STILL FAULTED
+
+  A joint that re-faults immediately points at the CAUSE still being present:
+  check the e-stop is fully released, the supply, and the arm harness —
+  that is RealMan-support territory, not a state to keep clearing.
