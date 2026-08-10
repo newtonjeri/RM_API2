@@ -52,12 +52,36 @@ _CAPS = {
 }
 
 # What Phase 2 wants switched on before a Cartesian cleaning path runs.
-# Deliberately small: only the two that bear on this failure mode.
+# Deliberately small: only the ones that bear on this failure mode.
 # RM_AVOID_SINGULARITY=0 opts out; RM_SET_CAPS=0 disables all changes.
+#
+# The collision knobs are settable BOTH ways, which matters as of
+# 2026-08-10: `execute_path` aborts with system 0x100D = 机械臂发生碰撞
+# ("arm collision detected"), in SIMULATION mode, where no physical
+# contact is possible — so the verdict is the controller's own MODEL, and
+# the only way to attribute it is to turn each check off in isolation and
+# see which one owns the abort. Everything is restored on exit by
+# restore(), so a diagnostic run does not leave the arm reconfigured for
+# the next program.
+#
+#   RM_SELF_COLLISION=0     turn the arm's self-collision model OFF
+#   RM_ENDEFF_COLLISION=0   turn END-EFFECTOR self-collision OFF (this one
+#                           depends on the ACTIVE TOOL FRAME, and ours is
+#                           L_glove_4, far off the flange)
+#   RM_COLLISION_STAGE=N    0..8 detection sensitivity; 0 disables it
+def _env_bool(name, default):
+    v = os.environ.get(name)
+    return default if v is None else (v not in ("0", "false", "False"))
+
+
 WANTED = {
     "avoid_singularity": int(os.environ.get("RM_AVOID_SINGULARITY", "1")),
-    "self_collision": True,
+    "self_collision": _env_bool("RM_SELF_COLLISION", True),
 }
+if os.environ.get("RM_ENDEFF_COLLISION") is not None:
+    WANTED["endeff_collision"] = _env_bool("RM_ENDEFF_COLLISION", True)
+if os.environ.get("RM_COLLISION_STAGE") is not None:
+    WANTED["collision_stage"] = int(os.environ["RM_COLLISION_STAGE"])
 ENABLED = os.environ.get("RM_SET_CAPS", "1") != "0"
 
 

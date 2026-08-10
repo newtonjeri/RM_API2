@@ -1,0 +1,521 @@
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:25:05
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          8 -> 45
+      + 2  ('0x0001', '1')
+      + 3  ('0x0002', '2')
+      + 4  ('0x0004', '4')
+      + 5  ('0x0008', '8')
+      + 6  ('0x0010', '16')
+      + 7  ('0x0020', '32')
+      + 8  ('0x0040', '64')
+      + 9  ('0x0080', '128')
+      + 10  ('0x0100', '256')
+      + 11  ('0x0200', '512')
+      + 12  ('0x0400', '1024')
+      + 13  ('0x0800', '2048')
+      + 14  ('0x1000', '4096')
+      + 15  ('0x2000', '8192')
+      + 16  ('0x4000', '16384')
+      + 17  ('0x8000', '32768')
+      + 18  ('0xF000', '61440')
+      + 19  ('0x1012', '4114')
+      + 20  ('0x1013', '4115')
+      + 21  ('0x1014', '4116')
+      + 22  ('0x1016', '4118')
+      + 23  ('0x1017', '4119')
+      + 24  ('0x1101', '4353')
+      + 25  ('0x2001', '8193')
+      + 26  ('0x2002', '8194')
+      + 27  ('0x2003', '8195')
+      + 28  ('0x2004', '8196')
+      + 29  ('0x2005', '8197')
+      + 30  ('0x5001', '20481')
+      + 31  ('0x5002', '20482')
+      + 32  ('0x5003', '20483')
+      + 33  ('0x5004', '20484')
+      + 34  ('0x5005', '20485')
+      + 35  ('0x5006', '20486')
+      + 36  ('0x5007', '20487')
+      + 37  ('0x5008', '20488')
+      + 38  ('0x5009', '20489')
+      ~ -6
+          was ('The robotic arm has stopped its motion planning due to an external stop command.', 'Investigate external E-Stop triggers, including JSON protocol commands or teach pendant activation.')
+          now ('The robotic arm has stopped its motion planning due to an external stop command.', '- Check for External E-Stop Commands: Investigate whether there are any external calls to the E-Stop command, such as sending an E-Stop JSON protocol, triggering an IO E-Stop, or triggering the E-Stop on the teach pendant.')
+      ~ -5
+          was ('The single-thread mode does not receive a return value after the timeout, indicating that the timeout period may be improper.', 'Increase timeout setting beyond expected motion duration and verify network connectivity.')
+          now ('The single-thread mode does not receive a return value after the timeout, indicating that the timeout period may be improper.', "- Check Timeout Setting: In single-thread blocking mode, it supports configuring the timeout for waiting for the device to complete its motion. Ensure that the timeout is set longer than the device's motion time. - Check Network Connectivity: Use tools like ping/telnet to check if the communication link with the controller is normal.")
+      ~ -4
+          was ('The current in-position equipment verification fails, indicating the current in-position equipment is not the joints/elevators/grippers/dexterous hands.', 'Detect concurrent control attempts and register callback function rm_get_arm_event_call_back to monitor device events.')
+          now ('The current in-position equipment verification fails, indicating the current in-position equipment is not the joints/elevators/grippers/dexterous hands.', '- Detect Concurrent Control by Multiple Devices: Check if other devices are sending motion commands to the robot arm, including the motion of the robot arm, gripper, dexterous hand, and elevator. - Monitor Command Events in Real-Time: Register the callback function rm_get_arm_event_call_back: ① Capture device arrival events (such as motion completion, timeout, etc.). ② Determine the specific device type that triggered the event through the device parameter in the callback.')
+      ~ -3
+          was ('The return value parse fails, indicating that the received data format is incorrect or incomplete.', 'Confirm controller firmware version supports current API functions; upgrade if needed.')
+          now ('The return value parse fails, indicating that the received data format is incorrect or incomplete.', 'Verify Version Compatibility: ① Check if the controller firmware version supports the current API functions. For specific version compatibility, refer to the Version Description. ② If the version is too low, upgrade the controller or use an API version that is compatible.')
+      ~ -2
+          was ('The data reception fails, indicating that a problem occurs during the communication, or the controller has a return timeout.', 'Check network connectivity and verify controller firmware version compatibility; upgrade if necessary. For ModbusTCP, call rm_set_modbustcp_mode() after creating the control handle.')
+          now ('The data reception fails, indicating that a problem occurs during the communication, or the controller has a return timeout.', '- Check Network Connectivity: Use tools like ping/telnet to check if the communication link with the controller is normal. - Verify Version Compatibility: ① Check if the controller firmware version supports the current API functions. For specific version compatibility, refer to the Version Description. ② If the version is too low, upgrade the controller or use an API version that is compatible.- Call the ModbusTCP interface: Applicable only when reading from or writing to the ModbusTCP device of the controller. After creating the robot arm control handle, you must call the rm_set_modbustcp_mode() interface; otherwise, no return value will be received.')
+      ~ -1
+          was ('The data transmission fails, indicating that a problem occurs during the communication.', 'Use diagnostic tools to verify communication link integrity with the controller.')
+          now ('The data transmission fails, indicating that a problem occurs during the communication.', 'Check Network Connectivity: Use tools like ping/telnet to check if the communication link with the controller is normal.')
+      ~ 0
+          was ('Success.', '')
+          now ('Success.', '-')
+      ~ 1
+          was ('The controller returns false, indicating that the parameters are sent incorrectly or the robotic arm state is wrong.', 'Validate JSON command syntax, verify parameter compliance with specifications, and check robot arm status for hardware failures or over-limit conditions.')
+          now ('0x0000', '0')
+  system_err           REFUSED: parsed 0 rows but we already hold 38. A shrinking table is a failed parse, not a deletion — leaving it alone.
+  joint_err            REFUSED: parsed 0 rows but we already hold 16. A shrinking table is a failed parse, not a deletion — leaving it alone.
+  special_interfaces   23 -> 24
+      + rm_set_modbustcp_mode()
+
+  re-run with --apply to write these into error_codes.py
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:25:27
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:Exception ignored in: Exception ignored in sys.unraisablehook
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:27:14
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          8 -> 8
+      ~ -6  The robotic arm has stopped its motion planning due to an ex  ->  The robotic arm has stopped its motion planning due to an ex
+      ~ -5  The single-thread mode does not receive a return value after  ->  The single-thread mode does not receive a return value after
+      ~ -4  The current in-position equipment verification fails, indica  ->  The current in-position equipment verification fails, indica
+      ~ -3  The return value parse fails, indicating that the received d  ->  The return value parse fails, indicating that the received d
+      ~ -2  The data reception fails, indicating that a problem occurs d  ->  The data reception fails, indicating that a problem occurs d
+      ~ -1  The data transmission fails, indicating that a problem occur  ->  The data transmission fails, indicating that a problem occur
+      ~ 0  Success.  ->  Success.
+      ~ 1  The controller returns false, indicating that the parameters  ->  The controller returns false, indicating that the parameters
+  system_err           38 -> 38
+      ~ 0  系统正常  ->  关节正常。
+      ~ 0x1001  关节通信异常  ->  关节通信异常。
+      ~ 0x1002  目标角度超过限位  ->  目标角度超过限位。
+      ~ 0x1003  该处不可达，为奇异点  ->  该处不可达，为奇异点。
+      ~ 0x1004  实时内核通信错误  ->  实时内核通信错误。
+      ~ 0x1005  关节通信总线错误  ->  关节通信总线错误。
+      ~ 0x1006  规划层内核错误  ->  规划层内核错误。
+      ~ 0x1007  关节超速  ->  关节超速。
+      ~ 0x1008  末端接口板无法连接  ->  末端接口板无法连接。
+      ~ 0x1009  超速度限制  ->  超速度限制。
+      ~ 0x100A  超加速度限制  ->  超加速度限制。
+      ~ 0x100B  关节抱闸未打开  ->  关节抱闸未打开。
+      ~ 0x100C  拖动示教时超速  ->  拖动示教时超速。
+      ~ 0x100D  机械臂发生碰撞  ->  机械臂发生碰撞。
+      ~ 0x100E  无该工作坐标系  ->  无该工作坐标系。
+      ~ 0x100F  无该工具坐标系  ->  无该工具坐标系。
+      ~ 0x1010  关节发生掉使能错误  ->  关节发生掉使能错误。
+      ~ 0x1011  圆弧规划错误  ->  圆弧规划错误。
+      ~ 0x1012  自碰撞错误  ->  自碰撞错误。
+      ~ 0x1013  碰撞到电子围栏错误  ->  碰撞到电子围栏错误。
+      ~ 0x1014  超关节软限位错误  ->  超关节软限位错误。
+      ~ 0x1016  电流环拖动使能失败  ->  电流环拖动使能失败，关节处于限位附近。
+      ~ 0x1017  系统外受力数据校验失败  ->  系统外受力数据校验失败。
+      ~ 0x1101  碰撞到虚拟墙错误  ->  碰撞到虚拟墙错误。
+      ~ 0x2001  夹爪异常  ->  夹爪异常。
+      ~ 0x2002  灵巧手异常  ->  灵巧手异常。
+      ~ 0x2003  六维力模块异常  ->  六维力模块异常。
+      ~ 0x2004  一维力模块异常  ->  一维力模块异常。
+      ~ 0x2005  输出电流异常  ->  输出电流异常。
+      ~ 0x5001  预留  ->  预留。
+      ~ 0x5002  预留  ->  预留。
+      ~ 0x5003  控制器过温  ->  控制器过温。
+      ~ 0x5004  预留  ->  预留。
+      ~ 0x5005  控制器过流  ->  控制器过流。
+      ~ 0x5006  控制器欠流  ->  控制器欠流。
+      ~ 0x5007  控制器过压  ->  控制器过压。
+      ~ 0x5008  控制器欠压  ->  控制器欠压。
+      ~ 0x5009  实时层无法通讯  ->  实时层无法通讯。
+  joint_err            16 -> 16
+      ~ 1  FOC错误  ->  FOC错误。
+      ~ 2  过压  ->  过压。
+      ~ 4  欠压  ->  欠压。
+      ~ 8  过温  ->  过温。
+      ~ 16  启动失败  ->  启动失败。
+      ~ 32  编码器错误  ->  编码器错误。
+      ~ 64  过流  ->  过流。
+      ~ 128  软件错误  ->  软件错误。
+      ~ 0x0100  温度传感器错误  ->  温度传感器错误。
+      ~ 0x0200  位置超限错误  ->  位置超限错误。
+      ~ 0x0400  关节ID非法  ->  关节ID非法。
+      ~ 0x0800  位置跟踪错误  ->  位置跟踪错误。
+      ~ 0x1000  电流检测错误  ->  电流检测错误。
+      ~ 0x2000  抱闸打开失败  ->  抱闸打开失败。
+      ~ 0x4000  位置指令阶跃警告  ->  位置指令阶跃警告。
+      ~ 0x8000  多圈关节丢圈数  ->  多圈关节丢圈数。
+  special_interfaces   unchanged (23 entries)
+
+  re-run with --apply to write these into error_codes.py
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:27:49
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          8 -> 8
+      ~ -6  The robotic arm has stopped its motion planning due to an ex  ->  The robotic arm has stopped its motion planning due to an ex
+      ~ -5  The single-thread mode does not receive a return value after  ->  The single-thread mode does not receive a return value after
+      ~ -4  The current in-position equipment verification fails, indica  ->  The current in-position equipment verification fails, indica
+      ~ -3  The return value parse fails, indicating that the received d  ->  The return value parse fails, indicating that the received d
+      ~ -2  The data reception fails, indicating that a problem occurs d  ->  The data reception fails, indicating that a problem occurs d
+      ~ -1  The data transmission fails, indicating that a problem occur  ->  The data transmission fails, indicating that a problem occur
+      ~ 0  Success.  ->  Success.
+      ~ 1  The controller returns false, indicating that the parameters  ->  The controller returns false, indicating that the parameters
+  system_err           38 -> 38
+      ~ 0  系统正常  ->  系统正常。
+      ~ 0x1001  关节通信异常  ->  关节通信异常。
+      ~ 0x1002  目标角度超过限位  ->  目标角度超过限位。
+      ~ 0x1003  该处不可达，为奇异点  ->  该处不可达，为奇异点。
+      ~ 0x1004  实时内核通信错误  ->  实时内核通信错误。
+      ~ 0x1005  关节通信总线错误  ->  关节通信总线错误。
+      ~ 0x1006  规划层内核错误  ->  规划层内核错误。
+      ~ 0x1007  关节超速  ->  关节超速。
+      ~ 0x1008  末端接口板无法连接  ->  末端接口板无法连接。
+      ~ 0x1009  超速度限制  ->  超速度限制。
+      ~ 0x100A  超加速度限制  ->  超加速度限制。
+      ~ 0x100B  关节抱闸未打开  ->  关节抱闸未打开。
+      ~ 0x100C  拖动示教时超速  ->  拖动示教时超速。
+      ~ 0x100D  机械臂发生碰撞  ->  机械臂发生碰撞。
+      ~ 0x100E  无该工作坐标系  ->  无该工作坐标系。
+      ~ 0x100F  无该工具坐标系  ->  无该工具坐标系。
+      ~ 0x1010  关节发生掉使能错误  ->  关节发生掉使能错误。
+      ~ 0x1011  圆弧规划错误  ->  圆弧规划错误。
+      ~ 0x1012  自碰撞错误  ->  自碰撞错误。
+      ~ 0x1013  碰撞到电子围栏错误  ->  碰撞到电子围栏错误。
+      ~ 0x1014  超关节软限位错误  ->  超关节软限位错误。
+      ~ 0x1016  电流环拖动使能失败  ->  电流环拖动使能失败，关节处于限位附近。
+      ~ 0x1017  系统外受力数据校验失败  ->  系统外受力数据校验失败。
+      ~ 0x1101  碰撞到虚拟墙错误  ->  碰撞到虚拟墙错误。
+      ~ 0x2001  夹爪异常  ->  夹爪异常。
+      ~ 0x2002  灵巧手异常  ->  灵巧手异常。
+      ~ 0x2003  六维力模块异常  ->  六维力模块异常。
+      ~ 0x2004  一维力模块异常  ->  一维力模块异常。
+      ~ 0x2005  输出电流异常  ->  输出电流异常。
+      ~ 0x5001  预留  ->  预留。
+      ~ 0x5002  预留  ->  预留。
+      ~ 0x5003  控制器过温  ->  控制器过温。
+      ~ 0x5004  预留  ->  预留。
+      ~ 0x5005  控制器过流  ->  控制器过流。
+      ~ 0x5006  控制器欠流  ->  控制器欠流。
+      ~ 0x5007  控制器过压  ->  控制器过压。
+      ~ 0x5008  控制器欠压  ->  控制器欠压。
+      ~ 0x5009  实时层无法通讯  ->  实时层无法通讯。
+  joint_err            16 -> 17
+      + 0  关节正常。
+      ~ 1  FOC错误  ->  FOC错误。
+      ~ 2  过压  ->  过压。
+      ~ 4  欠压  ->  欠压。
+      ~ 8  过温  ->  过温。
+      ~ 16  启动失败  ->  启动失败。
+      ~ 32  编码器错误  ->  编码器错误。
+      ~ 64  过流  ->  过流。
+      ~ 128  软件错误  ->  软件错误。
+      ~ 0x0100  温度传感器错误  ->  温度传感器错误。
+      ~ 0x0200  位置超限错误  ->  位置超限错误。
+      ~ 0x0400  关节ID非法  ->  关节ID非法。
+      ~ 0x0800  位置跟踪错误  ->  位置跟踪错误。
+      ~ 0x1000  电流检测错误  ->  电流检测错误。
+      ~ 0x2000  抱闸打开失败  ->  抱闸打开失败。
+      ~ 0x4000  位置指令阶跃警告  ->  位置指令阶跃警告。
+      ~ 0x8000  多圈关节丢圈数  ->  多圈关节丢圈数。
+  special_interfaces   unchanged (23 entries)
+
+  re-run with --apply to write these into error_codes.py
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:28:00
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          8 -> 8
+      ~ -6  The robotic arm has stopped its motion planning due to an ex  ->  The robotic arm has stopped its motion planning due to an ex
+      ~ -5  The single-thread mode does not receive a return value after  ->  The single-thread mode does not receive a return value after
+      ~ -4  The current in-position equipment verification fails, indica  ->  The current in-position equipment verification fails, indica
+      ~ -3  The return value parse fails, indicating that the received d  ->  The return value parse fails, indicating that the received d
+      ~ -2  The data reception fails, indicating that a problem occurs d  ->  The data reception fails, indicating that a problem occurs d
+      ~ -1  The data transmission fails, indicating that a problem occur  ->  The data transmission fails, indicating that a problem occur
+      ~ 0  Success.  ->  Success.
+      ~ 1  The controller returns false, indicating that the parameters  ->  The controller returns false, indicating that the parameters
+  system_err           38 -> 38
+      ~ 0  系统正常  ->  系统正常。
+      ~ 0x1001  关节通信异常  ->  关节通信异常。
+      ~ 0x1002  目标角度超过限位  ->  目标角度超过限位。
+      ~ 0x1003  该处不可达，为奇异点  ->  该处不可达，为奇异点。
+      ~ 0x1004  实时内核通信错误  ->  实时内核通信错误。
+      ~ 0x1005  关节通信总线错误  ->  关节通信总线错误。
+      ~ 0x1006  规划层内核错误  ->  规划层内核错误。
+      ~ 0x1007  关节超速  ->  关节超速。
+      ~ 0x1008  末端接口板无法连接  ->  末端接口板无法连接。
+      ~ 0x1009  超速度限制  ->  超速度限制。
+      ~ 0x100A  超加速度限制  ->  超加速度限制。
+      ~ 0x100B  关节抱闸未打开  ->  关节抱闸未打开。
+      ~ 0x100C  拖动示教时超速  ->  拖动示教时超速。
+      ~ 0x100D  机械臂发生碰撞  ->  机械臂发生碰撞。
+      ~ 0x100E  无该工作坐标系  ->  无该工作坐标系。
+      ~ 0x100F  无该工具坐标系  ->  无该工具坐标系。
+      ~ 0x1010  关节发生掉使能错误  ->  关节发生掉使能错误。
+      ~ 0x1011  圆弧规划错误  ->  圆弧规划错误。
+      ~ 0x1012  自碰撞错误  ->  自碰撞错误。
+      ~ 0x1013  碰撞到电子围栏错误  ->  碰撞到电子围栏错误。
+      ~ 0x1014  超关节软限位错误  ->  超关节软限位错误。
+      ~ 0x1016  电流环拖动使能失败  ->  电流环拖动使能失败，关节处于限位附近。
+      ~ 0x1017  系统外受力数据校验失败  ->  系统外受力数据校验失败。
+      ~ 0x1101  碰撞到虚拟墙错误  ->  碰撞到虚拟墙错误。
+      ~ 0x2001  夹爪异常  ->  夹爪异常。
+      ~ 0x2002  灵巧手异常  ->  灵巧手异常。
+      ~ 0x2003  六维力模块异常  ->  六维力模块异常。
+      ~ 0x2004  一维力模块异常  ->  一维力模块异常。
+      ~ 0x2005  输出电流异常  ->  输出电流异常。
+      ~ 0x5001  预留  ->  预留。
+      ~ 0x5002  预留  ->  预留。
+      ~ 0x5003  控制器过温  ->  控制器过温。
+      ~ 0x5004  预留  ->  预留。
+      ~ 0x5005  控制器过流  ->  控制器过流。
+      ~ 0x5006  控制器欠流  ->  控制器欠流。
+      ~ 0x5007  控制器过压  ->  控制器过压。
+      ~ 0x5008  控制器欠压  ->  控制器欠压。
+      ~ 0x5009  实时层无法通讯  ->  实时层无法通讯。
+  joint_err            16 -> 17
+      + 0  关节正常。
+      ~ 1  FOC错误  ->  FOC错误。
+      ~ 2  过压  ->  过压。
+      ~ 4  欠压  ->  欠压。
+      ~ 8  过温  ->  过温。
+      ~ 16  启动失败  ->  启动失败。
+      ~ 32  编码器错误  ->  编码器错误。
+      ~ 64  过流  ->  过流。
+      ~ 128  软件错误  ->  软件错误。
+      ~ 0x0100  温度传感器错误  ->  温度传感器错误。
+      ~ 0x0200  位置超限错误  ->  位置超限错误。
+      ~ 0x0400  关节ID非法  ->  关节ID非法。
+      ~ 0x0800  位置跟踪错误  ->  位置跟踪错误。
+      ~ 0x1000  电流检测错误  ->  电流检测错误。
+      ~ 0x2000  抱闸打开失败  ->  抱闸打开失败。
+      ~ 0x4000  位置指令阶跃警告  ->  位置指令阶跃警告。
+      ~ 0x8000  多圈关节丢圈数  ->  多圈关节丢圈数。
+  special_interfaces   unchanged (23 entries)
+
+  wrote /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/error_codes.py
+Traceback (most recent call last):
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/update_error_codes.py", line 464, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/update_error_codes.py", line 456, in main
+    MARKDOWN.write_text(build_markdown(mod))
+                        ^^^^^^^^^^^^^^^^^^^
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/update_error_codes.py", line 311, in build_markdown
+    zh, en = mod.SYSTEM_ERR[k]
+    ^^^^^^
+ValueError: too many values to unpack (expected 2)
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:28:35
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/en/robot/json/errorList/  (166411 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          unchanged (8 entries)
+  system_err           38 -> 38
+      ~ 0  系统正常。  ->  Normal system.
+      ~ 0x1001  关节通信异常。  ->  Abnormal joint communication.
+      ~ 0x1002  目标角度超过限位。  ->  Target angle out of limit.
+      ~ 0x1003  该处不可达，为奇异点。  ->  Point unreachable as a singularity.
+      ~ 0x1004  实时内核通信错误。  ->  Real-time kernel communication error.
+      ~ 0x1005  关节通信总线错误。  ->  Joint communication bus error.
+      ~ 0x1006  规划层内核错误。  ->  Planning layer kernel error.
+      ~ 0x1007  关节超速。  ->  Joint overspeed.
+      ~ 0x1008  末端接口板无法连接。  ->  End interface board disconnected.
+      ~ 0x1009  超速度限制。  ->  Speed out of limit.
+      ~ 0x100A  超加速度限制。  ->  Acceleration out of limit.
+      ~ 0x100B  关节抱闸未打开。  ->  Joint brake release failed.
+      ~ 0x100C  拖动示教时超速。  ->  Overspeed during drag teaching.
+      ~ 0x100D  机械臂发生碰撞。  ->  Robotic arm collision.
+      ~ 0x100E  无该工作坐标系。  ->  Null work frame.
+      ~ 0x100F  无该工具坐标系。  ->  Null tool frame.
+      ~ 0x1010  关节发生掉使能错误。  ->  Joint disabling error.
+      ~ 0x1011  圆弧规划错误。  ->  Arc planning error.
+      ~ 0x1012  自碰撞错误。  ->  Self-collision error.
+      ~ 0x1013  碰撞到电子围栏错误。  ->  Electronic fence collision error.
+      ~ 0x1014  超关节软限位错误。  ->  Joint out of soft limit error.
+      ~ 0x1016  电流环拖动使能失败，关节处于限位附近。  ->  Current loop drag enable failed; the joint is near the limit
+      ~ 0x1017  系统外受力数据校验失败。  ->  External force data verification failed.
+      ~ 0x1101  碰撞到虚拟墙错误。  ->  Collision with virtual wall error.
+      ~ 0x2001  夹爪异常。  ->  Abnormal gripper.
+      ~ 0x2002  灵巧手异常。  ->  Abnormal dexterous hand.
+      ~ 0x2003  六维力模块异常。  ->  Abnormal 6-DoF force module.
+      ~ 0x2004  一维力模块异常。  ->  Abnormal 1-DoF force module.
+      ~ 0x2005  输出电流异常。  ->  Abnormal output current.
+      ~ 0x5001  预留。  ->  Reserved.
+      ~ 0x5002  预留。  ->  Reserved.
+      ~ 0x5003  控制器过温。  ->  Controller over-temperature.
+      ~ 0x5004  预留。  ->  Reserved.
+      ~ 0x5005  控制器过流。  ->  Controller overcurrent.
+      ~ 0x5006  控制器欠流。  ->  Controller undercurrent.
+      ~ 0x5007  控制器过压。  ->  Controller overvoltage.
+      ~ 0x5008  控制器欠压。  ->  Controller undervoltage.
+      ~ 0x5009  实时层无法通讯。  ->  Real-time layer communication error.
+  joint_err            17 -> 17
+      ~ 0  关节正常。  ->  Normal joint.
+      ~ 1  FOC错误。  ->  FOC error.
+      ~ 2  过压。  ->  Overvoltage.
+      ~ 4  欠压。  ->  Undervoltage.
+      ~ 8  过温。  ->  Over-temperature.
+      ~ 16  启动失败。  ->  Start failed.
+      ~ 32  编码器错误。  ->  Encoder error.
+      ~ 64  过流。  ->  Overcurrent.
+      ~ 128  软件错误。  ->  Software error.
+      ~ 0x0100  温度传感器错误。  ->  Temperature Sensor Error.
+      ~ 0x0200  位置超限错误。  ->  Position Limit Error.
+      ~ 0x0400  关节ID非法。  ->  Invalid joint ID.
+      ~ 0x0800  位置跟踪错误。  ->  Position Tracking Error.
+      ~ 0x1000  电流检测错误。  ->  Current Detection Error.
+      ~ 0x2000  抱闸打开失败。  ->  Brake Release Failure.
+      ~ 0x4000  位置指令阶跃警告。  ->  Position Command Step Jump Warning.
+      ~ 0x8000  多圈关节丢圈数。  ->  Multi-coil joint data loss.
+  special_interfaces   unchanged (23 entries)
+
+  wrote /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/error_codes.py
+Traceback (most recent call last):
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/update_error_codes.py", line 467, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/update_error_codes.py", line 458, in main
+    importlib.reload(mod)
+  File "/usr/lib/python3.12/importlib/__init__.py", line 131, in reload
+    _bootstrap._exec(spec, module)
+  File "<frozen importlib._bootstrap>", line 866, in _exec
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1129, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1059, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/error_codes.py", line 91
+    "effect": 'The robotic arm is moving too fast,
+              ^
+SyntaxError: unterminated string literal (detected at line 91)
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:29:17
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/en/robot/json/errorList/  (166411 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          0 -> 8
+      + -6  The robotic arm has stopped its motion planning due to an ex
+      + -5  The single-thread mode does not receive a return value after
+      + -4  The current in-position equipment verification fails, indica
+      + -3  The return value parse fails, indicating that the received d
+      + -2  The data reception fails, indicating that a problem occurs d
+      + -1  The data transmission fails, indicating that a problem occur
+      + 0  Success.
+      + 1  The controller returns false, indicating that the parameters
+  system_err           0 -> 38
+      + 0  Normal system.
+      + 0x1001  Abnormal joint communication.
+      + 0x1002  Target angle out of limit.
+      + 0x1003  Point unreachable as a singularity.
+      + 0x1004  Real-time kernel communication error.
+      + 0x1005  Joint communication bus error.
+      + 0x1006  Planning layer kernel error.
+      + 0x1007  Joint overspeed.
+      + 0x1008  End interface board disconnected.
+      + 0x1009  Speed out of limit.
+      + 0x100A  Acceleration out of limit.
+      + 0x100B  Joint brake release failed.
+      + 0x100C  Overspeed during drag teaching.
+      + 0x100D  Robotic arm collision.
+      + 0x100E  Null work frame.
+      + 0x100F  Null tool frame.
+      + 0x1010  Joint disabling error.
+      + 0x1011  Arc planning error.
+      + 0x1012  Self-collision error.
+      + 0x1013  Electronic fence collision error.
+      + 0x1014  Joint out of soft limit error.
+      + 0x1016  Current loop drag enable failed; the joint is near the limit
+      + 0x1017  External force data verification failed.
+      + 0x1101  Collision with virtual wall error.
+      + 0x2001  Abnormal gripper.
+      + 0x2002  Abnormal dexterous hand.
+      + 0x2003  Abnormal 6-DoF force module.
+      + 0x2004  Abnormal 1-DoF force module.
+      + 0x2005  Abnormal output current.
+      + 0x5001  Reserved.
+      + 0x5002  Reserved.
+      + 0x5003  Controller over-temperature.
+      + 0x5004  Reserved.
+      + 0x5005  Controller overcurrent.
+      + 0x5006  Controller undercurrent.
+      + 0x5007  Controller overvoltage.
+      + 0x5008  Controller undervoltage.
+      + 0x5009  Real-time layer communication error.
+  joint_err            0 -> 17
+      + 0  Normal joint.
+      + 1  FOC error.
+      + 2  Overvoltage.
+      + 4  Undervoltage.
+      + 8  Over-temperature.
+      + 16  Start failed.
+      + 32  Encoder error.
+      + 64  Overcurrent.
+      + 128  Software error.
+      + 0x0100  Temperature Sensor Error.
+      + 0x0200  Position Limit Error.
+      + 0x0400  Invalid joint ID.
+      + 0x0800  Position Tracking Error.
+      + 0x1000  Current Detection Error.
+      + 0x2000  Brake Release Failure.
+      + 0x4000  Position Command Step Jump Warning.
+      + 0x8000  Multi-coil joint data loss.
+  special_interfaces   unchanged (23 entries)
+
+  wrote /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/src/error_codes.py
+  wrote /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/ERROR_CODES.md
+
+========================================================================
+  Script : update_error_codes.py
+  Log    : update_error_codes.log
+  Started: 2026-08-10 15:30:24
+========================================================================
+  fetched https://develop.realman-robotics.com/en/robot/apierrorList2/  (142637 bytes)
+  fetched https://develop.realman-robotics.com/en/robot/json/errorList/  (166411 bytes)
+  fetched https://develop.realman-robotics.com/robot/json/errorList/  (148630 bytes)
+
+  parsed from the documentation:
+  api2_return          unchanged (8 entries)
+  system_err           unchanged (38 entries)
+  joint_err            unchanged (17 entries)
+  special_interfaces   unchanged (23 entries)
+
+  nothing to update.

@@ -46,6 +46,7 @@ lookup rather than a correlation problem.
 """
 
 import csv
+import math
 import os
 import pathlib
 import sys
@@ -213,6 +214,77 @@ class RunRecorder:
               f"({1000.0 / (self.cycle * 5):.0f} Hz, ret={ret})")
         return True
 
+    def _speed_report(self, rows):
+        """What speed did the arm ACTUALLY sustain, against what we asked?
+
+        Added 2026-08-10. The first complete task run took 62 s for a
+        4.8 m path — 46% of what the arm's own configured limits allow —
+        and the cause was the teach pendant's GLOBAL SPEED OVERRIDE, left
+        at 39%. That slider scales every motion the controller executes
+        and there is NO SDK getter or setter for it (checked against the
+        whole `rm_robot_interface` surface), so a run cannot read its own
+        speed scaling. It can, however, MEASURE what it achieved — and a
+        measured 43% of cap is the same evidence, visible at the time
+        instead of a week later.
+
+        Returns None when the stream is too short to be meaningful.
+        """
+        h = self.header()
+        try:
+            ix, iy, iz = (h.index("tcp_x"), h.index("tcp_y"), h.index("tcp_z"))
+        except ValueError:
+            return None
+        if len(rows) < 60:
+            return None
+        # Scope to the LONGEST arm stage — in practice `execute_path`.
+        # A whole-run figure mixes the movej transits, whose speed is a
+        # percentage of the JOINT cap, with the movel path, whose speed is
+        # a percentage of the LINE cap; comparing that mixture against the
+        # line cap overstates the achieved fraction (67% vs the movel
+        # stage's real 43% on the 2026-08-10 run).
+        arm = [st for st in self.stages if st.get("device") == "arm"]
+        span = None
+        if arm:
+            longest = max(arm, key=lambda st: st["t_end"] - st["t_start"])
+            span = (longest["t_start"], longest["t_end"])
+            rows = [r for r in rows if span[0] <= r[0] <= span[1]]
+            if len(rows) < 60:
+                return None
+        sp = []
+        for i in range(1, len(rows)):
+            dt = rows[i][0] - rows[i - 1][0]
+            d = math.dist((rows[i][ix], rows[i][iy], rows[i][iz]),
+                          (rows[i - 1][ix], rows[i - 1][iy], rows[i - 1][iz]))
+            # a tool-frame change reports as a metre-scale jump with the
+            # joints unchanged; it is not motion, so drop it
+            if dt > 0 and d < 0.05:
+                sp.append(d / dt)
+        if len(sp) < 60:
+            return None
+        # TYPICAL CRUISE, not peak and not a windowed minimum. A peak can
+        # be one noisy sample; a windowed minimum on a stop-start path
+        # lands inside a corner deceleration. Smooth 50 ms, drop the
+        # near-stationary samples (corners, dwell), take the median of
+        # what is left: "how fast does it go when it is going".
+        k = 2                                   # +/-2 samples = 50 ms
+        sm = [sum(sp[max(0, i - k):i + k + 1]) /
+              len(sp[max(0, i - k):i + k + 1]) for i in range(len(sp))]
+        cap = self.meta.get("line_speed_cap_m_s")
+        floor = 0.1 * float(cap) if cap else 0.005
+        moving = sorted(x for x in sm if x > floor)
+        if len(moving) < 30:
+            return None
+        typical = moving[len(moving) // 2]
+        out = {"typical_mm_s": typical * 1000.0,
+               "p95_mm_s": moving[int(len(moving) * 0.95)] * 1000.0,
+               "moving_fraction": len(moving) / len(sm),
+               "measured_over": (longest["stage_name"] if arm
+                                 else "whole run")}
+        if cap:
+            out["cap_mm_s"] = float(cap) * 1000.0
+            out["pct_of_cap"] = typical / float(cap) * 100.0
+        return out
+
     def mark(self, stage, device, t_start, t_end, ok, detail):
         """Record a stage span on the SAME clock as the stream."""
         self.stages.append({
@@ -248,6 +320,7 @@ class RunRecorder:
                     f"{x:.6f}" if isinstance(x, float) else str(x)
                     for x in r[1:]])
         dur = rows[-1][0] if rows else 0.0
+        speed = self._speed_report(rows)
         meta = {
             "run_id": self.run_id,
             "task_name": self.task,
@@ -270,6 +343,8 @@ class RunRecorder:
                           "is the hand feedback path"),
         }
         meta.update(self.meta)
+        if speed:
+            meta["speed_achieved"] = speed
         meta["num_stages"] = len(self.stages)
         meta["stages"] = self.stages
         if extra:
@@ -282,6 +357,15 @@ class RunRecorder:
             print("  [WARN] NO samples recorded — check that the push "
                   f"target {self.host_ip}:{self.udp_port} is this machine "
                   "and that the callback stayed registered")
+        if speed and speed.get("pct_of_cap") is not None \
+                and speed["pct_of_cap"] < 80:
+            print(f"  [WARN] the arm reached only "
+                  f"{speed['typical_mm_s']:.0f} mm/s typical against a "
+                  f"commanded cap of {speed['cap_mm_s']:.0f} mm/s "
+                  f"({speed['pct_of_cap']:.0f}%). The pendant has a GLOBAL "
+                  "speed override slider that scales everything and that "
+                  "the SDK cannot read or set — check it is at 100% before "
+                  "trusting any timing from this run.")
         print(f"  [INFO] recorded {len(rows)} samples "
               f"({meta['measured_rate_hz']:.1f} Hz measured) -> "
               f"{self.dir}")

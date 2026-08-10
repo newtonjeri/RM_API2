@@ -524,6 +524,79 @@ def main() -> int:
     check("pole homing failure halts the arms",
           not dac.home_poles_full(mon, left, right) and left.robot.stopped)
 
+    # ── F1b2. Payload mirror law + consensus ────────────────────────────
+    print("\nF1b2. Payload centroid: consensus and the mirror law")
+    import payload_audit as pa
+    # The real calibrated table, 2026-08-10. Four frames agree, two do not.
+    LEFT = {
+        "L_glove_1": {"payload": 0.627, "com": (-9.0, 32.0, 188.0)},
+        "L_glove_2": {"payload": 0.568, "com": (-24.0, 42.0, 222.0)},
+        "L_glove_3": {"payload": 0.565, "com": (-25.0, 41.0, 224.0)},
+        "L_glove_4": {"payload": 0.646, "com": (-11.0, 27.0, 177.0)},
+        "L_tip": {"payload": 0.569, "com": (-25.0, 40.0, 224.0)},
+        "L_index_tip": {"payload": 0.566, "com": (-27.0, 42.0, 226.0)},
+    }
+    cons, off, _ = pa.consensus(LEFT)
+    com, kg, n_in, n_all = cons
+    check("consensus uses only the agreeing frames", n_in == 4 and n_all == 6,
+          f"{n_in} of {n_all}")
+    check("consensus CoM is the cluster, not the mean",
+          abs(com[0] + 25.2) < 0.3 and abs(com[1] - 41.2) < 0.3
+          and abs(com[2] - 224.0) < 0.3,
+          f"({com[0]:.1f}, {com[1]:.1f}, {com[2]:.1f})")
+    check("consensus mass", abs(kg - 0.567) < 0.002, f"{kg:.3f} kg")
+    check("both outliers are named",
+          {n for n, _d, _k in off} == {"L_glove_1", "L_glove_4"},
+          str(sorted(n for n, _d, _k in off)))
+    # mirror() is a correct geometric operation and stays as a comparison,
+    # but it is NOT how the right arm's payload is obtained — the measured
+    # right calibration refutes it by 78.4 mm and 0.144 kg (2026-08-10).
+    check("mirror negates X, keeps Y and Z",
+          pa.mirror((-25.2, 41.2, 224.0)) == (25.2, 41.2, 224.0))
+    check("mirror is an involution",
+          pa.mirror(pa.mirror((-25.2, 41.2, 224.0))) == (-25.2, 41.2, 224.0))
+    RIGHT = {
+        "R_glove_1": {"payload": 0.785, "com": (-21.0, 8.0, 126.0)},
+        "R_glove_2": {"payload": 0.717, "com": (-22.0, 25.0, 163.0)},
+        "R_glove_3": {"payload": 0.708, "com": (-24.0, 26.0, 166.0)},
+        "R_glove_4": {"payload": 0.711, "com": (-24.0, 25.0, 165.0)},
+        "R_tip": {"payload": 0.712, "com": (-23.0, 25.0, 164.0)},
+        "R_index_tip": {"payload": 0.707, "com": (-25.0, 26.0, 166.0)},
+    }
+    rc, roff, _ = pa.consensus(RIGHT)
+    rcom, rkg, rn, rall = rc
+    check("right consensus uses 5 of 6 frames", rn == 5 and rall == 6,
+          f"{rn} of {rall}")
+    check("right outlier is R_glove_1",
+          {n for n, _d, _k in roff} == {"R_glove_1"},
+          str(sorted(n for n, _d, _k in roff)))
+    # The refutation itself, pinned: if someone reinstates the mirror as a
+    # source of values, this fails.
+    pred = pa.mirror(com)
+    check("mirror does NOT predict the measured right arm",
+          pa.dist(rcom, pred) > 50.0,
+          f"{pa.dist(rcom, pred):.1f} mm off")
+    check("CX agrees between arms — it does not mirror",
+          abs(rcom[0] - com[0]) < 3.0,
+          f"left {com[0]:.1f} vs right {rcom[0]:.1f}")
+    # Flange-relative, confirmed independently on the right arm.
+    check("right frames agree despite 65 mm of origin spread",
+          max(pa.dist(RIGHT[n]["com"], rcom) for n in RIGHT
+              if n != "R_glove_1") < 4.0)
+    # A side with NOTHING declared agrees with itself perfectly; it must
+    # never be chosen as the source to mirror FROM.
+    ZERO = {f"R_{i}": {"payload": 0.0, "com": (0.0, 0.0, 0.0)}
+            for i in range(6)}
+    zc, _zoff, _ = pa.consensus(ZERO)
+    check("an undeclared side reads as zero payload",
+          zc is not None and zc[1] == 0.0 and max(abs(v) for v in zc[0]) == 0.0)
+    # 128 metres: every value beyond the bound leaves NO usable record.
+    HUGE = {f"L_{i}": {"payload": 0.706, "com": (-12000.0, 44000.0, 128000.0)}
+            for i in range(6)}
+    hc, _hoff, hgood = pa.consensus(HUGE)
+    check("an impossible centroid yields no consensus",
+          hc is None and not hgood)
+
     # ── F1c. CLI guard (-h/--help and unknown-arg rejection) ────────────
     print("\nF1c. CLI guard")
     for flags, code, name in ((["-h"], 0, "-h exits 0 with docs"),

@@ -1254,6 +1254,17 @@ def error_state_clean(st: dict) -> bool:
             and not st.get("disabled"))
 
 
+# Error-code decoding lives in `error_codes.py`, which is regenerated
+# from RealMan's own documentation by `update_error_codes.py`. Keeping a
+# second copy here is how tables drift; import the one that can be
+# refreshed instead.
+from error_codes import (                              # noqa: E402
+    describe_system_err as describe_sys_err,
+    describe_joint_err,
+    remedy as error_remedy,
+)
+
+
 def describe_error_state(st: dict) -> str:
     if not st["readable"]:
         return "unreadable"
@@ -1261,9 +1272,11 @@ def describe_error_state(st: dict) -> str:
         return "clean"
     bits = []
     if st["sys"]:
-        bits.append("system " + ",".join(st["sys"]))
+        bits.append("system " + ",".join(describe_sys_err(c)
+                                         for c in st["sys"]))
     if st["joints"]:
-        bits.append("joints " + ",".join(f"J{i}={f}" for i, f in st["joints"]))
+        bits.append("joints " + ",".join(f"J{i}={describe_joint_err(f)}"
+                                         for i, f in st["joints"]))
     if st["lift_err"]:
         bits.append(f"lift driver {st['lift_err']}")
     if st.get("disabled"):

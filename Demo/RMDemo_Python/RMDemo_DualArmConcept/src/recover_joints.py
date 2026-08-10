@@ -31,6 +31,7 @@ import time
 
 from dual_arm_common import (
     handle_cli, error_state, describe_error_state, error_state_clean,
+    describe_joint_err,
     LEFT_IP, RIGHT_IP, ROBOT_PORT, ConceptArm,
 )
 from Robotic_Arm.rm_robot_interface import RoboticArm
@@ -92,7 +93,7 @@ def main() -> int:
         for j, en, flag in _joint_report(robot):
             state = ("ENABLED" if en else
                      "DISABLED" if en is not None else "?")
-            print(f"    J{j}: {state:9s} err_flag={flag}")
+            print(f"    J{j}: {state:9s} err_flag={describe_joint_err(flag)}")
         arm = ConceptArm(ARM_SIDE, robot, handle)
         st = error_state(arm)
         print(f"  gate: {describe_error_state(st)}")
@@ -117,7 +118,7 @@ def main() -> int:
                 good = bool(en) and not flag
                 ok &= good
                 mark = "  <-- recovered" if good else "  <-- STILL FAULTED"
-            print(f"    J{j}: {state:9s} err_flag={flag}{mark}")
+            print(f"    J{j}: {state:9s} err_flag={describe_joint_err(flag)}{mark}")
         if not ok:
             print("\n  A joint that re-faults immediately points at the "
                   "CAUSE still being present:\n  check the e-stop is fully "

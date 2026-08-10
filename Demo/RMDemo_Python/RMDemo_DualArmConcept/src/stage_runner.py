@@ -54,7 +54,7 @@ from task_config import TaskConfig
 from dual_arm_common import (
     handle_cli, parse_mode_arg, countdown, preflight_error_gate,
     host_ip_for, UDP_PORT,
-    error_state, describe_error_state,
+    error_state, describe_error_state, error_remedy,
     apply_run_mode, mode_label, report_run_modes, restore_run_modes,
     teardown, ArrivalMonitor, ConceptArm,
     ARM_TIMEOUT_S, DEV_JOINT, DEV_LIFT, LEFT_IP, LIFT_TIMEOUT_S,
@@ -104,6 +104,14 @@ def diagnose_failure(arm, arrived, ok):
         st = error_state(arm)
         d = describe_error_state(st)
         bits.append(f"errors: {d}" if d else "errors: none reported")
+        # RealMan documents a remedy per code. For 0x100D it reads "if
+        # there is a load at the end, re-establish the tool coordinate
+        # system" — which was the actual fix on 2026-08-10. Print it
+        # rather than leaving it in a table nobody opens mid-session.
+        for c in st.get("sys", []):
+            fix = error_remedy(c)
+            if fix:
+                bits.append(f"RealMan's remedy for {c}: {fix}")
     except Exception as exc:
         bits.append(f"error state unreadable: {exc!r}")
     try:
@@ -583,6 +591,12 @@ def main() -> int:
                                "approach_pct": cfg.approach_speed_pct,
                                "pole_pct": cfg.pole_speed_pct},
                     "ik_frame": cfg.ik_frame,
+                    # the cap the commanded v% is a percentage OF, so the
+                    # recorder can compare achieved against commanded and
+                    # surface a global speed override the SDK cannot read
+                    "line_speed_cap_m_s": (
+                        lim.get("line_speed")
+                        if isinstance(lim, dict) else None),
                     "capabilities_as_found": {
                         k: (v if not isinstance(v, str) else str(v))
                         for k, v in (caps_before or {}).items()},

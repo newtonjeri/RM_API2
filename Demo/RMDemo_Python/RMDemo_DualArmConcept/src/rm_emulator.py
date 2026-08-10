@@ -328,11 +328,19 @@ class EmuController:
         self.motion_locked = False
         # Tool frames as the controllers hold them: Arm_Tip always exists,
         # the left arm additionally ships with the hand-taught 'Hand'.
-        self.tool_frames = {"Arm_Tip": {"pose": [0.0] * 6, "payload": 0.0}}
+        # A tool frame carries a PAYLOAD and its CENTROID (x/y/z, mm from
+        # the flange). The centroid used to be hard-coded 0.0 here and
+        # never stored, so the emulator could not reproduce the 2026-08-10
+        # defect at all: six frames written with a centroid of 128 METRES,
+        # which made the controller's torque model call every movel an
+        # "arm collision" (0x100D). F25 again — an emulator that cannot
+        # hold the state cannot catch the bug.
+        self.tool_frames = {"Arm_Tip": {"pose": [0.0] * 6, "payload": 0.0,
+                                        "com": [0.0, 0.0, 0.0]}}
         if side == "left":
             self.tool_frames["Hand"] = {
                 "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0],
-                "payload": 0.706}
+                "payload": 0.706, "com": [-12.0, 44.0, 128.0]}
         self.active_tool = "Hand" if side == "left" else "Arm_Tip"
         # F10: read from both arms 2026-08-07.
         self.limits = {"line_speed": 0.250, "line_acc": 1.600,
@@ -1021,9 +1029,10 @@ class RoboticArm:
     def rm_get_current_tool_frame(self):
         name = self._ctrl.active_tool
         f = self._ctrl.tool_frames.get(name, {})
+        com = f.get("com", [0.0, 0.0, 0.0])
         return 0, {"name": name, "pose": f.get("pose", [0.0] * 6),
                    "payload": f.get("payload", 0.0),
-                   "x": 0.0, "y": 0.0, "z": 0.0}
+                   "x": com[0], "y": com[1], "z": com[2]}
 
     def rm_get_total_tool_frame(self):
         return {"return_code": 0,
@@ -1035,9 +1044,10 @@ class RoboticArm:
         f = self._ctrl.tool_frames.get(name)
         if f is None:
             return 1, {}
+        com = f.get("com", [0.0, 0.0, 0.0])
         return 0, {"name": name, "pose": f["pose"],
                    "payload": f.get("payload", 0.0),
-                   "x": 0.0, "y": 0.0, "z": 0.0}
+                   "x": com[0], "y": com[1], "z": com[2]}
 
     def rm_set_manual_tool_frame(self, frame):
         name = frame.frame_name.decode() if isinstance(
@@ -1051,7 +1061,8 @@ class RoboticArm:
         p, e = frame.pose.position, frame.pose.euler
         self._ctrl.tool_frames[name] = {
             "pose": [p.x, p.y, p.z, e.rx, e.ry, e.rz],
-            "payload": float(frame.payload)}
+            "payload": float(frame.payload),
+            "com": [float(frame.x), float(frame.y), float(frame.z)]}
         return 0
 
     def rm_update_tool_frame(self, frame):
@@ -1062,7 +1073,8 @@ class RoboticArm:
         p, e = frame.pose.position, frame.pose.euler
         self._ctrl.tool_frames[name] = {
             "pose": [p.x, p.y, p.z, e.rx, e.ry, e.rz],
-            "payload": float(frame.payload)}
+            "payload": float(frame.payload),
+            "com": [float(frame.x), float(frame.y), float(frame.z)]}
         return 0
 
     def rm_delete_tool_frame(self, name):

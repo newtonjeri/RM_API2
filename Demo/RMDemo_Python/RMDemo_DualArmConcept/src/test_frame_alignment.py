@@ -176,6 +176,23 @@ def _capture(robot, label):
     return cap
 
 
+# A payload centroid is an offset from the FLANGE to the centre of mass
+# of whatever is bolted on. For an Inspire hand + glove that is O(100 mm);
+# the arm's whole reach is under 1 m. Anything past this bound is a unit
+# error, not a heavy tool — see the 2026-08-10 128-metre incident.
+MAX_COM_MM = 500.0
+
+
+def _arg(flag, default=None):
+    argv = sys.argv[1:]
+    for i, a in enumerate(argv):
+        if a == flag and i + 1 < len(argv):
+            return argv[i + 1]
+        if a.startswith(flag + "="):
+            return a.split("=", 1)[1]
+    return default
+
+
 def _create_glove_frames(robot):
     """Write the URDF glove/ik frames as controller tool frames.
 
@@ -203,6 +220,43 @@ def _create_glove_frames(robot):
     except Exception as exc:
         return ("FAIL", "glove tool frames created",
                 f"cannot read the current tool frame: {exc!r}")
+
+    # --- payload centroid: NEVER copy a value we have not sanity-checked.
+    # 2026-08-10, from a GUI screenshot: the six L_* frames carried a
+    # centroid of (-12000, 44000, 128000) mm — 128 METRES — while the
+    # `Hand` frame they were copied from held the sane (-12, 44, 128) mm.
+    # Exactly 1000x. The controller's gravity/dynamics model then predicts
+    # a torque that the joints never produce, and calls the difference an
+    # external collision: system 0x100D, raised ONLY while an L_glove_*
+    # frame is active, which is exactly the `execute_path` stage and the
+    # Blockly program. The movej stages run on `Hand` and pass.
+    #
+    # The write path is the suspect (rm_frame_t.x/y/z is documented mm,
+    # but a read->write round trip inflated it), so the fix is not to
+    # guess a scale factor: refuse anything physically impossible, say
+    # so, and VERIFY the round trip below.
+    com_override = _arg("--com")
+    if com_override:
+        com = tuple(float(v) for v in com_override.split(","))
+        print(f"    payload centroid OVERRIDDEN to {com} mm (--com)")
+    pay_override = _arg("--payload")
+    if pay_override is not None:
+        payload = float(pay_override)
+        print(f"    payload OVERRIDDEN to {payload} kg (--payload)")
+    worst = max(abs(v) for v in com) if com else 0.0
+    if worst > MAX_COM_MM:
+        return ("FAIL", "glove tool frames created",
+                f"payload centroid read from {original!r} is "
+                f"{tuple(round(v, 1) for v in com)} mm — {worst:.0f} mm "
+                f"from the flange, beyond the {MAX_COM_MM:.0f} mm physical "
+                "bound. REFUSING to copy it onto the glove frames: a "
+                "centroid this far out makes the controller's torque model "
+                "predict a force that is not there, which it reports as "
+                "system 0x100D 'arm collision'. Fix the source frame in "
+                "the GUI, or pass the true value with "
+                "--com X,Y,Z (mm) --payload KG")
+    print(f"    payload {payload} kg at centroid "
+          f"{tuple(round(v, 1) for v in com)} mm  (source: {original!r})")
     if not original:
         return ("FAIL", "glove tool frames created",
                 f"cannot identify the active tool frame (ret={ret}, "
@@ -296,6 +350,32 @@ def _create_glove_frames(robot):
         ok = d <= 0.5                      # 0.5 mm: float round-trip only
         if not ok:
             mismatched.append(f"{fname}({d:.1f} mm off)")
+        # The PAYLOAD and its CENTROID were never verified before
+        # 2026-08-10, and that is exactly where the defect hid: the pose
+        # table read 0.00 mm on every row while the centroid sat at
+        # 128 metres. Check what we actually meant to write.
+        rb_com = tuple(float(got.get(k, 0.0)) for k in ("x", "y", "z"))
+        rb_pay = float(got.get("payload", 0.0))
+        cd = max(abs(a - b) for a, b in zip(rb_com, com)) if com else \
+            max(abs(v) for v in rb_com)
+        if cd > 0.5 or abs(rb_pay - payload) > 1e-3:
+            ratio = ""
+            for a, b in zip(rb_com, com):
+                if abs(b) > 1e-6 and abs(abs(a / b) - 1000.0) < 1.0:
+                    ratio = "  <-- exactly 1000x: a UNIT mismatch " \
+                            "between the setter and what the controller " \
+                            "stores"
+                    break
+            mismatched.append(f"{fname}(payload/centroid: wrote "
+                              f"{tuple(round(v, 1) for v in com)} mm / "
+                              f"{payload} kg, reads "
+                              f"{tuple(round(v, 1) for v in rb_com)} mm / "
+                              f"{rb_pay} kg{ratio})")
+        if max(abs(v) for v in rb_com) > MAX_COM_MM:
+            mismatched.append(
+                f"{fname}(centroid {tuple(round(v, 1) for v in rb_com)} mm "
+                f"is beyond the {MAX_COM_MM:.0f} mm physical bound — this "
+                "frame WILL make the controller report 0x100D collision)")
         print(f"    {link:22s} {fname:12s} "
               f"{tip[0] * 1000:7.1f}{tip[1] * 1000:7.1f}{tip[2] * 1000:7.1f}"
               f"   {rb[0] * 1000:7.1f}{rb[1] * 1000:7.1f}{rb[2] * 1000:7.1f}"
@@ -329,7 +409,8 @@ def _create_glove_frames(robot):
 def main() -> int:
     for k in _results:
         _results[k] = 0
-    handle_cli(__doc__, extra_flags=("--poses", "--create-frames"))
+    handle_cli(__doc__, extra_flags=("--poses", "--create-frames"),
+               value_flags=("--com", "--payload"))
     forced = parse_mode_arg()
     clear_errs = parse_clear_errors_arg()
     with_poses = "--poses" in sys.argv
