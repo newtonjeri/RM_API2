@@ -23,8 +23,17 @@ We were reading about six. This calls all of them, by introspection rather
 than by a hand-maintained list, so a getter added by a future SDK is
 picked up without anyone remembering to add it here.
 
-    python3 arm_census.py                 # both arms, compare, report
-    python3 arm_census.py --side left     # one arm
+    python3 arm_census.py --side left --save     # ONE ARM AT A TIME
+    python3 arm_census.py --side right --save
+
+**KNOWN LIMITATION 2026-08-11: `--side both` hangs on the handoff between
+arms.** A single-arm run completes. A getter that blocks leaves a thread
+parked inside the SDK and the handle is deliberately not closed, so opening
+the second arm in the same process wedges. Run them separately.
+
+The real fix is process isolation — one child per arm, killed if it hangs —
+because a C library that is not thread-safe cannot be made safe with more
+threads. Not done; the per-arm workaround costs one extra command.
     python3 arm_census.py --save          # write census/<side>.json
     python3 arm_census.py --diff FILE     # what changed since that census
 
@@ -40,6 +49,7 @@ import pathlib
 import sys
 import queue
 import threading
+import time
 
 from dual_arm_common import (
     handle_cli, LEFT_IP, RIGHT_IP, ROBOT_PORT,
@@ -158,7 +168,8 @@ class _Worker:
         return val
 
 
-def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
+def read_all(robot, timeout=3.0, verbose=True, give_up_after=12,
+             delay=0.05, retry=True):
     """Call every no-argument rm_get_*. Never raises; records failures.
 
     Prints each name BEFORE calling it, flushed, so that if one does hang
@@ -190,13 +201,32 @@ def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
         if verbose:
             print(f"    [{i:2d}/{len(names)}] {name[7:]:<42}", end="",
                   flush=True)
+        if delay:
+            time.sleep(delay)             # pace the burst; see below
         try:
             out[name] = _plain(worker.call(fn, timeout))
             if verbose:
                 print("ok", flush=True)
         except TimeoutError as exc:
+            # Retry ONCE after a pause. The 2026-08-11 census timed out on
+            # exactly 5 getters on BOTH arms, in the same places, while the
+            # *drive* variants of the very same reads answered and the link
+            # recovered immediately afterwards — and every one of them
+            # answers instantly when called alone. That is a burst-rate
+            # effect in the controller, not a broken getter, so pacing and
+            # a single retry are the right response.
+            worker = _Worker()
+            time.sleep(0.5)
+            if retry:
+                try:
+                    out[name] = _plain(worker.call(fn, timeout))
+                    if verbose:
+                        print("ok (on retry)", flush=True)
+                    continue
+                except Exception:
+                    worker = _Worker()
             timed_out.append(name)
-            failed[name] = f"TIMED OUT after {timeout:.0f}s"
+            failed[name] = f"TIMED OUT after {timeout:.0f}s, twice"
             if verbose:
                 print("TIMEOUT", flush=True)
             # The worker is parked inside that C call for good, but the
@@ -205,7 +235,6 @@ def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
             # answered. So retire the stuck worker, start a fresh one, and
             # keep going — abandoning the arm on the first timeout would
             # have thrown away two thirds of a good census.
-            worker = _Worker()
             burned += 1
             if burned >= give_up_after:
                 print(f"\n  [WARN] {burned} getters blocked. That is more "
