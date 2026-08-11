@@ -1,0 +1,157 @@
+{
+  "run_id": "20260811T220322_toplid_left_left",
+  "task_name": "toplid_left",
+  "side": "left",
+  "timestamp_human": "2026-08-11 22:03:54",
+  "stream_file": "stream.csv",
+  "udp_cycle": 2,
+  "sample_rate_hz": 100.000000,
+  "num_samples": 3107,
+  "duration_s": 31.506945,
+  "measured_rate_hz": 98.613180,
+  "frames_dropped": 0,
+  "first_parse_error": null,
+  "sdk": "hardware",
+  "hand_recorded": false,
+  "hand_note": "handState measured ALL-ZERO on the arm UDP line (bench_udp_fields, both arms) — Modbus ANGLE_ACT is the hand feedback path",
+  "mode": "REAL",
+  "sim": false,
+  "speeds": {
+    "cleaning_pct": 100,
+    "transit_pct": 50,
+    "approach_pct": 50,
+    "pole_pct": 50
+  },
+  "ik_frame": "L_glove_frame_2",
+  "limits_in_force": {
+    "line_speed": 0.450000,
+    "line_acc": 1.600000,
+    "angular_speed": 1.200000,
+    "angular_acc": 4.000000
+  },
+  "line_speed_cap_m_s": 0.450000,
+  "capabilities_as_found": {
+    "avoid_singularity": 0,
+    "self_collision": true,
+    "endeff_collision": true,
+    "collision_stage": 4,
+    "static_collision": 0,
+    "collision_remove": false
+  },
+  "commanded": {
+    "tool_frame": "L_glove_2",
+    "pole_m": 0.075000,
+    "blend_pct": 10,
+    "hover_mm": 0.000000,
+    "num_waypoints": 28,
+    "segments": 27,
+    "waypoint_names": ["point1", "point2", "point3", "point4", "point5", "point6", "point7", "point8", "point9", "point10", "point11", "point12", "point13", "point12", "point2", "point1", "point3", "point5", "point7", "point11", "point13", "point7", "point5", "point3", "point1", "point20", "point2", "point101"],
+    "poses": [
+      [0.550000, 0.043700, -0.272500, 3.113933, -0.029752, 0.003812],
+      [0.842500, 0.048200, -0.269500, 3.010077, -0.544059, 0.208759],
+      [0.512500, 0.016700, -0.272000, 3.113732, -0.082111, 0.003823],
+      [0.847500, 0.016700, -0.269000, 3.111692, -0.553346, 0.004479],
+      [0.477500, -0.019800, -0.271500, 3.125842, -0.098546, -0.171485],
+      [0.846000, -0.025300, -0.269500, 3.060534, -0.550917, 0.106903],
+      [0.456500, -0.047800, -0.272000, 3.118310, -0.081929, -0.083699],
+      [0.845000, -0.064300, -0.270000, -3.140741, -0.552658, -0.057022],
+      [0.446000, -0.072300, -0.272000, 3.125814, -0.116210, -0.136681],
+      [0.849000, -0.096800, -0.272000, 3.009244, -0.550607, 0.058234],
+      [0.442500, -0.099800, -0.271500, 3.068963, -0.088625, -0.131781],
+      [0.845500, -0.137800, -0.270500, 2.948043, -0.546725, 0.090161],
+      [0.441000, -0.128300, -0.271500, 3.058216, 0.139305, -0.124477],
+      [0.845500, -0.137800, -0.270500, 2.948043, -0.546725, 0.090161],
+      [0.842500, 0.048200, -0.269500, 3.010077, -0.544059, 0.208759],
+      [0.550000, 0.043700, -0.272500, 3.113933, -0.029752, 0.003812],
+      [0.512500, 0.016700, -0.272000, 3.113732, -0.082111, 0.003823],
+      [0.477500, -0.019800, -0.271500, 3.125842, -0.098546, -0.171485],
+      [0.456500, -0.047800, -0.272000, 3.118310, -0.081929, -0.083699],
+      [0.442500, -0.099800, -0.271500, 3.068963, -0.088625, -0.131781],
+      [0.441000, -0.128300, -0.271500, 3.058216, 0.139305, -0.124477],
+      [0.456500, -0.047800, -0.272000, 3.118310, -0.081929, -0.083699],
+      [0.477500, -0.019800, -0.271500, 3.125842, -0.098546, -0.171485],
+      [0.512500, 0.016700, -0.272000, 3.113732, -0.082111, 0.003823],
+      [0.550000, 0.043700, -0.272500, 3.113933, -0.029752, 0.003812],
+      [0.675500, 0.056200, -0.276000, -3.127306, -0.302294, 0.159851],
+      [0.842500, 0.048200, -0.269500, 3.010077, -0.544059, 0.208759],
+      [0.750000, 0.054200, -0.232500, 3.120276, -0.508367, 0.155646]
+    ]
+  },
+  "speed_achieved": {
+    "typical_mm_s": 281.776015,
+    "p95_mm_s": 474.070607,
+    "moving_fraction": 0.880051,
+    "measured_over": "execute_path",
+    "cap_mm_s": 449.999988,
+    "pct_of_cap": 62.616894,
+    "dips": 33,
+    "deepest_dip_mm_s": 1.139966,
+    "fraction_below_half_cruise": 0.340909
+  },
+  "num_stages": 7,
+  "stages": [
+    {
+      "index": 0,
+      "stage_name": "hand_grasp",
+      "device": "hand",
+      "t_start": 3.505563,
+      "t_end": 4.099912,
+      "ok": true,
+      "detail": "grasp [33, 33, 33, 33, 133, 944] from plan (duration-based)"
+    },
+    {
+      "index": 1,
+      "stage_name": "move_pole_to_quarter_height",
+      "device": "pole",
+      "t_start": 4.100061,
+      "t_end": 4.119991,
+      "ok": true,
+      "detail": "75 hw-mm at 50%"
+    },
+    {
+      "index": 2,
+      "stage_name": "move_to_start",
+      "device": "arm",
+      "t_start": 4.120072,
+      "t_end": 5.181260,
+      "ok": true,
+      "detail": "v=50%"
+    },
+    {
+      "index": 3,
+      "stage_name": "open_tenth",
+      "device": "hand",
+      "t_start": 5.181329,
+      "t_end": 5.781700,
+      "ok": true,
+      "detail": "open_tenth [130, 130, 130, 130, 133, 944] from plan (duration-based)"
+    },
+    {
+      "index": 4,
+      "stage_name": "execute_path",
+      "device": "arm",
+      "t_start": 5.781772,
+      "t_end": 29.579944,
+      "ok": true,
+      "detail": "27 segments, tool L_glove_2"
+    },
+    {
+      "index": 5,
+      "stage_name": "move_to_rest",
+      "device": "arm",
+      "t_start": 29.580005,
+      "t_end": 30.677349,
+      "ok": true,
+      "detail": "v=50%"
+    },
+    {
+      "index": 6,
+      "stage_name": "hand_release",
+      "device": "hand",
+      "t_start": 30.677422,
+      "t_end": 31.271872,
+      "ok": true,
+      "detail": "release [993, 993, 993, 993, 981, 992] from plan (duration-based)"
+    }
+  ]
+}
