@@ -35,8 +35,10 @@ commissioning reconciler diffs against (H32 / alix_commissioning).
 import datetime
 import inspect
 import json
+import os
 import pathlib
 import sys
+import queue
 import threading
 
 from dual_arm_common import (
@@ -109,36 +111,51 @@ def _plain(v):
     return repr(v)
 
 
-def _call_with_timeout(fn, seconds):
-    """Run fn() in a daemon thread and give up after `seconds`.
+class _Worker:
+    """ONE thread for every SDK call on an arm, not one thread per call.
 
-    A `ctypes` call into the SDK does not release control back to Python
-    until the C function returns, so a getter that waits on a device that
-    is not there **cannot be interrupted by Ctrl-C** — the signal is only
-    delivered when the interpreter regains control. The first version of
-    this file had no timeout and no progress output, so a single blocking
-    getter looked like the whole tool freezing.
+    The first version started a fresh daemon thread per getter. On hardware
+    that made getters which work perfectly standalone — `joint_max_speed`,
+    `install_pose`, `current_tool_frame` — time out, and then wedged the
+    process on teardown. The SDK is opened in TRIPLE-thread mode and is not
+    safe to call from an ever-changing set of threads: each abandoned
+    thread was left blocked inside the library holding its response slot.
 
-    The thread is a daemon: if the C call never returns, the thread leaks
-    but the process can still exit. `join(seconds)` runs in the MAIN
-    thread, which is interruptible, so Ctrl-C works again.
+    So: one worker, one identity, calls serialised. If a call does not come
+    back the worker is stuck for good — which means the LINK is stuck, and
+    the honest move is to abandon that arm rather than pretend the
+    remaining reads mean anything.
     """
-    box = {}
 
-    def run():
+    def __init__(self):
+        self._in = queue.Queue()
+        self._out = queue.Queue()
+        self.dead = False
+        self._t = threading.Thread(target=self._run, daemon=True)
+        self._t.start()
+
+    def _run(self):
+        while True:
+            fn = self._in.get()
+            if fn is None:
+                return
+            try:
+                self._out.put(("ok", fn()))
+            except BaseException as exc:            # noqa: BLE001
+                self._out.put(("err", exc))
+
+    def call(self, fn, seconds):
+        if self.dead:
+            raise TimeoutError("worker already stuck")
+        self._in.put(fn)
         try:
-            box["v"] = fn()
-        except BaseException as exc:      # noqa: BLE001 - recorded, not raised
-            box["e"] = exc
-
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
-    t.join(seconds)
-    if t.is_alive():
-        raise TimeoutError(f"no answer in {seconds:.0f}s")
-    if "e" in box:
-        raise box["e"]
-    return box.get("v")
+            kind, val = self._out.get(timeout=seconds)
+        except queue.Empty:
+            self.dead = True                        # the thread is gone
+            raise TimeoutError(f"no answer in {seconds:.0f}s")
+        if kind == "err":
+            raise val
+        return val
 
 
 def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
@@ -167,40 +184,47 @@ def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
                for p in sig.parameters.values()):
             continue                      # needs an argument
         names.append((name, fn))
-    consecutive = 0
+    worker = _Worker()
+    burned = 0
     for i, (name, fn) in enumerate(names, 1):
         if verbose:
             print(f"    [{i:2d}/{len(names)}] {name[7:]:<42}", end="",
                   flush=True)
         try:
-            out[name] = _plain(_call_with_timeout(fn, timeout))
-            consecutive = 0
+            out[name] = _plain(worker.call(fn, timeout))
             if verbose:
                 print("ok", flush=True)
         except TimeoutError as exc:
             timed_out.append(name)
             failed[name] = f"TIMED OUT after {timeout:.0f}s"
-            consecutive += 1
             if verbose:
                 print("TIMEOUT", flush=True)
-            if consecutive >= give_up_after:
-                print(f"\n  [WARN] {consecutive} getters timed out in a row — "
-                      "the SDK link looks wedged. Stopping this arm rather "
-                      "than hanging on every remaining call.")
+            # The worker is parked inside that C call for good, but the
+            # LINK is not necessarily dead: the 2026-08-11 hardware run
+            # timed out on 8 getters and every call after each one still
+            # answered. So retire the stuck worker, start a fresh one, and
+            # keep going — abandoning the arm on the first timeout would
+            # have thrown away two thirds of a good census.
+            worker = _Worker()
+            burned += 1
+            if burned >= give_up_after:
+                print(f"\n  [WARN] {burned} getters blocked. That is more "
+                      "than a few absent devices — abandoning this arm "
+                      "rather than reporting reads nobody should trust.")
                 for rest, _f in names[i:]:
-                    failed[rest] = "not attempted (link wedged)"
+                    failed[rest] = "not attempted (too many blocked)"
                 break
         except Exception as exc:
             failed[name] = repr(exc)[:120]
-            consecutive = 0
             if verbose:
                 print(f"err {repr(exc)[:40]}", flush=True)
     if timed_out:
-        print(f"\n  [WARN] {len(timed_out)} getter(s) did not answer within "
-              f"{timeout:.0f}s: {', '.join(n[7:] for n in timed_out)}")
-        print("         Most likely a device that is not fitted (no RealMan "
-              "gripper, no rm_plus end effector) — the SDK waits on it.")
-    return out, failed
+        print(f"\n  [WARN] {len(timed_out)} getter(s) blocked past "
+              f"{timeout:.0f}s and were skipped:")
+        print("         " + ", ".join(n[7:] for n in timed_out))
+        print("         Each left a thread parked inside the SDK, so the "
+              "handle is NOT closed on the way out.")
+    return out, failed, bool(timed_out)
 
 
 def read_frames(robot, census):
@@ -358,12 +382,14 @@ def main() -> int:
     which = arg("--side", "both")
     sides = ("left", "right") if which == "both" else (which,)
     bad_total = 0
+    stuck = False
     for side in sides:
         robot = connect(LEFT_IP if side == "left" else RIGHT_IP)
         if robot is None:
             print(f"\n  [SKIP] {side} arm not reachable")
             continue
-        census, failed = read_all(robot, timeout=float(arg("--timeout", 3.0)))
+        census, failed, blocked = read_all(
+            robot, timeout=float(arg("--timeout", 3.0)))
         frames = read_frames(robot, census)
         bad_total += report(side, census, failed, frames, "--all" in argv)
         if "--save" in argv:
@@ -397,10 +423,26 @@ def main() -> int:
             for k in cfg:
                 print(f"    {k[7:]:<40}\n        was {json.dumps(a.get(k))[:90]}"
                       f"\n        now {json.dumps(b.get(k))[:90]}")
-        try:
-            robot.rm_delete_robot_arm()
-        except Exception:
-            pass
+        if blocked:
+            # rm_delete_robot_arm() would join the blocked call and hang
+            # the process on the way out — which is exactly what happened
+            # after the left arm finished. Leave the handle; the OS closes
+            # the socket when we exit.
+            print("  [WARN] skipping teardown: the SDK call is still "
+                  "blocked and closing the handle would hang.")
+            stuck = True
+        else:
+            try:
+                robot.rm_delete_robot_arm()
+            except Exception:
+                pass
+    if stuck:
+        # A daemon thread parked inside a C call can still keep the
+        # interpreter's shutdown waiting. os._exit skips that entirely.
+        print("\n  exiting immediately (a blocked SDK thread cannot be "
+              "joined)")
+        sys.stdout.flush()
+        os._exit(1 if bad_total else 0)
     return 1 if bad_total else 0
 
 

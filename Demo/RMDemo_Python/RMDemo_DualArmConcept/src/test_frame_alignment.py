@@ -77,6 +77,7 @@ import time
 
 from dual_arm_common import (
     handle_cli,
+    com_mm,
     preflight_error_gate,
     ARM_SPEED_PCT, ARM_TIMEOUT_S, DEV_JOINT, LEFT_IP, RIGHT_IP, ROBOT_PORT,
     ArrivalMonitor, ConceptArm, apply_run_mode, countdown, mode_label,
@@ -216,7 +217,11 @@ def _create_glove_frames(robot):
         original = (cur.get("name") or cur.get("frame_name")) \
             if ret == 0 else None
         payload = float(cur.get("payload", 0.0)) if ret == 0 else 0.0
-        com = tuple(float(cur.get(k, 0.0)) for k in ("x", "y", "z"))
+        # METRES from the getter — convert, or the MAX_COM_MM guard below
+        # is inert: it would see 0.128 and pass, and would ALSO pass the
+        # 128 that means 128 metres, which is the very defect it exists to
+        # stop.
+        com, com_note = com_mm(cur)
     except Exception as exc:
         return ("FAIL", "glove tool frames created",
                 f"cannot read the current tool frame: {exc!r}")
@@ -256,7 +261,8 @@ def _create_glove_frames(robot):
                 "the GUI, or pass the true value with "
                 "--com X,Y,Z (mm) --payload KG")
     print(f"    payload {payload} kg at centroid "
-          f"{tuple(round(v, 1) for v in com)} mm  (source: {original!r})")
+          f"{tuple(round(v, 1) for v in com)} mm  (source: {original!r}, "
+          f"{com_note or 'plausible'})")
     if not original:
         return ("FAIL", "glove tool frames created",
                 f"cannot identify the active tool frame (ret={ret}, "
@@ -354,7 +360,7 @@ def _create_glove_frames(robot):
         # 2026-08-10, and that is exactly where the defect hid: the pose
         # table read 0.00 mm on every row while the centroid sat at
         # 128 metres. Check what we actually meant to write.
-        rb_com = tuple(float(got.get(k, 0.0)) for k in ("x", "y", "z"))
+        rb_com = com_mm(got)[0]
         rb_pay = float(got.get("payload", 0.0))
         cd = max(abs(a - b) for a, b in zip(rb_com, com)) if com else \
             max(abs(v) for v in rb_com)

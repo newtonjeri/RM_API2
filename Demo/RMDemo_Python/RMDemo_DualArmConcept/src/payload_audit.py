@@ -56,7 +56,7 @@ import statistics
 import sys
 
 from dual_arm_common import (
-    handle_cli, LEFT_IP, RIGHT_IP, ROBOT_PORT,
+    handle_cli, com_mm, LEFT_IP, RIGHT_IP, ROBOT_PORT,
 )
 from frame_alignment_offline import frame_map, controller_frame_name
 
@@ -109,10 +109,15 @@ def read_side(robot, side):
         if ret != 0:
             out[fname] = {"error": f"read ret={ret}"}
             continue
+        # The getter answers in METRES (measured 2026-08-11 against the
+        # GUI); this file works in mm throughout. com_mm() detects rather
+        # than assumes, because treating metres as mm made every frame
+        # look identical and no outlier could ever be flagged.
+        mm, note = com_mm(got)
         out[fname] = {
             "payload": float(got.get("payload", 0.0)),
-            "com": (float(got.get("x", 0.0)), float(got.get("y", 0.0)),
-                    float(got.get("z", 0.0))),
+            "com": mm,
+            "note": note,
         }
     return out
 
@@ -215,8 +220,7 @@ def apply_side(robot, side, com, kg, only=None):
         f.x, f.y, f.z = [float(v) for v in com]
         ret = robot.rm_update_tool_frame(f)
         rb_ret, rb = robot.rm_get_given_tool_frame(fname)
-        rbc = (float(rb.get("x", 0)), float(rb.get("y", 0)),
-               float(rb.get("z", 0))) if rb_ret == 0 else None
+        rbc = com_mm(rb)[0] if rb_ret == 0 else None
         good = rbc is not None and dist(rbc, com) < 0.5 \
             and abs(float(rb.get("payload", 0)) - kg) < 1e-3
         # A 1000x round trip is the exact signature of the setter and the

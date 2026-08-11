@@ -1265,6 +1265,58 @@ from error_codes import (                              # noqa: E402
 )
 
 
+# ── payload centroid units ──────────────────────────────────────────────
+# MEASURED 2026-08-11 by arm_census against the Web GUI, left arm:
+#
+#     rm_get_given_tool_frame("Hand") -> x=-0.012  y=0.044  z=0.128
+#     the GUI's table for the same row ->  CX=-12   CY=44    CZ=128  mm
+#
+# **The getter answers in METRES.** `rm_frame_t.x/y/z` is documented in
+# MILLIMETRES for the setter, and a read->write round trip once produced a
+# centroid 1000x too large (128 metres), which the controller reported as
+# `0x100D arm collision detected` and cost two days.
+#
+# So the unit is not something to assume in each caller. It is DETECTED
+# here, once, from magnitude — a hand-and-glove centroid is O(0.1 m) =
+# O(100 mm), and the two candidate readings differ by 1000x, which is far
+# larger than any real ambiguity:
+COM_MM_MAX = 500.0          # past this it is a unit error, not a heavy tool
+
+
+def com_mm(frame: dict):
+    """Payload centroid from a tool-frame read, in MILLIMETRES.
+
+    The getter answers in METRES, so this always multiplies by 1000. An
+    earlier version guessed the unit from magnitude instead, and that
+    guess had a hole big enough to miss the exact defect the guard exists
+    to catch:
+
+        a GOOD frame reads 0.128 (m)  -> 128 mm      sane
+        the 2026-08-10 DEFECT was 128 metres, which this getter reports
+        as 128.0 — and a magnitude rule reads "128" as millimetres,
+        calls it sane, and waves it through.
+
+    128 mm and 128 m are indistinguishable by size once the unit is in
+    doubt. So do not doubt it: the unit was MEASURED (arm_census
+    2026-08-11, `Hand` reads -0.012/0.044/0.128 where the GUI shows
+    -12/44/128 mm) and it is metres.
+
+    Returns (mm_tuple, note). `note` is "" when the result is physically
+    plausible and a warning string when it is not — so a firmware that
+    changes the unit under us announces itself instead of silently
+    passing, and `arm_census --diff` will show the same change.
+    """
+    raw = tuple(float((frame or {}).get(k, 0.0) or 0.0)
+                for k in ("x", "y", "z"))
+    mm = tuple(v * 1000.0 for v in raw)
+    worst = max(abs(v) for v in mm) if mm else 0.0
+    if worst > COM_MM_MAX:
+        return mm, (f"{worst:.0f} mm is beyond the {COM_MM_MAX:.0f} mm "
+                    "physical bound — either the frame is wrong or the "
+                    "getter's unit changed; re-run arm_census --diff")
+    return mm, ""
+
+
 def describe_error_state(st: dict) -> str:
     if not st["readable"]:
         return "unreadable"
