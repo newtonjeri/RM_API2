@@ -51,13 +51,13 @@
           "err_len": 1
         },
         "joint_current": [
-          -75.0,
-          -393.0,
-          185.0,
-          -3509.0,
-          -349.0,
-          -559.0,
-          2.0
+          -1278.0,
+          1143.0,
+          -577.0,
+          -1571.0,
+          157.0,
+          -24.0,
+          22.0
         ],
         "joint_en_flag": [
           1,
@@ -78,13 +78,13 @@
           0
         ],
         "joint_temperature": [
+          39.0,
           37.0,
+          36.0,
           37.0,
           38.0,
-          40.0,
-          39.0,
-          40.0,
-          42.0
+          38.0,
+          39.0
         ],
         "joint_voltage": [
           22.0,
@@ -92,20 +92,20 @@
           22.0,
           22.0,
           22.0,
-          22.0,
+          21.0,
           22.0
         ]
       }
     ],
     "rm_get_arm_current_trajectory": {
       "data": [
-        1.1339999437332153,
-        -106.86399841308594,
-        1.246999979019165,
-        106.61399841308594,
-        -4.936999797821045,
-        9.338000297546387,
-        0.31299999356269836
+        43.84199905395508,
+        -116.4260025024414,
+        -175.00999450683594,
+        38.83599853515625,
+        -125.61000061035156,
+        -101.49299621582031,
+        117.74500274658203
       ],
       "return_code": 0,
       "trajectory_type": 0
@@ -120,11 +120,11 @@
     ],
     "rm_get_arm_max_line_acc": [
       0,
-      2.4000000953674316
+      1.600000023841858
     ],
     "rm_get_arm_max_line_speed": [
       0,
-      0.800000011920929
+      0.25
     ],
     "rm_get_arm_power_state": [
       0,
@@ -168,7 +168,7 @@
     ],
     "rm_get_collision_stage": [
       0,
-      3
+      0
     ],
     "rm_get_controller_rs485_mode": {
       "baudrate": 460800,
@@ -184,11 +184,11 @@
       }
     ],
     "rm_get_controller_state": {
-      "current": 0.5899999737739563,
+      "current": 0.6579999923706055,
       "return_code": 0,
       "system_error": 0,
-      "temperature": 53.0880012512207,
-      "voltage": 22.38599967956543
+      "temperature": 50.3849983215332,
+      "voltage": 22.423999786376953
     },
     "rm_get_current_arm_state": [
       0,
@@ -200,46 +200,46 @@
           "err_len": 1
         },
         "joint": [
-          1.1339999437332153,
-          -106.86599731445312,
-          1.2450000047683716,
-          106.61399841308594,
-          -4.934999942779541,
-          9.338000297546387,
-          0.3149999976158142
+          43.84000015258789,
+          -116.42400360107422,
+          -175.01199340820312,
+          38.8380012512207,
+          -125.60900115966797,
+          -101.49299621582031,
+          117.74500274658203
         ],
         "pose": [
-          0.761373,
-          0.013625,
-          0.23971,
-          -2.737,
-          1.399,
-          -2.723
+          -0.049722,
+          -0.250341,
+          -0.163646,
+          3.118,
+          0.197,
+          1.478
         ]
       }
     ],
     "rm_get_current_joint_current": [
       0,
       [
-        -70.0,
-        -406.0,
-        221.0,
-        -3521.0,
-        -350.0,
-        -558.0,
-        -1.0
+        -1283.0,
+        1147.0,
+        -591.0,
+        -1570.0,
+        164.0,
+        -17.0,
+        20.0
       ]
     ],
     "rm_get_current_joint_temperature": [
       0,
       [
+        39.0,
         37.0,
+        36.0,
         37.0,
         38.0,
-        40.0,
-        39.0,
-        40.0,
-        42.0
+        38.0,
+        39.0
       ]
     ],
     "rm_get_current_joint_voltage": [
@@ -250,7 +250,7 @@
         22.0,
         22.0,
         22.0,
-        22.0,
+        21.0,
         22.0
       ]
     ],
@@ -296,10 +296,10 @@
     "rm_get_expand_state": [
       0,
       {
-        "current": 819,
+        "current": 1121,
         "err_flag": 0,
         "mode": 0,
-        "pos": 75
+        "pos": 136
       }
     ],
     "rm_get_flowchart_program_run_state": [
@@ -316,10 +316,10 @@
     "rm_get_force_data": [
       0,
       {
-        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed650>",
-        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed850>",
-        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed7d0>",
-        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed750>"
+        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad550>",
+        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad750>",
+        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad6d0>",
+        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad650>"
       }
     ],
     "rm_get_force_drag_mode": [
@@ -380,13 +380,13 @@
     "rm_get_joint_degree": [
       0,
       [
-        1.1339999437332153,
-        -106.86499786376953,
-        1.2450000047683716,
-        106.61399841308594,
-        -4.934000015258789,
-        9.33899974822998,
-        0.3149999976158142
+        43.84199905395508,
+        -116.42400360107422,
+        -175.00900268554688,
+        38.8380012512207,
+        -125.60900115966797,
+        -101.49400329589844,
+        117.74500274658203
       ]
     ],
     "rm_get_joint_drive_max_acc": [
@@ -407,7 +407,7 @@
         183.0,
         135.0,
         183.0,
-        169.0,
+        140.0,
         360.0,
         133.0,
         365.0
@@ -431,7 +431,7 @@
         -183.0,
         -135.0,
         -183.0,
-        -169.0,
+        -140.0,
         -360.0,
         -133.0,
         -365.0
@@ -471,8 +471,8 @@
       "return_code": 0
     }
   },
-  "side": "left",
-  "taken": "2026-08-11T20:03:59",
+  "side": "right",
+  "taken": "2026-08-11T20:06:03",
   "tool_frames": {},
   "unavailable": {
     "rm_get_current_tool_frame": "TIMED OUT after 3s",
