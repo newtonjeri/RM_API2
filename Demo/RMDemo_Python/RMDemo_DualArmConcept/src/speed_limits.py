@@ -186,3 +186,67 @@ def restore(robot, before: dict) -> None:
 
 
 ENABLED = os.environ.get("RM_SET_LIMITS") == "1"
+
+
+# What a run may raise, by env, and why you would.
+#
+# Measured 2026-08-10 on `toplid_right` (27 segments, 6202 mm):
+#   * at the shipped 0.250 m/s the joints run at **23 % of their limits**
+#     at cruise — there is a lot of headroom.
+#   * `movel` derives linear AND angular motion from one `v%`, so whichever
+#     saturates first throttles the whole segment. At 0.250 m/s only 7 of 27
+#     segments are angular-limited and it costs +2 % of cruise time. Raise
+#     the linear cap alone and that flips: 11/27 at 0.350, 13/27 at 0.400,
+#     24/27 and +36 % at 0.533.
+#
+# So the two move TOGETHER or the angular cap eats the gain. With
+# angular_speed at 1.200 rad/s, a 0.350 m/s linear cap leaves 1 of 27
+# angular-limited instead of 11.
+#
+#   RM_LINE_SPEED=0.350        m/s     (needs line_acc/line_speed >= 3)
+#   RM_ANGULAR_SPEED=1.200     rad/s   (needs angular_acc/angular_speed >= 3)
+#   RM_LINE_ACC / RM_ANGULAR_ACC       if the ratio needs the other side
+#
+# These are GLOBAL controller state, shared with the Web GUI and every other
+# program on the arm. `prepare()` returns the previous values and the caller
+# MUST restore them — the same contract as controller_caps.
+_ENV = {
+    "line_speed": "RM_LINE_SPEED",
+    "line_acc": "RM_LINE_ACC",
+    "angular_speed": "RM_ANGULAR_SPEED",
+    "angular_acc": "RM_ANGULAR_ACC",
+}
+
+
+def wanted_from_env() -> dict:
+    out = {}
+    for key, var in _ENV.items():
+        v = os.environ.get(var)
+        if v is not None:
+            out[key] = float(v)
+    return out
+
+
+def prepare(robot, label: str = "") -> dict:
+    """Apply any env-requested limits; return the previous values.
+
+    Returns {} when nothing was asked for, so the caller's restore is a
+    no-op. Raising past the F10 envelope is deliberate here — that is what
+    the env var means — but the acc/speed ratio is still enforced, because
+    the controller enforces it too and a bare ret=1 is a poor error.
+    """
+    want = wanted_from_env()
+    if not want:
+        return {}
+    before = read(robot)
+    shown = ", ".join(f"{k}={v}" for k, v in sorted(want.items()))
+    print(f"  [INFO] raising limits {label}: {shown}")
+    for k, v in sorted(want.items()):
+        was = before.get(k)
+        if isinstance(was, float):
+            print(f"           {k:<14} {was:.3f} -> {v:.3f}")
+    try:
+        return apply(robot, allow_raise=True, **want)
+    except ValueError as exc:
+        print(f"  [FAIL] {exc}")
+        raise

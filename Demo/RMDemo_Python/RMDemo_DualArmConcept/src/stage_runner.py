@@ -528,6 +528,7 @@ def main() -> int:
     arm = None
     originals = {}
     caps_before = {}
+    limits_before = {}
     rec = None
     try:
         robot = RoboticArm(rm_thread_mode_e.RM_TRIPLE_MODE_E)
@@ -545,6 +546,12 @@ def main() -> int:
             return 1
         report_run_modes(arm)
         caps_before = controller_caps.prepare(arm.robot, f"({cfg.side})")
+        # Speed/accel limits are GLOBAL controller state like the
+        # capabilities above, so they follow the same prepare/restore
+        # contract. Nothing changes unless RM_LINE_SPEED / RM_ANGULAR_SPEED
+        # (etc.) are set — see speed_limits for why the two must move
+        # together.
+        limits_before = speed_limits.prepare(arm.robot, f"({cfg.side})")
         if "--no-record" not in sys.argv:
             rec = run_recorder.RunRecorder(
                 arm.robot, task, cfg.side, host_ip_for(ip), UDP_PORT,
@@ -594,6 +601,9 @@ def main() -> int:
                     # the cap the commanded v% is a percentage OF, so the
                     # recorder can compare achieved against commanded and
                     # surface a global speed override the SDK cannot read
+                    "limits_in_force": {
+                        k: v for k, v in (lim or {}).items()
+                        if isinstance(v, float)},
                     "line_speed_cap_m_s": (
                         lim.get("line_speed")
                         if isinstance(lim, dict) else None),
@@ -615,6 +625,9 @@ def main() -> int:
         try:
             if arm is not None and caps_before:
                 controller_caps.restore(arm.robot, caps_before)
+                if limits_before:
+                    speed_limits.restore(arm.robot, limits_before)
+                    print("  [INFO] speed limits restored")
                 print("  [INFO] controller capabilities restored")
         except Exception as exc:
             print(f"  [WARN] capability restore failed: {exc!r}")
