@@ -186,6 +186,98 @@ breached in §1. It is the lower-risk of the two.
 
 ---
 
+## 4b. LADDER RESULTS, 2026-08-11 22:0x — both arms, and the ceiling is J4
+
+Eleven new runs. Both arms ran the `line_acc` ladder at `line_speed 0.450`,
+and the right arm has REAL runs for the first time.
+
+### `line_acc` works. It was wrong to demote it.
+
+| arm | `ls / la` | duration | cruise | J4 peak |
+|---|---|---|---|---|
+| left | 0.45 / 1.6 | 31.5 s | 282 mm/s | 177 |
+| left | 0.45 / 2.4 | 29.0 s | 347 | 194 |
+| left | 0.45 / 3.6 | **28.0 s** | 394 | 215 |
+| right | 0.45 / 1.6 | 33.3 s | 283 | 169 |
+| right | 0.45 / 2.4 | 29.1 s | 353 | 188 |
+| right | 0.45 / 3.6 | **27.5 s** | 396 | 207 |
+| right | 0.50 / 3.6 | 27.1 s | 396 | 218 |
+| right | 0.60 / 3.6 | — | — | **225 → STALLED** |
+
+**−17 % run time from `line_acc` alone**, at unchanged `line_speed`.
+
+### Correction: `line_acc` DOES raise peak joint speed
+
+§4 argued that raising `line_acc` at fixed `line_speed` would not push J4
+toward the limit that failed. **That was wrong.** J4 rose 169 → 207 °/s
+(+38) across the ladder, because higher acceleration lets the arm actually
+reach cruise on short segments — measured cruise rose 283 → 396 mm/s under
+an unchanged 450 mm/s cap. Both knobs spend the same J4 budget.
+
+### The law, fitted and validated on both arms independently
+
+```
+J4peak = C + 47.0 * ln(line_acc / 3.6) + 220 * (line_speed - 0.45)
+
+  C = 206.9 (right)    C = 215 (left, runs 8 deg/s hotter)
+  ln-slope fitted separately per arm: 47.0 and 46.9   <- independent agreement
+  residuals across all four right-arm points: <= 0.5 deg/s
+```
+
+Both knobs are near saturation, and the ceilings are tight:
+
+| | left | right |
+|---|---|---|
+| max `line_speed` at `la=3.6` | **0.50** | **0.53** |
+| max `line_acc` at `ls=0.45` | **4.5** | **5.3** |
+
+The 0.600 run was at a model ceiling of 0.53 — **13 % past it**, and it
+stalled. The law predicted the failure.
+
+### `line_speed` is a bad trade; `line_acc` is a good one
+
+From `0.45 / 3.6` on the right arm:
+
+```
+ls 0.45 -> 0.50    -0.4 s  (-1 %)    costs J4 +11 deg/s
+la 1.6  -> 3.6     -5.8 s  (-17 %)   costs J4 +38 deg/s
+```
+
+Per degree of J4 headroom spent, acceleration buys about 4× the time.
+
+### The binding constraint is a fixed point on the path, not either knob
+
+The J4 peak, the peak elbow rate, and the stall all land in the same place
+regardless of speed or acceleration:
+
+```
+J4 peak            74.4 - 75.6 % of path   (five runs, 1.6 <= la <= 3.6)
+peak elbow rate    75.1 - 77.9 %
+the 0.600 stall    78.7 %
+```
+
+**There is a kinematic hot spot at ~75 % of the stroke.** Its *location* is
+fixed by geometry; speed and acceleration only scale the joint rate demanded
+there. Both knobs are now within 10 % of saturating J4 at that one point, so
+**neither has meaningful headroom left and fixing the hot spot is the only
+thing that unlocks more.** That is the 144–149° null-space excursion of §3,
+now localised.
+
+### H45 — a worse failure mode than H39
+
+The 0.600 run did not report a failure. It **stalled**: TCP motion stopped
+dead at t+11.6 s, 4.629 m into a 5.88 m path, and stayed at zero for 16 s
+until the operator interrupted. Throughout: `err1..err7` all zero,
+`arm_status` only 0/1, no collision code — and **the arrival event never
+fired at all**, so `monitor.wait()` blocked forever. H39's run at least
+returned a failed arrival event. This one returns nothing and hangs.
+
+⚠ `capabilities_as_found` on the right arm shows **`collision_stage: 0`** for
+every one of these runs — collision detection was OFF, unlike the left arm's
+3. Any collision-related conclusion from the right-arm ladder is void.
+
+---
+
 ## 5. What to run next
 
 ### Step 0 — preconditions, every run
