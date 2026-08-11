@@ -51,13 +51,13 @@
           "err_len": 1
         },
         "joint_current": [
-          -1278.0,
-          1143.0,
-          -577.0,
-          -1571.0,
-          157.0,
-          -24.0,
-          22.0
+          -1106.0,
+          891.0,
+          -725.0,
+          -1334.0,
+          156.0,
+          -43.0,
+          8.0
         ],
         "joint_en_flag": [
           1,
@@ -84,7 +84,7 @@
           37.0,
           38.0,
           38.0,
-          39.0
+          40.0
         ],
         "joint_voltage": [
           22.0,
@@ -99,13 +99,13 @@
     ],
     "rm_get_arm_current_trajectory": {
       "data": [
-        43.84199905395508,
-        -116.4260025024414,
-        -175.00999450683594,
-        38.83599853515625,
-        -125.61000061035156,
-        -101.49299621582031,
-        117.74500274658203
+        43.84000015258789,
+        -116.4229965209961,
+        -175.00900268554688,
+        38.834999084472656,
+        -125.60900115966797,
+        -101.49400329589844,
+        117.74700164794922
       ],
       "return_code": 0,
       "trajectory_type": 0
@@ -187,8 +187,8 @@
       "current": 0.6579999923706055,
       "return_code": 0,
       "system_error": 0,
-      "temperature": 50.3849983215332,
-      "voltage": 22.423999786376953
+      "temperature": 50.49399948120117,
+      "voltage": 22.388999938964844
     },
     "rm_get_current_arm_state": [
       0,
@@ -202,16 +202,16 @@
         "joint": [
           43.84000015258789,
           -116.42400360107422,
-          -175.01199340820312,
+          -175.00999450683594,
           38.8380012512207,
-          -125.60900115966797,
-          -101.49299621582031,
+          -125.61000061035156,
+          -101.49400329589844,
           117.74500274658203
         ],
         "pose": [
-          -0.049722,
-          -0.250341,
-          -0.163646,
+          -0.04971,
+          -0.250335,
+          -0.163648,
           3.118,
           0.197,
           1.478
@@ -221,13 +221,13 @@
     "rm_get_current_joint_current": [
       0,
       [
-        -1283.0,
-        1147.0,
-        -591.0,
-        -1570.0,
-        164.0,
-        -17.0,
-        20.0
+        -1104.0,
+        888.0,
+        -738.0,
+        -1335.0,
+        156.0,
+        -39.0,
+        16.0
       ]
     ],
     "rm_get_current_joint_temperature": [
@@ -239,7 +239,7 @@
         37.0,
         38.0,
         38.0,
-        39.0
+        40.0
       ]
     ],
     "rm_get_current_joint_voltage": [
@@ -316,10 +316,10 @@
     "rm_get_force_data": [
       0,
       {
-        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad550>",
-        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad750>",
-        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad6d0>",
-        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x786a4e5ad650>"
+        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x73650735d550>",
+        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x73650735d750>",
+        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x73650735d6d0>",
+        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x73650735d650>"
       }
     ],
     "rm_get_force_drag_mode": [
@@ -380,12 +380,12 @@
     "rm_get_joint_degree": [
       0,
       [
-        43.84199905395508,
+        43.8390007019043,
         -116.42400360107422,
-        -175.00900268554688,
+        -175.00799560546875,
         38.8380012512207,
-        -125.60900115966797,
-        -101.49400329589844,
+        -125.60800170898438,
+        -101.49500274658203,
         117.74500274658203
       ]
     ],
@@ -472,7 +472,7 @@
     }
   },
   "side": "right",
-  "taken": "2026-08-11T20:06:03",
+  "taken": "2026-08-11T20:10:00",
   "tool_frames": {},
   "unavailable": {
     "rm_get_current_tool_frame": "TIMED OUT after 3s",

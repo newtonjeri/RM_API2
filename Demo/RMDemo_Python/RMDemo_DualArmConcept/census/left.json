@@ -51,13 +51,13 @@
           "err_len": 1
         },
         "joint_current": [
-          -75.0,
-          -393.0,
-          185.0,
-          -3509.0,
-          -349.0,
-          -559.0,
-          2.0
+          -225.0,
+          -422.0,
+          209.0,
+          -2945.0,
+          -278.0,
+          -565.0,
+          -27.0
         ],
         "joint_en_flag": [
           1,
@@ -82,7 +82,7 @@
           37.0,
           38.0,
           40.0,
-          39.0,
+          40.0,
           40.0,
           42.0
         ],
@@ -99,13 +99,13 @@
     ],
     "rm_get_arm_current_trajectory": {
       "data": [
-        1.1339999437332153,
+        1.13100004196167,
         -106.86399841308594,
-        1.246999979019165,
-        106.61399841308594,
-        -4.936999797821045,
+        1.2510000467300415,
+        106.61199951171875,
+        -4.934000015258789,
         9.338000297546387,
-        0.31299999356269836
+        0.31700000166893005
       ],
       "return_code": 0,
       "trajectory_type": 0
@@ -184,11 +184,11 @@
       }
     ],
     "rm_get_controller_state": {
-      "current": 0.5899999737739563,
+      "current": 0.5920000076293945,
       "return_code": 0,
       "system_error": 0,
-      "temperature": 53.0880012512207,
-      "voltage": 22.38599967956543
+      "temperature": 53.111000061035156,
+      "voltage": 22.398000717163086
     },
     "rm_get_current_arm_state": [
       0,
@@ -200,20 +200,20 @@
           "err_len": 1
         },
         "joint": [
-          1.1339999437332153,
-          -106.86599731445312,
-          1.2450000047683716,
-          106.61399841308594,
-          -4.934999942779541,
+          1.1319999694824219,
+          -106.86399841308594,
+          1.246999979019165,
+          106.61599731445312,
+          -4.936999797821045,
           9.338000297546387,
           0.3149999976158142
         ],
         "pose": [
-          0.761373,
-          0.013625,
-          0.23971,
+          0.761384,
+          0.013646,
+          0.239655,
           -2.737,
-          1.399,
+          1.398,
           -2.723
         ]
       }
@@ -221,13 +221,13 @@
     "rm_get_current_joint_current": [
       0,
       [
-        -70.0,
-        -406.0,
-        221.0,
-        -3521.0,
-        -350.0,
-        -558.0,
-        -1.0
+        -250.0,
+        -449.0,
+        164.0,
+        -2961.0,
+        -280.0,
+        -563.0,
+        -26.0
       ]
     ],
     "rm_get_current_joint_temperature": [
@@ -237,7 +237,7 @@
         37.0,
         38.0,
         40.0,
-        39.0,
+        40.0,
         40.0,
         42.0
       ]
@@ -316,10 +316,10 @@
     "rm_get_force_data": [
       0,
       {
-        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed650>",
-        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed850>",
-        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed7d0>",
-        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7ac307fed750>"
+        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x790363959650>",
+        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x790363959850>",
+        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7903639597d0>",
+        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x790363959750>"
       }
     ],
     "rm_get_force_drag_mode": [
@@ -380,13 +380,13 @@
     "rm_get_joint_degree": [
       0,
       [
-        1.1339999437332153,
-        -106.86499786376953,
-        1.2450000047683716,
-        106.61399841308594,
-        -4.934000015258789,
+        1.1319999694824219,
+        -106.86199951171875,
+        1.2489999532699585,
+        106.61599731445312,
+        -4.934999942779541,
         9.33899974822998,
-        0.3149999976158142
+        0.3140000104904175
       ]
     ],
     "rm_get_joint_drive_max_acc": [
@@ -472,7 +472,7 @@
     }
   },
   "side": "left",
-  "taken": "2026-08-11T20:03:59",
+  "taken": "2026-08-11T20:09:00",
   "tool_frames": {},
   "unavailable": {
     "rm_get_current_tool_frame": "TIMED OUT after 3s",

@@ -494,3 +494,300 @@ current c api version:  1.1.6
   [WARN] skipping teardown: the SDK call is still blocked and closing the handle would hang.
 
   exiting immediately (a blocked SDK thread cannot be joined)
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 20:08:45
+========================================================================
+current c api version:  1.1.6
+    [ 1/78] DH_data                                   ok
+    [ 2/78] arm_all_state                             ok
+    [ 3/78] arm_current_trajectory                    ok
+    [ 4/78] arm_max_angular_acc                       ok
+    [ 5/78] arm_max_angular_speed                     ok
+    [ 6/78] arm_max_line_acc                          ok
+    [ 7/78] arm_max_line_speed                        ok
+    [ 8/78] arm_power_state                           ok
+    [ 9/78] arm_run_mode                              ok
+    [10/78] arm_software_info                         ok
+    [11/78] avoid_singularity_mode                    ok
+    [12/78] collision_detection                       ok
+    [13/78] collision_remove_enable                   ok
+    [14/78] collision_stage                           ok
+    [15/78] controller_rs485_mode                     ok
+    [16/78] controller_rs485_mode_v4                  ok
+    [17/78] controller_state                          ok
+    [18/78] current_arm_state                         ok
+    [19/78] current_joint_current                     ok
+    [20/78] current_joint_temperature                 ok
+    [21/78] current_joint_voltage                     ok
+    [22/78] current_tool_frame                        TIMEOUT
+    [23/78] current_work_frame                        TIMEOUT
+    [24/78] default_run_program                       ok
+    [25/78] drag_teach_sensitivity                    ok
+    [26/78] electronic_fence_config                   ok
+    [27/78] electronic_fence_enable                   ok
+    [28/78] electronic_fence_list_infos               ok
+    [29/78] electronic_fence_list_names               ok
+    [30/78] expand_state                              ok
+    [31/78] flowchart_program_run_state               ok
+    [32/78] force_data                                ok
+    [33/78] force_drag_mode                           ok
+    [34/78] fz                                        ok
+    [35/78] gripper_state                             ok
+    [36/78] init_pose                                 ok
+    [37/78] install_pose                              TIMEOUT
+    [38/78] io_input                                  ok
+    [39/78] io_output                                 ok
+    [40/78] joint_degree                              ok
+    [41/78] joint_drive_max_acc                       ok
+    [42/78] joint_drive_max_pos                       ok
+    [43/78] joint_drive_max_speed                     ok
+    [44/78] joint_drive_min_pos                       ok
+    [45/78] joint_en_state                            ok
+    [46/78] joint_err_flag                            ok
+    [47/78] joint_max_acc                             TIMEOUT
+    [48/78] joint_max_pos                             TIMEOUT
+
+  [WARN] 5 getters blocked. That is more than a few absent devices — abandoning this arm rather than reporting reads nobody should trust.
+
+  [WARN] 5 getter(s) blocked past 3s and were skipped:
+         current_tool_frame, current_work_frame, install_pose, joint_max_acc, joint_max_pos
+         Each left a thread parked inside the SDK, so the handle is NOT closed on the way out.
+
+==========================================================================
+  LEFT arm — 43 getters answered, 35 unavailable
+==========================================================================
+
+  IDENTITY
+    arm_software_info          [0, {"product_version": "RM75-6FB", "algorithm_info": {"version": "1.5.9-0b8919e1"}, "ctrl_info": {"build_time": "2025/12/16 20:12:03", "version": "V1
+
+  LIMITS — the class of value that has bitten us twice
+    joint_drive_max_speed        [0, [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0]]
+    joint_drive_max_acc          [0, [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]]
+    arm_max_line_speed           [0, 0.800000011920929]
+    arm_max_line_acc             [0, 2.4000000953674316]
+    arm_max_angular_speed        [0, 0.6000000238418579]
+    arm_max_angular_acc          [0, 4.0]
+
+  SAFETY / CAPABILITY
+    collision_stage                          [0, 3]
+    collision_detection                      [0, 0]
+    collision_remove_enable                  [0, false]
+    avoid_singularity_mode                   [0, 0]
+    arm_run_mode                             [0, 1]
+    arm_power_state                          [0, 1]
+    joint_en_state                           [0, [1, 1, 1, 1, 1, 1, 1]]
+    joint_err_flag                           {"return_code": 0, "err_flag": [0, 0, 0, 0, 0, 0, 0], "brake_state": [0, 0, 0, 0, 0, 0, 0]}
+    electronic_fence_enable                  [0, {"enable_state": false, "in_out_side": 0, "effective_region": 0}]
+
+  PERIPHERALS
+    expand_state                   [0, {"pos": 75, "current": 819, "err_flag": 0, "mode": 0}]
+    gripper_state                  [0, {"enable_state": 0, "status": 0, "error": 0, "mode": 0, "current_force": 0, "temperature": 0, "actpos": 0}]
+    controller_rs485_mode          {"return_code": 0, "mode": 0, "baudrate": 460800, "timeout": 0}
+    force_data                     [0, {"force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x790363959650>", "zero_force_data": "<Robotic
+    fz                             [-4, {"Fz": 0.0, "zero_Fz": 0.0, "work_zero_Fz": 0.0, "tool_zero_Fz": 0.0}]
+
+  DOES THE ARM AGREE WITH OUR CODE?
+     ?    joint_max_speed  code=[180.0, 180.0, 225.0, 225.0, 225.0   arm=null
+     ?    joint_max_acc    code=[600.0, 600.0, 600.0, 600.0, 600.0   arm=null
+    WRONG line_speed       code=0.25                                 arm=0.800000011920929
+          -> our value lives in speed_limits.CONFIGURED
+    WRONG line_acc         code=1.6                                  arm=2.4000000953674316
+          -> our value lives in speed_limits.CONFIGURED
+     ok   angular_speed    code=0.6                                  arm=0.6000000238418579
+     ok   angular_acc      code=4.0                                  arm=4.0
+     ?    install_pose     code=[0.0, 90.0, 0.0]                     arm=null
+     ?    arm model        code="RM_75"                              arm=null
+
+    6/8 agree   2 DISAGREE — fix the code, not the arm
+
+  UNAVAILABLE (35) — firmware or model does not support these
+    current_tool_frame                       TIMED OUT after 3s
+    current_work_frame                       TIMED OUT after 3s
+    install_pose                             TIMED OUT after 3s
+    joint_max_acc                            TIMED OUT after 3s
+    joint_max_pos                            TIMED OUT after 3s
+    joint_max_speed                          not attempted (too many blocked)
+    joint_min_pos                            not attempted (too many blocked)
+    joint_odom                               not attempted (too many blocked)
+    joint_software_version                   not attempted (too many blocked)
+    lift_state                               not attempted (too many blocked)
+    program_run_state                        not attempted (too many blocked)
+    rm_plus_base_info                        not attempted (too many blocked)
+    rm_plus_mode                             not attempted (too many blocked)
+    rm_plus_state_info                       not attempted (too many blocked)
+    rm_plus_touch                            not attempted (too many blocked)
+    robot_info                               not attempted (too many blocked)
+    self_collision_enable                    not attempted (too many blocked)
+    self_endeffector_collision_enable        not attempted (too many blocked)
+    sn                                       not attempted (too many blocked)
+    system_runtime                           not attempted (too many blocked)
+    teach_frame                              not attempted (too many blocked)
+    tool_io_state                            not attempted (too many blocked)
+    tool_rs485_mode                          not attempted (too many blocked)
+    tool_rs485_mode_v4                       not attempted (too many blocked)
+    tool_software_version                    not attempted (too many blocked)
+    tool_voltage                             not attempted (too many blocked)
+    torque_data                              not attempted (too many blocked)
+    total_tool_frame                         not attempted (too many blocked)
+    total_work_frame                         not attempted (too many blocked)
+    virtual_wall_config                      not attempted (too many blocked)
+    virtual_wall_enable                      not attempted (too many blocked)
+    voltage                                  not attempted (too many blocked)
+    webserver_enabled                        not attempted (too many blocked)
+    wifi_net                                 not attempted (too many blocked)
+    wired_net                                not attempted (too many blocked)
+
+  wrote /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/census/left.json
+  [WARN] skipping teardown: the SDK call is still blocked and closing the handle would hang.
+current c api version:  1.1.6
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 20:09:45
+========================================================================
+current c api version:  1.1.6
+    [ 1/78] DH_data                                   ok
+    [ 2/78] arm_all_state                             ok
+    [ 3/78] arm_current_trajectory                    ok
+    [ 4/78] arm_max_angular_acc                       ok
+    [ 5/78] arm_max_angular_speed                     ok
+    [ 6/78] arm_max_line_acc                          ok
+    [ 7/78] arm_max_line_speed                        ok
+    [ 8/78] arm_power_state                           ok
+    [ 9/78] arm_run_mode                              ok
+    [10/78] arm_software_info                         ok
+    [11/78] avoid_singularity_mode                    ok
+    [12/78] collision_detection                       ok
+    [13/78] collision_remove_enable                   ok
+    [14/78] collision_stage                           ok
+    [15/78] controller_rs485_mode                     ok
+    [16/78] controller_rs485_mode_v4                  ok
+    [17/78] controller_state                          ok
+    [18/78] current_arm_state                         ok
+    [19/78] current_joint_current                     ok
+    [20/78] current_joint_temperature                 ok
+    [21/78] current_joint_voltage                     ok
+    [22/78] current_tool_frame                        TIMEOUT
+    [23/78] current_work_frame                        TIMEOUT
+    [24/78] default_run_program                       ok
+    [25/78] drag_teach_sensitivity                    ok
+    [26/78] electronic_fence_config                   ok
+    [27/78] electronic_fence_enable                   ok
+    [28/78] electronic_fence_list_infos               ok
+    [29/78] electronic_fence_list_names               ok
+    [30/78] expand_state                              ok
+    [31/78] flowchart_program_run_state               ok
+    [32/78] force_data                                ok
+    [33/78] force_drag_mode                           ok
+    [34/78] fz                                        ok
+    [35/78] gripper_state                             ok
+    [36/78] init_pose                                 ok
+    [37/78] install_pose                              TIMEOUT
+    [38/78] io_input                                  ok
+    [39/78] io_output                                 ok
+    [40/78] joint_degree                              ok
+    [41/78] joint_drive_max_acc                       ok
+    [42/78] joint_drive_max_pos                       ok
+    [43/78] joint_drive_max_speed                     ok
+    [44/78] joint_drive_min_pos                       ok
+    [45/78] joint_en_state                            ok
+    [46/78] joint_err_flag                            ok
+    [47/78] joint_max_acc                             TIMEOUT
+    [48/78] joint_max_pos                             TIMEOUT
+
+  [WARN] 5 getters blocked. That is more than a few absent devices — abandoning this arm rather than reporting reads nobody should trust.
+
+  [WARN] 5 getter(s) blocked past 3s and were skipped:
+         current_tool_frame, current_work_frame, install_pose, joint_max_acc, joint_max_pos
+         Each left a thread parked inside the SDK, so the handle is NOT closed on the way out.
+
+==========================================================================
+  RIGHT arm — 43 getters answered, 35 unavailable
+==========================================================================
+
+  IDENTITY
+    arm_software_info          [0, {"product_version": "RM75-6FB", "algorithm_info": {"version": "1.5.9-0b8919e1"}, "ctrl_info": {"build_time": "2025/12/16 20:12:03", "version": "V1
+
+  LIMITS — the class of value that has bitten us twice
+    joint_drive_max_speed        [0, [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0]]
+    joint_drive_max_acc          [0, [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]]
+    arm_max_line_speed           [0, 0.25]
+    arm_max_line_acc             [0, 1.600000023841858]
+    arm_max_angular_speed        [0, 0.6000000238418579]
+    arm_max_angular_acc          [0, 4.0]
+
+  SAFETY / CAPABILITY
+    collision_stage                          [0, 0]
+    collision_detection                      [0, 0]
+    collision_remove_enable                  [0, false]
+    avoid_singularity_mode                   [0, 0]
+    arm_run_mode                             [0, 1]
+    arm_power_state                          [0, 1]
+    joint_en_state                           [0, [1, 1, 1, 1, 1, 1, 1]]
+    joint_err_flag                           {"return_code": 0, "err_flag": [0, 0, 0, 0, 0, 0, 0], "brake_state": [0, 0, 0, 0, 0, 0, 0]}
+    electronic_fence_enable                  [0, {"enable_state": false, "in_out_side": 0, "effective_region": 0}]
+
+  PERIPHERALS
+    expand_state                   [0, {"pos": 136, "current": 1121, "err_flag": 0, "mode": 0}]
+    gripper_state                  [0, {"enable_state": 0, "status": 0, "error": 0, "mode": 0, "current_force": 0, "temperature": 0, "actpos": 0}]
+    controller_rs485_mode          {"return_code": 0, "mode": 0, "baudrate": 460800, "timeout": 0}
+    force_data                     [0, {"force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x73650735d550>", "zero_force_data": "<Robotic
+    fz                             [-4, {"Fz": 0.0, "zero_Fz": 0.0, "work_zero_Fz": 0.0, "tool_zero_Fz": 0.0}]
+
+  DOES THE ARM AGREE WITH OUR CODE?
+     ?    joint_max_speed  code=[180.0, 180.0, 225.0, 225.0, 225.0   arm=null
+     ?    joint_max_acc    code=[600.0, 600.0, 600.0, 600.0, 600.0   arm=null
+     ok   line_speed       code=0.25                                 arm=0.25
+     ok   line_acc         code=1.6                                  arm=1.600000023841858
+     ok   angular_speed    code=0.6                                  arm=0.6000000238418579
+     ok   angular_acc      code=4.0                                  arm=4.0
+     ?    install_pose     code=[0.0, 90.0, 0.0]                     arm=null
+     ?    arm model        code="RM_75"                              arm=null
+
+    8/8 agree
+
+  UNAVAILABLE (35) — firmware or model does not support these
+    current_tool_frame                       TIMED OUT after 3s
+    current_work_frame                       TIMED OUT after 3s
+    install_pose                             TIMED OUT after 3s
+    joint_max_acc                            TIMED OUT after 3s
+    joint_max_pos                            TIMED OUT after 3s
+    joint_max_speed                          not attempted (too many blocked)
+    joint_min_pos                            not attempted (too many blocked)
+    joint_odom                               not attempted (too many blocked)
+    joint_software_version                   not attempted (too many blocked)
+    lift_state                               not attempted (too many blocked)
+    program_run_state                        not attempted (too many blocked)
+    rm_plus_base_info                        not attempted (too many blocked)
+    rm_plus_mode                             not attempted (too many blocked)
+    rm_plus_state_info                       not attempted (too many blocked)
+    rm_plus_touch                            not attempted (too many blocked)
+    robot_info                               not attempted (too many blocked)
+    self_collision_enable                    not attempted (too many blocked)
+    self_endeffector_collision_enable        not attempted (too many blocked)
+    sn                                       not attempted (too many blocked)
+    system_runtime                           not attempted (too many blocked)
+    teach_frame                              not attempted (too many blocked)
+    tool_io_state                            not attempted (too many blocked)
+    tool_rs485_mode                          not attempted (too many blocked)
+    tool_rs485_mode_v4                       not attempted (too many blocked)
+    tool_software_version                    not attempted (too many blocked)
+    tool_voltage                             not attempted (too many blocked)
+    torque_data                              not attempted (too many blocked)
+    total_tool_frame                         not attempted (too many blocked)
+    total_work_frame                         not attempted (too many blocked)
+    virtual_wall_config                      not attempted (too many blocked)
+    virtual_wall_enable                      not attempted (too many blocked)
+    voltage                                  not attempted (too many blocked)
+    webserver_enabled                        not attempted (too many blocked)
+    wifi_net                                 not attempted (too many blocked)
+    wired_net                                not attempted (too many blocked)
+
+  wrote /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/census/right.json
+  [WARN] skipping teardown: the SDK call is still blocked and closing the handle would hang.
+
+  exiting immediately (a blocked SDK thread cannot be joined)
