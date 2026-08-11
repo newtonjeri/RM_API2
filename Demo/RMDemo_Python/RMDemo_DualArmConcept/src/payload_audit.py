@@ -56,7 +56,7 @@ import statistics
 import sys
 
 from dual_arm_common import (
-    handle_cli, com_mm, LEFT_IP, RIGHT_IP, ROBOT_PORT,
+    handle_cli, com_mm, com_from_mm, LEFT_IP, RIGHT_IP, ROBOT_PORT,
 )
 from frame_alignment_offline import frame_map, controller_frame_name
 
@@ -217,7 +217,7 @@ def apply_side(robot, side, com, kg, only=None):
         f.pose.position = rm_position_t(*[float(v) for v in pose[:3]])
         f.pose.euler = rm_euler_t(*[float(v) for v in pose[3:6]])
         f.payload = float(kg)
-        f.x, f.y, f.z = [float(v) for v in com]
+        f.x, f.y, f.z = com_from_mm(com)
         ret = robot.rm_update_tool_frame(f)
         rb_ret, rb = robot.rm_get_given_tool_frame(fname)
         rbc = com_mm(rb)[0] if rb_ret == 0 else None

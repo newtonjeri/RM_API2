@@ -340,7 +340,13 @@ class EmuController:
         if side == "left":
             self.tool_frames["Hand"] = {
                 "pose": [-0.035, 0.01, 0.259999, 0.0, 0.0, 0.0],
-                "payload": 0.706, "com": [-12.0, 44.0, 128.0]}
+                "payload": 0.706,
+                # METRES, because that is what the hardware getter returns
+                # (arm_census 2026-08-11: `Hand` reads -0.012/0.044/0.128
+                # where the GUI shows -12/44/128 mm). Holding it in mm here
+                # made the emulator disagree with the arm about units —
+                # the same class of fidelity gap as F25.
+                "com": [-0.012, 0.044, 0.128]}
         self.active_tool = "Hand" if side == "left" else "Arm_Tip"
         # F10: read from both arms 2026-08-07.
         self.limits = {"line_speed": 0.250, "line_acc": 1.600,

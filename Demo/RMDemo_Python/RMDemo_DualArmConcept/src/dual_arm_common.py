@@ -1317,6 +1317,19 @@ def com_mm(frame: dict):
     return mm, ""
 
 
+def com_from_mm(mm):
+    """Millimetres -> whatever the SETTER wants. Symmetric with com_mm().
+
+    We write in the unit the getter reads in — metres — and then READ IT
+    BACK and compare. That is deliberate: the setter's unit is genuinely
+    unresolved (`rm_frame_t.x/y/z` is documented in mm, yet a read->write
+    round trip once produced a value 1000x too large). Guessing is what
+    put 128 metres on six tool frames, so instead we write, verify, and
+    report the observed factor if it disagrees.
+    """
+    return tuple(float(v) / 1000.0 for v in mm)
+
+
 def describe_error_state(st: dict) -> str:
     if not st["readable"]:
         return "unreadable"

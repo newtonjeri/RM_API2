@@ -77,7 +77,7 @@ import time
 
 from dual_arm_common import (
     handle_cli,
-    com_mm,
+    com_mm, com_from_mm,
     preflight_error_gate,
     ARM_SPEED_PCT, ARM_TIMEOUT_S, DEV_JOINT, LEFT_IP, RIGHT_IP, ROBOT_PORT,
     ArrivalMonitor, ConceptArm, apply_run_mode, countdown, mode_label,
@@ -318,7 +318,9 @@ def _create_glove_frames(robot):
         frame.pose.position = rm_position_t(*[float(v) for v in T[:3, 3]])
         frame.pose.euler = rm_euler_t(*[float(v) for v in rpy])
         frame.payload = payload
-        frame.x, frame.y, frame.z = com     # payload centroid, carried over
+        # com is in mm; the setter takes the getter's unit — see
+        # com_from_mm(). The read-back below is what verifies it.
+        frame.x, frame.y, frame.z = com_from_mm(com)
         update = fname in existing
         try:
             ret = (robot.rm_update_tool_frame(frame) if update
