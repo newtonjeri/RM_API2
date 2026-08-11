@@ -45858,3 +45858,2599 @@ P12. Run recorder
 ====================================================================
 Dry run: 249/249 passed
 ====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-11 18:14:03
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 5 (right, 1to1)
+  [PASS] lift quarter -> 75 (right, 1to1)
+  [PASS] lift half -> 150 (right, 1to1)
+  [PASS] lift full -> 300 (right, 1to1)
+  [PASS] lift minimum -> 5 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 300 (left, 1to1)
+  [PASS] full 300 leaves headroom under the 315 mm ceiling
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 19%
+  [PASS] matched pole is predicted to finish AFTER the arm  (pole 5.86 s vs arm 4.00 s)
+  [PASS] matched speed is the SLOWEST that still fits the target
+  [PASS] pole model: 140 mm @ 50% ~ 3.47 s measured  (predicts 3.49 s)
+  [PASS] pole model: 10 mm @ 50% ~ 0.75 s measured  (predicts 0.83 s)
+  [PASS] short strokes are acceleration-limited (commanding faster is a no-op)
+  [PASS] long strokes DO respond to speed
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.71 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1d. Sync dispatch order
+  [PASS] default order dispatches the LIFT first
+  [PASS] arm_first restores the old order for A/B tests
+  [PASS] shipped default is lift_first
+  [PASS] non-sync steps are unaffected by the order
+
+F1f. Lift gearing auto-detection
+  [PASS] version parser handles V-prefix and suffixes
+  [PASS] V1.7.4 -> true-mm 1to1
+  [PASS] V1.7.1 -> geared 2to3
+  [PASS] unreadable version -> no verdict
+  [INFO] right: lift gearing 2to3 -> 1to1 (detected from controller firmware); full_length now 300 hw-mm
+  [PASS] upgraded right arm auto-switches to 1to1 (full -> 300)
+  [WARN] right: controller version unreadable — keeping assumed lift gearing 2to3 (pin with RM_RIGHT_LIFT_GEAR if this is wrong)
+  [PASS] unreadable version keeps the assumed gearing
+  [PASS] env pin outranks detection
+
+F1g. Self-collision default
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] self-collision is ENABLED when found off
+  [PASS] already-enabled arm is left alone (no redundant write)
+  [INFO] left: self-collision left as-found (RM_SELF_COLLISION=0)
+  [PASS] RM_SELF_COLLISION=0 leaves the arm as-found
+
+F1e. Latched-error gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [PASS] clean controller reads clean
+  [INFO] left: error state clean
+  [PASS] clean controller passes the gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — system 5001 (unknown system code); joints J1=16 (Start failed),J2=16 (Start failed),J3=16 (Start failed),J4=16 (Start failed),J5=16 (Start failed),J6=16 (Start failed),J7=16 (Start failed)
+  [PASS] latched joint errors BLOCK the run before motion
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] --clear-errors clears and then passes
+  [PASS] R8: flagged joints cleared PER JOINT (system clear is not enough)
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — lift driver 1
+  [PASS] lift driver error alone also blocks
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1b2. Payload centroid: consensus and the mirror law
+  [PASS] consensus uses only the agreeing frames  (4 of 6)
+  [PASS] consensus CoM is the cluster, not the mean  ((-25.2, 41.2, 224.0))
+  [PASS] consensus mass  (0.567 kg)
+  [PASS] both outliers are named  (['L_glove_1', 'L_glove_4'])
+  [PASS] mirror negates X, keeps Y and Z
+  [PASS] mirror is an involution
+  [PASS] right consensus uses 5 of 6 frames  (5 of 6)
+  [PASS] right outlier is R_glove_1  (['R_glove_1'])
+  [PASS] mirror does NOT predict the measured right arm  (78.4 mm off)
+  [PASS] CX agrees between arms — it does not mirror  (left -25.2 vs right -23.6)
+  [PASS] right frames agree despite 65 mm of origin spread
+  [PASS] an undeclared side reads as zero payload
+  [PASS] an impossible centroid yields no consensus
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+  [PASS] --mode accepted when common on
+unknown argument: '--mode'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --mode REJECTED when common off  (exit 2)
+unknown argument: '--no-hands'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --no-hands rejected when common off  (exit 2)
+  [PASS] usage= overrides the shared motion USAGE
+  [PASS] wants_help sees -h
+  [PASS] wants_help sees --help
+  [PASS] wants_help ignores other flags
+  [PASS] --help does NOT create the run log
+
+========================================================================
+  Script : cli_probe.py
+  Log    : cli_probe.log
+  Started: 2026-08-11 18:14:05
+========================================================================
+  [PASS] a real run DOES create the run log
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 resolves its push target from the route
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5 (RM_HOST_IP still pins it)
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: both 1to1, full -> 300
+  [PASS] RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller
+  [FAIL] RM_SYNC_BACKEND=planned is LOCKED (vendor defect)
+  [FAIL] RM_UNLOCK_PLANNED_SYNC=1 re-opens it for post-fix re-tests
+
+F1h. C11 rehearsal residual
+  [PASS] predicted_path labels every point with its stage
+  [PASS] on-path sample: zero deviation, correct stage
+  [PASS] off-path sample: deviation measured exactly
+  [PASS] lopsided capture still attributes to every stage
+
+F1k. IK frame naming (controller <-> URDF)
+  [PASS] right: all 6 ik frames present, correctly prefixed
+  [PASS] right: every controller name fits in 11 chars  (longest 'R_index_tip')
+  [PASS] right: names are unique after mapping
+  [PASS] right: mapping is the documented rule
+  [PASS] left: all 6 ik frames present, correctly prefixed
+  [PASS] left: every controller name fits in 11 chars  (longest 'L_index_tip')
+  [PASS] left: names are unique after mapping
+  [PASS] left: mapping is the documented rule
+  [PASS] an over-long name RAISES rather than truncating
+  [PASS] right: frame map covers every ik frame
+  [PASS] right: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] left: frame map covers every ik frame
+  [PASS] left: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] the hinge task's ik_frame R_glove_frame_4 is mapped
+  [PASS] the frame writer imports the residual, not a copy of it
+
+F1j. Plan resolution (lab laptop has no workspace)
+  [PASS] plan is bundled in the repo  (1268 KB)
+  [PASS] the repo's plans/ copy is the resolved plan
+  [PASS] a workspace elsewhere does NOT change the plan
+  [PASS] bundled plan yields the 4 arm stages
+  [PASS] bundled plan waypoints are radians, 7 joints
+
+F1m. C11 capture reduction
+  [PASS] path stage found by SIZE, not by stage name
+  [PASS] a short stage stays at its two endpoints
+  [PASS] arc-length resampling covers the traverse  (11/11 distinct)
+  [PASS] index subsampling clusters in the dwell (the bug this replaces)  (only 2/11 distinct)
+  [PASS] a capture that never moved degrades safely
+
+F1i. UDP push target resolution
+  [PASS] route lookup yields a real local address
+  [PASS] RM_HOST_IP pins the push target
+  [PASS] unroutable arm still yields an address (falls back)
+
+P1. Hand angle conversion
+  [PASS] release rad->counts reproduces the bench values  ([993, 993, 993, 993, 981, 992] vs [993, 993, 993, 993, 981, 992])
+  [PASS] half_grasp rad->counts reproduces the bench values  ([517, 517, 517, 517, 133, 944] vs [516, 516, 516, 516, 133, 944])
+  [PASS] grasp rad->counts reproduces the bench values  ([33, 33, 33, 33, 133, 944] vs [33, 33, 33, 33, 133, 944])
+  [PASS] open_tenth is nearly closed, NOT open  (130 counts (alias would give 993))
+  [PASS] quarter_grasp is mostly open, NOT a full grasp  (750 counts (alias would give 33))
+  [PASS] counts are clamped into 0..1000
+  [PASS] a missing finger RAISES rather than defaulting
+
+P2. Task config + serialization
+  [PASS] all four tasks load
+  [PASS] side is read per task
+  [PASS] ik_frame comes from the task, not the arm default
+  [PASS] groups resolve from arm_defaults by suffix
+  [PASS] cleaning runs at the task's full scaling
+  [PASS] everything else runs at half
+  [PASS] the pole saturates against the DRIVE, not MoveIt's limit
+  [PASS] the intended (pre-policy) speed stays visible
+  [PASS] hinge_area_right: no stage drives two devices
+  [PASS] hinge_area_right: every motion stage maps to one device
+  [PASS] hinge_area_left: no stage drives two devices
+  [PASS] hinge_area_left: every motion stage maps to one device
+  [PASS] toplid_right: no stage drives two devices
+  [PASS] toplid_right: every motion stage maps to one device
+  [PASS] toplid_left: no stage drives two devices
+  [PASS] toplid_left: every motion stage maps to one device
+  [PASS] conditional stages are resolved, not blindly run
+  [PASS] hinge KEEPS pre_start (use_prestart_stage: true)
+  [PASS] contact contract is loaded per ik_frame
+
+P3. Cleaning path resolution
+  [PASS] hinge_area_right: 44 waypoints from the chained sequence  (got 44)
+  [PASS] hinge_area_left: 44 waypoints from the chained sequence  (got 44)
+  [PASS] toplid_right: 28 waypoints from the chained sequence  (got 28)
+  [PASS] toplid_left: 28 waypoints from the chained sequence  (got 28)
+  [PASS] translation delta is applied in the reference frame
+  [PASS] zero rotation delta leaves the anchor orientation untouched
+  [PASS] a non-chained cleaning_sequence RAISES
+  [PASS] a missing anchor RAISES (lookback must be supplied)
+  [PASS] movel program queues every segment
+  [PASS] movel program selects the task's own tool frame
+  [PASS] pole height shifts the whole path by 215 mm  (215.0 mm)
+  [PASS] raising the pole shifts commanded targets along -Z
+  [PASS] orientation is unchanged by pole height
+
+P4. Stage runner invariant
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   0.03s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+  [PASS] dry run walks the whole sequence
+  [PASS] every stage reported a result
+  [PASS] the pole is recorded so the path can be resolved
+  [PASS] a concurrent device dispatch RAISES (F9 invariant)
+    [WARN] arm dispatch for 'y' while pole is still in flight — concurrent devices in the planned domain truncate each other (F9)
+  [PASS] RM_SERIALIZE=0 reports but does not block
+  [PASS] the cleaning path refuses to run before the pole
+
+P5. Contact contract
+  [PASS] hinge_area_right: contact window read from allow/forbid_collision  (all over {'move_to_start', 'execute_path'})
+  [PASS] toplid_left: contact window read from allow/forbid_collision  (seat_and_lid over {'move_to_start', 'execute_path'})
+  [PASS] stages outside the bracket are NOT contact stages
+  [PASS] declared objects map to scene meshes
+    [WARN] contact object 'bin_link' has no scene mesh mapping — treated as NOT allowed
+  [PASS] an unmapped contact object is NOT silently allowed
+  [PASS] every commode task declares a fixture articulation
+
+P6. Controller speed limits
+  [PASS] all six limit families read back
+  [PASS] a percentage is reported in PHYSICAL units  (movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (c)
+  [PASS] raising a limit past the F10 envelope RAISES
+  [PASS] lowering is allowed and returns the previous value
+  [PASS] restore puts the envelope back
+
+P7. SDK call-site audit
+  [PASS] every SDK call site matches the real signature arity  (176 call sites checked)
+
+P8. Controller base frame + SIM
+  [PASS] the mounting rotation is applied to commanded poses
+  [PASS] commanded poses are plausible for this arm (|p| < 1.2 m)  (|p|=0.883 m)
+  [PASS] SIM assumes the pole and still RECORDS its height
+  [PASS] SIM assumes the hand
+
+P9. Disabled-joint gate
+  [PASS] de-enabled joints are seen as an error surface
+  [PASS] the gate REFUSES with disabled joints
+  [PASS] the description warns about teach mode
+  [PASS] all-enabled arm is clean
+  [PASS] a missing en-state getter degrades to the old gate
+
+P10. Hover and power telemetry
+  [PASS] hinge_area_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_left: declares start AND pre_start (hover needs both)
+  [PASS] hinge_area_left: declares start AND pre_start (hover needs both)
+  [PASS] toplid's local +Z points INTO the surface (sign proof against the local-axis convention)
+  [PASS] hover shifts every waypoint by exactly 10 mm
+  [PASS] the shift is one CONSTANT vector (the declared retreat)
+  [PASS] hover without a declared retreat REFUSES (never guesses)
+  [PASS] orientations are untouched by hover
+  [PASS] the program records its hover
+  [PASS] probe: the sagging joint is flagged with dip count and depth
+  [PASS] probe: a clean joint stays clean
+
+P11. Controller capabilities + mount source
+  [PASS] every capability reads back
+  [PASS] the report flags what is OFF but wanted
+  [INFO] controller capabilities (test):
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision            False  <-- OFF, Phase 2 wants it ON
+    endeff_collision          False
+    collision_stage               4
+    static_collision              0
+    collision_remove          False
+    enabling: avoid_singularity=1, self_collision=True
+  [PASS] prepare() switches singularity avoidance ON
+  [PASS] restore() puts the controller back as found
+  [PASS] mount angle is read from rm_get_install_pose
+  [WARN] install pose Y=75.00 deg differs from the measured 90.0 deg — using the CONTROLLER's value (it is the authority)
+  [PASS] a DIFFERENT install pose wins over the constant
+  [PASS] a non-Ry mounting REFUSES rather than mis-modelling
+  [WARN] install pose unreadable (RuntimeError("ret={'return_code': 1}")) — falling back to the measured constant 90.0 deg about Y. If either arm has been re-mounted this is WRONG.
+  [PASS] an unreadable install pose falls back to the measured constant
+
+P12. Run recorder
+  [PASS] scalar arrays stay inline (plan style)
+  [PASS] floats render at 6 decimals
+  [PASS] bools/None render as JSON literals
+  [PASS] nested arrays-of-arrays expand one per line
+  [PASS] output is valid JSON
+  [PASS] header width matches a row's width
+  [PASS] the recorder does NOT request hand_state (bench: ALL-ZERO)
+  [PASS] 100 Hz default (cycle=2, 5 ms units)
+  [PASS] an EMULATED recorder writes outside runs/
+  [PASS] a HARDWARE recorder writes INTO runs/  (MDemo_DualArmConcept/runs/20260811T181406_t_left)
+  [PASS] an unparseable frame is COUNTED, not swallowed
+
+====================================================================
+Dry run: 247/249 passed
+====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-11 18:14:10
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 5 (right, 1to1)
+  [PASS] lift quarter -> 75 (right, 1to1)
+  [PASS] lift half -> 150 (right, 1to1)
+  [PASS] lift full -> 300 (right, 1to1)
+  [PASS] lift minimum -> 5 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 300 (left, 1to1)
+  [PASS] full 300 leaves headroom under the 315 mm ceiling
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 19%
+  [PASS] matched pole is predicted to finish AFTER the arm  (pole 5.86 s vs arm 4.00 s)
+  [PASS] matched speed is the SLOWEST that still fits the target
+  [PASS] pole model: 140 mm @ 50% ~ 3.47 s measured  (predicts 3.49 s)
+  [PASS] pole model: 10 mm @ 50% ~ 0.75 s measured  (predicts 0.83 s)
+  [PASS] short strokes are acceleration-limited (commanding faster is a no-op)
+  [PASS] long strokes DO respond to speed
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.76 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1d. Sync dispatch order
+  [PASS] default order dispatches the LIFT first
+  [PASS] arm_first restores the old order for A/B tests
+  [PASS] shipped default is lift_first
+  [PASS] non-sync steps are unaffected by the order
+
+F1f. Lift gearing auto-detection
+  [PASS] version parser handles V-prefix and suffixes
+  [PASS] V1.7.4 -> true-mm 1to1
+  [PASS] V1.7.1 -> geared 2to3
+  [PASS] unreadable version -> no verdict
+  [INFO] right: lift gearing 2to3 -> 1to1 (detected from controller firmware); full_length now 300 hw-mm
+  [PASS] upgraded right arm auto-switches to 1to1 (full -> 300)
+  [WARN] right: controller version unreadable — keeping assumed lift gearing 2to3 (pin with RM_RIGHT_LIFT_GEAR if this is wrong)
+  [PASS] unreadable version keeps the assumed gearing
+  [PASS] env pin outranks detection
+
+F1g. Self-collision default
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] self-collision is ENABLED when found off
+  [PASS] already-enabled arm is left alone (no redundant write)
+  [INFO] left: self-collision left as-found (RM_SELF_COLLISION=0)
+  [PASS] RM_SELF_COLLISION=0 leaves the arm as-found
+
+F1e. Latched-error gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [PASS] clean controller reads clean
+  [INFO] left: error state clean
+  [PASS] clean controller passes the gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — system 5001 (unknown system code); joints J1=16 (Start failed),J2=16 (Start failed),J3=16 (Start failed),J4=16 (Start failed),J5=16 (Start failed),J6=16 (Start failed),J7=16 (Start failed)
+  [PASS] latched joint errors BLOCK the run before motion
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] --clear-errors clears and then passes
+  [PASS] R8: flagged joints cleared PER JOINT (system clear is not enough)
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — lift driver 1
+  [PASS] lift driver error alone also blocks
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1b2. Payload centroid: consensus and the mirror law
+  [PASS] consensus uses only the agreeing frames  (4 of 6)
+  [PASS] consensus CoM is the cluster, not the mean  ((-25.2, 41.2, 224.0))
+  [PASS] consensus mass  (0.567 kg)
+  [PASS] both outliers are named  (['L_glove_1', 'L_glove_4'])
+  [PASS] mirror negates X, keeps Y and Z
+  [PASS] mirror is an involution
+  [PASS] right consensus uses 5 of 6 frames  (5 of 6)
+  [PASS] right outlier is R_glove_1  (['R_glove_1'])
+  [PASS] mirror does NOT predict the measured right arm  (78.4 mm off)
+  [PASS] CX agrees between arms — it does not mirror  (left -25.2 vs right -23.6)
+  [PASS] right frames agree despite 65 mm of origin spread
+  [PASS] an undeclared side reads as zero payload
+  [PASS] an impossible centroid yields no consensus
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+  [PASS] --mode accepted when common on
+unknown argument: '--mode'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --mode REJECTED when common off  (exit 2)
+unknown argument: '--no-hands'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --no-hands rejected when common off  (exit 2)
+  [PASS] usage= overrides the shared motion USAGE
+  [PASS] wants_help sees -h
+  [PASS] wants_help sees --help
+  [PASS] wants_help ignores other flags
+  [PASS] --help does NOT create the run log
+
+========================================================================
+  Script : cli_probe.py
+  Log    : cli_probe.log
+  Started: 2026-08-11 18:14:12
+========================================================================
+  [PASS] a real run DOES create the run log
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 resolves its push target from the route
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5 (RM_HOST_IP still pins it)
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: both 1to1, full -> 300
+  [PASS] RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller
+  [FAIL] RM_SYNC_BACKEND=planned is LOCKED (vendor defect)
+  [FAIL] RM_UNLOCK_PLANNED_SYNC=1 re-opens it for post-fix re-tests
+
+F1h. C11 rehearsal residual
+  [PASS] predicted_path labels every point with its stage
+  [PASS] on-path sample: zero deviation, correct stage
+  [PASS] off-path sample: deviation measured exactly
+  [PASS] lopsided capture still attributes to every stage
+
+F1k. IK frame naming (controller <-> URDF)
+  [PASS] right: all 6 ik frames present, correctly prefixed
+  [PASS] right: every controller name fits in 11 chars  (longest 'R_index_tip')
+  [PASS] right: names are unique after mapping
+  [PASS] right: mapping is the documented rule
+  [PASS] left: all 6 ik frames present, correctly prefixed
+  [PASS] left: every controller name fits in 11 chars  (longest 'L_index_tip')
+  [PASS] left: names are unique after mapping
+  [PASS] left: mapping is the documented rule
+  [PASS] an over-long name RAISES rather than truncating
+  [PASS] right: frame map covers every ik frame
+  [PASS] right: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] left: frame map covers every ik frame
+  [PASS] left: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] the hinge task's ik_frame R_glove_frame_4 is mapped
+  [PASS] the frame writer imports the residual, not a copy of it
+
+F1j. Plan resolution (lab laptop has no workspace)
+  [PASS] plan is bundled in the repo  (1268 KB)
+  [PASS] the repo's plans/ copy is the resolved plan
+  [PASS] a workspace elsewhere does NOT change the plan
+  [PASS] bundled plan yields the 4 arm stages
+  [PASS] bundled plan waypoints are radians, 7 joints
+
+F1m. C11 capture reduction
+  [PASS] path stage found by SIZE, not by stage name
+  [PASS] a short stage stays at its two endpoints
+  [PASS] arc-length resampling covers the traverse  (11/11 distinct)
+  [PASS] index subsampling clusters in the dwell (the bug this replaces)  (only 2/11 distinct)
+  [PASS] a capture that never moved degrades safely
+
+F1i. UDP push target resolution
+  [PASS] route lookup yields a real local address
+  [PASS] RM_HOST_IP pins the push target
+  [PASS] unroutable arm still yields an address (falls back)
+
+P1. Hand angle conversion
+  [PASS] release rad->counts reproduces the bench values  ([993, 993, 993, 993, 981, 992] vs [993, 993, 993, 993, 981, 992])
+  [PASS] half_grasp rad->counts reproduces the bench values  ([517, 517, 517, 517, 133, 944] vs [516, 516, 516, 516, 133, 944])
+  [PASS] grasp rad->counts reproduces the bench values  ([33, 33, 33, 33, 133, 944] vs [33, 33, 33, 33, 133, 944])
+  [PASS] open_tenth is nearly closed, NOT open  (130 counts (alias would give 993))
+  [PASS] quarter_grasp is mostly open, NOT a full grasp  (750 counts (alias would give 33))
+  [PASS] counts are clamped into 0..1000
+  [PASS] a missing finger RAISES rather than defaulting
+
+P2. Task config + serialization
+  [PASS] all four tasks load
+  [PASS] side is read per task
+  [PASS] ik_frame comes from the task, not the arm default
+  [PASS] groups resolve from arm_defaults by suffix
+  [PASS] cleaning runs at the task's full scaling
+  [PASS] everything else runs at half
+  [PASS] the pole saturates against the DRIVE, not MoveIt's limit
+  [PASS] the intended (pre-policy) speed stays visible
+  [PASS] hinge_area_right: no stage drives two devices
+  [PASS] hinge_area_right: every motion stage maps to one device
+  [PASS] hinge_area_left: no stage drives two devices
+  [PASS] hinge_area_left: every motion stage maps to one device
+  [PASS] toplid_right: no stage drives two devices
+  [PASS] toplid_right: every motion stage maps to one device
+  [PASS] toplid_left: no stage drives two devices
+  [PASS] toplid_left: every motion stage maps to one device
+  [PASS] conditional stages are resolved, not blindly run
+  [PASS] hinge KEEPS pre_start (use_prestart_stage: true)
+  [PASS] contact contract is loaded per ik_frame
+
+P3. Cleaning path resolution
+  [PASS] hinge_area_right: 44 waypoints from the chained sequence  (got 44)
+  [PASS] hinge_area_left: 44 waypoints from the chained sequence  (got 44)
+  [PASS] toplid_right: 28 waypoints from the chained sequence  (got 28)
+  [PASS] toplid_left: 28 waypoints from the chained sequence  (got 28)
+  [PASS] translation delta is applied in the reference frame
+  [PASS] zero rotation delta leaves the anchor orientation untouched
+  [PASS] a non-chained cleaning_sequence RAISES
+  [PASS] a missing anchor RAISES (lookback must be supplied)
+  [PASS] movel program queues every segment
+  [PASS] movel program selects the task's own tool frame
+  [PASS] pole height shifts the whole path by 215 mm  (215.0 mm)
+  [PASS] raising the pole shifts commanded targets along -Z
+  [PASS] orientation is unchanged by pole height
+
+P4. Stage runner invariant
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   0.03s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+  [PASS] dry run walks the whole sequence
+  [PASS] every stage reported a result
+  [PASS] the pole is recorded so the path can be resolved
+  [PASS] a concurrent device dispatch RAISES (F9 invariant)
+    [WARN] arm dispatch for 'y' while pole is still in flight — concurrent devices in the planned domain truncate each other (F9)
+  [PASS] RM_SERIALIZE=0 reports but does not block
+  [PASS] the cleaning path refuses to run before the pole
+
+P5. Contact contract
+  [PASS] hinge_area_right: contact window read from allow/forbid_collision  (all over {'move_to_start', 'execute_path'})
+  [PASS] toplid_left: contact window read from allow/forbid_collision  (seat_and_lid over {'move_to_start', 'execute_path'})
+  [PASS] stages outside the bracket are NOT contact stages
+  [PASS] declared objects map to scene meshes
+    [WARN] contact object 'bin_link' has no scene mesh mapping — treated as NOT allowed
+  [PASS] an unmapped contact object is NOT silently allowed
+  [PASS] every commode task declares a fixture articulation
+
+P6. Controller speed limits
+  [PASS] all six limit families read back
+  [PASS] a percentage is reported in PHYSICAL units  (movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (c)
+  [PASS] raising a limit past the F10 envelope RAISES
+  [PASS] lowering is allowed and returns the previous value
+  [PASS] restore puts the envelope back
+
+P7. SDK call-site audit
+  [PASS] every SDK call site matches the real signature arity  (176 call sites checked)
+
+P8. Controller base frame + SIM
+  [PASS] the mounting rotation is applied to commanded poses
+  [PASS] commanded poses are plausible for this arm (|p| < 1.2 m)  (|p|=0.883 m)
+  [PASS] SIM assumes the pole and still RECORDS its height
+  [PASS] SIM assumes the hand
+
+P9. Disabled-joint gate
+  [PASS] de-enabled joints are seen as an error surface
+  [PASS] the gate REFUSES with disabled joints
+  [PASS] the description warns about teach mode
+  [PASS] all-enabled arm is clean
+  [PASS] a missing en-state getter degrades to the old gate
+
+P10. Hover and power telemetry
+  [PASS] hinge_area_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_left: declares start AND pre_start (hover needs both)
+  [PASS] hinge_area_left: declares start AND pre_start (hover needs both)
+  [PASS] toplid's local +Z points INTO the surface (sign proof against the local-axis convention)
+  [PASS] hover shifts every waypoint by exactly 10 mm
+  [PASS] the shift is one CONSTANT vector (the declared retreat)
+  [PASS] hover without a declared retreat REFUSES (never guesses)
+  [PASS] orientations are untouched by hover
+  [PASS] the program records its hover
+  [PASS] probe: the sagging joint is flagged with dip count and depth
+  [PASS] probe: a clean joint stays clean
+
+P11. Controller capabilities + mount source
+  [PASS] every capability reads back
+  [PASS] the report flags what is OFF but wanted
+  [INFO] controller capabilities (test):
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision            False  <-- OFF, Phase 2 wants it ON
+    endeff_collision          False
+    collision_stage               4
+    static_collision              0
+    collision_remove          False
+    enabling: avoid_singularity=1, self_collision=True
+  [PASS] prepare() switches singularity avoidance ON
+  [PASS] restore() puts the controller back as found
+  [PASS] mount angle is read from rm_get_install_pose
+  [WARN] install pose Y=75.00 deg differs from the measured 90.0 deg — using the CONTROLLER's value (it is the authority)
+  [PASS] a DIFFERENT install pose wins over the constant
+  [PASS] a non-Ry mounting REFUSES rather than mis-modelling
+  [WARN] install pose unreadable (RuntimeError("ret={'return_code': 1}")) — falling back to the measured constant 90.0 deg about Y. If either arm has been re-mounted this is WRONG.
+  [PASS] an unreadable install pose falls back to the measured constant
+
+P12. Run recorder
+  [PASS] scalar arrays stay inline (plan style)
+  [PASS] floats render at 6 decimals
+  [PASS] bools/None render as JSON literals
+  [PASS] nested arrays-of-arrays expand one per line
+  [PASS] output is valid JSON
+  [PASS] header width matches a row's width
+  [PASS] the recorder does NOT request hand_state (bench: ALL-ZERO)
+  [PASS] 100 Hz default (cycle=2, 5 ms units)
+  [PASS] an EMULATED recorder writes outside runs/
+  [PASS] a HARDWARE recorder writes INTO runs/  (MDemo_DualArmConcept/runs/20260811T181413_t_left)
+  [PASS] an unparseable frame is COUNTED, not swallowed
+
+====================================================================
+Dry run: 247/249 passed
+====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-11 18:28:36
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 5 (right, 1to1)
+  [PASS] lift quarter -> 75 (right, 1to1)
+  [PASS] lift half -> 150 (right, 1to1)
+  [PASS] lift full -> 300 (right, 1to1)
+  [PASS] lift minimum -> 5 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 300 (left, 1to1)
+  [PASS] full 300 leaves headroom under the 315 mm ceiling
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 19%
+  [PASS] matched pole is predicted to finish AFTER the arm  (pole 5.86 s vs arm 4.00 s)
+  [PASS] matched speed is the SLOWEST that still fits the target
+  [PASS] pole model: 140 mm @ 50% ~ 3.47 s measured  (predicts 3.49 s)
+  [PASS] pole model: 10 mm @ 50% ~ 0.75 s measured  (predicts 0.83 s)
+  [PASS] short strokes are acceleration-limited (commanding faster is a no-op)
+  [PASS] long strokes DO respond to speed
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.85 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1d. Sync dispatch order
+  [PASS] default order dispatches the LIFT first
+  [PASS] arm_first restores the old order for A/B tests
+  [PASS] shipped default is lift_first
+  [PASS] non-sync steps are unaffected by the order
+
+F1f. Lift gearing auto-detection
+  [PASS] version parser handles V-prefix and suffixes
+  [PASS] V1.7.4 -> true-mm 1to1
+  [PASS] V1.7.1 -> geared 2to3
+  [PASS] unreadable version -> no verdict
+  [INFO] right: lift gearing 2to3 -> 1to1 (detected from controller firmware); full_length now 300 hw-mm
+  [PASS] upgraded right arm auto-switches to 1to1 (full -> 300)
+  [WARN] right: controller version unreadable — keeping assumed lift gearing 2to3 (pin with RM_RIGHT_LIFT_GEAR if this is wrong)
+  [PASS] unreadable version keeps the assumed gearing
+  [PASS] env pin outranks detection
+
+F1g. Self-collision default
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] self-collision is ENABLED when found off
+  [PASS] already-enabled arm is left alone (no redundant write)
+  [INFO] left: self-collision left as-found (RM_SELF_COLLISION=0)
+  [PASS] RM_SELF_COLLISION=0 leaves the arm as-found
+
+F1e. Latched-error gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [PASS] clean controller reads clean
+  [INFO] left: error state clean
+  [PASS] clean controller passes the gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — system 5001 (unknown system code); joints J1=16 (Start failed),J2=16 (Start failed),J3=16 (Start failed),J4=16 (Start failed),J5=16 (Start failed),J6=16 (Start failed),J7=16 (Start failed)
+  [PASS] latched joint errors BLOCK the run before motion
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] --clear-errors clears and then passes
+  [PASS] R8: flagged joints cleared PER JOINT (system clear is not enough)
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — lift driver 1
+  [PASS] lift driver error alone also blocks
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1b2. Payload centroid: consensus and the mirror law
+  [PASS] consensus uses only the agreeing frames  (4 of 6)
+  [PASS] consensus CoM is the cluster, not the mean  ((-25.2, 41.2, 224.0))
+  [PASS] consensus mass  (0.567 kg)
+  [PASS] both outliers are named  (['L_glove_1', 'L_glove_4'])
+  [PASS] mirror negates X, keeps Y and Z
+  [PASS] mirror is an involution
+  [PASS] right consensus uses 5 of 6 frames  (5 of 6)
+  [PASS] right outlier is R_glove_1  (['R_glove_1'])
+  [PASS] mirror does NOT predict the measured right arm  (78.4 mm off)
+  [PASS] CX agrees between arms — it does not mirror  (left -25.2 vs right -23.6)
+  [PASS] right frames agree despite 65 mm of origin spread
+  [PASS] an undeclared side reads as zero payload
+  [PASS] an impossible centroid yields no consensus
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+  [PASS] --mode accepted when common on
+unknown argument: '--mode'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --mode REJECTED when common off  (exit 2)
+unknown argument: '--no-hands'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --no-hands rejected when common off  (exit 2)
+  [PASS] usage= overrides the shared motion USAGE
+  [PASS] wants_help sees -h
+  [PASS] wants_help sees --help
+  [PASS] wants_help ignores other flags
+  [PASS] --help does NOT create the run log
+
+========================================================================
+  Script : cli_probe.py
+  Log    : cli_probe.log
+  Started: 2026-08-11 18:28:37
+========================================================================
+  [PASS] a real run DOES create the run log
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 resolves its push target from the route
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5 (RM_HOST_IP still pins it)
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: both 1to1, full -> 300
+  [PASS] RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller
+  [FAIL] RM_SYNC_BACKEND=planned is LOCKED (vendor defect)
+  [FAIL] RM_UNLOCK_PLANNED_SYNC=1 re-opens it for post-fix re-tests
+
+F1h. C11 rehearsal residual
+  [PASS] predicted_path labels every point with its stage
+  [PASS] on-path sample: zero deviation, correct stage
+  [PASS] off-path sample: deviation measured exactly
+  [PASS] lopsided capture still attributes to every stage
+
+F1k. IK frame naming (controller <-> URDF)
+  [PASS] right: all 6 ik frames present, correctly prefixed
+  [PASS] right: every controller name fits in 11 chars  (longest 'R_index_tip')
+  [PASS] right: names are unique after mapping
+  [PASS] right: mapping is the documented rule
+  [PASS] left: all 6 ik frames present, correctly prefixed
+  [PASS] left: every controller name fits in 11 chars  (longest 'L_index_tip')
+  [PASS] left: names are unique after mapping
+  [PASS] left: mapping is the documented rule
+  [PASS] an over-long name RAISES rather than truncating
+  [PASS] right: frame map covers every ik frame
+  [PASS] right: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] left: frame map covers every ik frame
+  [PASS] left: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] the hinge task's ik_frame R_glove_frame_4 is mapped
+  [PASS] the frame writer imports the residual, not a copy of it
+
+F1j. Plan resolution (lab laptop has no workspace)
+  [PASS] plan is bundled in the repo  (1268 KB)
+  [PASS] the repo's plans/ copy is the resolved plan
+  [PASS] a workspace elsewhere does NOT change the plan
+  [PASS] bundled plan yields the 4 arm stages
+  [PASS] bundled plan waypoints are radians, 7 joints
+
+F1m. C11 capture reduction
+  [PASS] path stage found by SIZE, not by stage name
+  [PASS] a short stage stays at its two endpoints
+  [PASS] arc-length resampling covers the traverse  (11/11 distinct)
+  [PASS] index subsampling clusters in the dwell (the bug this replaces)  (only 2/11 distinct)
+  [PASS] a capture that never moved degrades safely
+
+F1i. UDP push target resolution
+  [PASS] route lookup yields a real local address
+  [PASS] RM_HOST_IP pins the push target
+  [PASS] unroutable arm still yields an address (falls back)
+
+P1. Hand angle conversion
+  [PASS] release rad->counts reproduces the bench values  ([993, 993, 993, 993, 981, 992] vs [993, 993, 993, 993, 981, 992])
+  [PASS] half_grasp rad->counts reproduces the bench values  ([517, 517, 517, 517, 133, 944] vs [516, 516, 516, 516, 133, 944])
+  [PASS] grasp rad->counts reproduces the bench values  ([33, 33, 33, 33, 133, 944] vs [33, 33, 33, 33, 133, 944])
+  [PASS] open_tenth is nearly closed, NOT open  (130 counts (alias would give 993))
+  [PASS] quarter_grasp is mostly open, NOT a full grasp  (750 counts (alias would give 33))
+  [PASS] counts are clamped into 0..1000
+  [PASS] a missing finger RAISES rather than defaulting
+
+P2. Task config + serialization
+  [PASS] all four tasks load
+  [PASS] side is read per task
+  [PASS] ik_frame comes from the task, not the arm default
+  [PASS] groups resolve from arm_defaults by suffix
+  [PASS] cleaning runs at the task's full scaling
+  [PASS] everything else runs at half
+  [PASS] the pole saturates against the DRIVE, not MoveIt's limit
+  [PASS] the intended (pre-policy) speed stays visible
+  [PASS] hinge_area_right: no stage drives two devices
+  [PASS] hinge_area_right: every motion stage maps to one device
+  [PASS] hinge_area_left: no stage drives two devices
+  [PASS] hinge_area_left: every motion stage maps to one device
+  [PASS] toplid_right: no stage drives two devices
+  [PASS] toplid_right: every motion stage maps to one device
+  [PASS] toplid_left: no stage drives two devices
+  [PASS] toplid_left: every motion stage maps to one device
+  [PASS] conditional stages are resolved, not blindly run
+  [PASS] hinge KEEPS pre_start (use_prestart_stage: true)
+  [PASS] contact contract is loaded per ik_frame
+
+P3. Cleaning path resolution
+  [PASS] hinge_area_right: 44 waypoints from the chained sequence  (got 44)
+  [PASS] hinge_area_left: 44 waypoints from the chained sequence  (got 44)
+  [PASS] toplid_right: 28 waypoints from the chained sequence  (got 28)
+  [PASS] toplid_left: 28 waypoints from the chained sequence  (got 28)
+  [PASS] translation delta is applied in the reference frame
+  [PASS] zero rotation delta leaves the anchor orientation untouched
+  [PASS] a non-chained cleaning_sequence RAISES
+  [PASS] a missing anchor RAISES (lookback must be supplied)
+  [PASS] movel program queues every segment
+  [PASS] movel program selects the task's own tool frame
+  [PASS] pole height shifts the whole path by 215 mm  (215.0 mm)
+  [PASS] raising the pole shifts commanded targets along -Z
+  [PASS] orientation is unchanged by pole height
+
+P4. Stage runner invariant
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   0.03s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+  [PASS] dry run walks the whole sequence
+  [PASS] every stage reported a result
+  [PASS] the pole is recorded so the path can be resolved
+  [PASS] a concurrent device dispatch RAISES (F9 invariant)
+    [WARN] arm dispatch for 'y' while pole is still in flight — concurrent devices in the planned domain truncate each other (F9)
+  [PASS] RM_SERIALIZE=0 reports but does not block
+  [PASS] the cleaning path refuses to run before the pole
+
+P5. Contact contract
+  [PASS] hinge_area_right: contact window read from allow/forbid_collision  (all over {'execute_path', 'move_to_start'})
+  [PASS] toplid_left: contact window read from allow/forbid_collision  (seat_and_lid over {'execute_path', 'move_to_start'})
+  [PASS] stages outside the bracket are NOT contact stages
+  [PASS] declared objects map to scene meshes
+    [WARN] contact object 'bin_link' has no scene mesh mapping — treated as NOT allowed
+  [PASS] an unmapped contact object is NOT silently allowed
+  [PASS] every commode task declares a fixture articulation
+
+P6. Controller speed limits
+  [PASS] all six limit families read back
+  [PASS] a percentage is reported in PHYSICAL units  (movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (c)
+  [PASS] raising a limit past the F10 envelope RAISES
+  [PASS] lowering is allowed and returns the previous value
+  [PASS] restore puts the envelope back
+
+P7. SDK call-site audit
+  [PASS] every SDK call site matches the real signature arity  (176 call sites checked)
+
+P8. Controller base frame + SIM
+  [PASS] the mounting rotation is applied to commanded poses
+  [PASS] commanded poses are plausible for this arm (|p| < 1.2 m)  (|p|=0.883 m)
+  [PASS] SIM assumes the pole and still RECORDS its height
+  [PASS] SIM assumes the hand
+
+P9. Disabled-joint gate
+  [PASS] de-enabled joints are seen as an error surface
+  [PASS] the gate REFUSES with disabled joints
+  [PASS] the description warns about teach mode
+  [PASS] all-enabled arm is clean
+  [PASS] a missing en-state getter degrades to the old gate
+
+P10. Hover and power telemetry
+  [PASS] hinge_area_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_left: declares start AND pre_start (hover needs both)
+  [PASS] hinge_area_left: declares start AND pre_start (hover needs both)
+  [PASS] toplid's local +Z points INTO the surface (sign proof against the local-axis convention)
+  [PASS] hover shifts every waypoint by exactly 10 mm
+  [PASS] the shift is one CONSTANT vector (the declared retreat)
+  [PASS] hover without a declared retreat REFUSES (never guesses)
+  [PASS] orientations are untouched by hover
+  [PASS] the program records its hover
+  [PASS] probe: the sagging joint is flagged with dip count and depth
+  [PASS] probe: a clean joint stays clean
+
+P11. Controller capabilities + mount source
+  [PASS] every capability reads back
+  [PASS] the report flags what is OFF but wanted
+  [INFO] controller capabilities (test):
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision            False  <-- OFF, Phase 2 wants it ON
+    endeff_collision          False
+    collision_stage               4
+    static_collision              0
+    collision_remove          False
+    enabling: avoid_singularity=1, self_collision=True
+  [PASS] prepare() switches singularity avoidance ON
+  [PASS] restore() puts the controller back as found
+  [PASS] mount angle is read from rm_get_install_pose
+  [WARN] install pose Y=75.00 deg differs from the measured 90.0 deg — using the CONTROLLER's value (it is the authority)
+  [PASS] a DIFFERENT install pose wins over the constant
+  [PASS] a non-Ry mounting REFUSES rather than mis-modelling
+  [WARN] install pose unreadable (RuntimeError("ret={'return_code': 1}")) — falling back to the measured constant 90.0 deg about Y. If either arm has been re-mounted this is WRONG.
+  [PASS] an unreadable install pose falls back to the measured constant
+
+P12. Run recorder
+  [PASS] scalar arrays stay inline (plan style)
+  [PASS] floats render at 6 decimals
+  [PASS] bools/None render as JSON literals
+  [PASS] nested arrays-of-arrays expand one per line
+  [PASS] output is valid JSON
+  [PASS] header width matches a row's width
+  [PASS] the recorder does NOT request hand_state (bench: ALL-ZERO)
+  [PASS] 100 Hz default (cycle=2, 5 ms units)
+  [PASS] an EMULATED recorder writes outside runs/
+  [PASS] a HARDWARE recorder writes INTO runs/  (MDemo_DualArmConcept/runs/20260811T182838_t_left)
+  [PASS] an unparseable frame is COUNTED, not swallowed
+
+====================================================================
+Dry run: 247/249 passed
+====================================================================
+
+========================================================================
+  Script : run_dry_run.py
+  Log    : run_dry_run.log
+  Started: 2026-08-11 18:57:10
+========================================================================
+====================================================================
+Dual-arm concept — offline dry run (no hardware, no motion)
+====================================================================
+
+A. Unit conversions
+  [PASS] left ready J2 rad->deg  (-108.0025)
+  [PASS] left ready J7 rad->deg  (180.0004)
+  [PASS] right rest J3 rad->deg  (-26.0008)
+  [PASS] right zero all 0
+  [PASS] lift minimum -> 5 (right, 1to1)
+  [PASS] lift quarter -> 75 (right, 1to1)
+  [PASS] lift half -> 150 (right, 1to1)
+  [PASS] lift full -> 300 (right, 1to1)
+  [PASS] lift minimum -> 5 (left, 1to1)
+  [PASS] lift quarter -> 75 (left, 1to1)
+  [PASS] lift half -> 150 (left, 1to1)
+  [PASS] lift full -> 300 (left, 1to1)
+  [PASS] full 300 leaves headroom under the 315 mm ceiling
+  [PASS] lift range guard rejects 0.0
+  [PASS] lift range guard rejects 0.31
+  [PASS] lift range guard rejects -0.1
+
+B. Concept sequence
+  [PASS] 7 steps
+  [PASS] first step homes to ready
+  [PASS] all targets defined for both sides
+  [PASS] sequence includes sync steps
+  [PASS] sequence includes hand steps
+  [PASS] hand grasp = 33/33/33/33/133/944 (bench echo)
+  [PASS] hand values in range
+  [PASS] matched lift speed: 105 phys mm over 4 s arm move -> 19%
+  [PASS] matched pole is predicted to finish AFTER the arm  (pole 5.86 s vs arm 4.00 s)
+  [PASS] matched speed is the SLOWEST that still fits the target
+  [PASS] pole model: 140 mm @ 50% ~ 3.47 s measured  (predicts 3.49 s)
+  [PASS] pole model: 10 mm @ 50% ~ 0.75 s measured  (predicts 0.83 s)
+  [PASS] short strokes are acceleration-limited (commanding faster is a no-op)
+  [PASS] long strokes DO respond to speed
+  [PASS] matched lift speed floors at 4%
+  [PASS] matched lift speed caps at 100%
+
+C. ArrivalMonitor demux
+  [PASS] wrong handle ignored
+  [PASS] event_type 0 ignored
+  [PASS] trajectory_connect=1 does not complete
+  [PASS] matching event completes with success
+  [PASS] failed trajectory reported
+
+D. Locked mode (mock)
+  [PASS] locked completes ok
+  [PASS] locked ran all steps
+  [PASS] locked arrivals confirmed (events / acked hand)
+  [PASS] locked dispatch skew < 20 ms (mock)  (max 0.72 ms)
+  [PASS] locked barrier: step k+1 after both k done
+  [PASS] locked wall time plausible  (0.36 s)
+  [PASS] locked stops on dispatch failure
+  [PASS] locked partner halted on failure
+
+E. Chained mode (mock)
+  [PASS] chained completes ok
+  [PASS] chained ordering: follower k after leader k done
+  [PASS] chained pipelines (leader k+1 overlaps follower k)
+
+F. Free mode (mock)
+  [PASS] free completes ok
+  [PASS] free ran all steps both arms
+  [PASS] free stops partner on failure
+
+F1a. Combo step kind
+  [PASS] combo arm+hand: joint event + hand acked, step ok
+  [PASS] --no-hands strips hand parts
+  [PASS] --no-pole strips lift parts, sync keeps its arm half
+  [PASS] --no-hands + --no-pole leaves arm-only choreography
+
+F1d. Sync dispatch order
+  [PASS] default order dispatches the LIFT first
+  [PASS] arm_first restores the old order for A/B tests
+  [PASS] shipped default is lift_first
+  [PASS] non-sync steps are unaffected by the order
+
+F1f. Lift gearing auto-detection
+  [PASS] version parser handles V-prefix and suffixes
+  [PASS] V1.7.4 -> true-mm 1to1
+  [PASS] V1.7.1 -> geared 2to3
+  [PASS] unreadable version -> no verdict
+  [INFO] right: lift gearing 2to3 -> 1to1 (detected from controller firmware); full_length now 300 hw-mm
+  [PASS] upgraded right arm auto-switches to 1to1 (full -> 300)
+  [WARN] right: controller version unreadable — keeping assumed lift gearing 2to3 (pin with RM_RIGHT_LIFT_GEAR if this is wrong)
+  [PASS] unreadable version keeps the assumed gearing
+  [PASS] env pin outranks detection
+
+F1g. Self-collision default
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [PASS] self-collision is ENABLED when found off
+  [PASS] already-enabled arm is left alone (no redundant write)
+  [INFO] left: self-collision left as-found (RM_SELF_COLLISION=0)
+  [PASS] RM_SELF_COLLISION=0 leaves the arm as-found
+
+F1e. Latched-error gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [PASS] clean controller reads clean
+  [INFO] left: error state clean
+  [PASS] clean controller passes the gate
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — system 5001 (unknown system code); joints J1=16 (Start failed),J2=16 (Start failed),J3=16 (Start failed),J4=16 (Start failed),J5=16 (Start failed),J6=16 (Start failed),J7=16 (Start failed)
+  [PASS] latched joint errors BLOCK the run before motion
+  [INFO] left: rm_set_joint_clear_err(J1) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J2) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J3) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J4) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J5) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J6) ret=0  (flag was 16)
+  [INFO] left: rm_set_joint_clear_err(J7) ret=0  (flag was 16)
+  [INFO] left: clear_errors -> clean
+  [INFO] left: error state clean
+  [PASS] --clear-errors clears and then passes
+  [PASS] R8: flagged joints cleared PER JOINT (system clear is not enough)
+  [WARN] left: controller version unreadable — keeping assumed lift gearing 1to1 (pin with RM_LEFT_LIFT_GEAR if this is wrong)
+  [WARN] left: self-collision state unreadable (AttributeError("'_ErrRobot' object has no attribute 'rm_get_self_collision_enable'")) — cannot confirm it is on
+  [WARN] left: LATCHED ERRORS — lift driver 1
+  [PASS] lift driver error alone also blocks
+
+F1b. Pole homing to full length
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [INFO] left: pole at full length (0.03 s, event=True)
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing completes on both arms
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1), right=300 (1to1)) ...
+  [WARN] left: pole homing FAILED (ret=1, event=False)
+  [DIAG] left: lift command REJECTED by the controller (set_state false) — state dump:
+  [DIAG]   arm power: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_arm_power_state'"))
+  [DIAG]   controller err: none
+  [DIAG]   joint err flags: getter unavailable (AttributeError("'MockRobot' object has no attribute 'rm_get_joint_err_flag'"))
+  [DIAG]   lift state: pos=0 hw-mm  current=None mA  mode=None  err_flag=0
+  [DIAG] recovery ladder: (1) release/reset the physical e-stop, (2) clear errors (RM_ARM=left python3 test_pole_only.py --clear-errors), (3) check the Web GUI lift panel moves the pole, (4) power-cycle the arm.
+  [INFO] right: pole at full length (0.03 s, event=True)
+  [PASS] pole homing failure halts the arms
+
+F1b2. Payload centroid: consensus and the mirror law
+  [PASS] consensus uses only the agreeing frames  (4 of 6)
+  [PASS] consensus CoM is the cluster, not the mean  ((-25.2, 41.2, 224.0))
+  [PASS] consensus mass  (0.567 kg)
+  [PASS] both outliers are named  (['L_glove_1', 'L_glove_4'])
+  [PASS] mirror negates X, keeps Y and Z
+  [PASS] mirror is an involution
+  [PASS] right consensus uses 5 of 6 frames  (5 of 6)
+  [PASS] right outlier is R_glove_1  (['R_glove_1'])
+  [PASS] mirror does NOT predict the measured right arm  (78.4 mm off)
+  [PASS] CX agrees between arms — it does not mirror  (left -25.2 vs right -23.6)
+  [PASS] right frames agree despite 65 mm of origin spread
+  [PASS] an undeclared side reads as zero payload
+  [PASS] an impossible centroid yields no consensus
+
+F1c. CLI guard
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] -h exits 0 with docs  (exit 0)
+doc
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --help exits 0 with docs  (exit 0)
+unknown argument: '--typo'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unknown flag exits 2  (exit 2)
+unknown argument: 'SIM'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] stray positional exits 2  (exit 2)
+  [PASS] valid flags pass through
+  [PASS] registered extra flags pass through (C8)
+unknown argument: '--diagnose-only'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] unregistered extra flag still exits 2
+  [PASS] --mode accepted when common on
+unknown argument: '--mode'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --mode REJECTED when common off  (exit 2)
+unknown argument: '--no-hands'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+  [PASS] --no-hands rejected when common off  (exit 2)
+  [PASS] usage= overrides the shared motion USAGE
+  [PASS] wants_help sees -h
+  [PASS] wants_help sees --help
+  [PASS] wants_help ignores other flags
+  [PASS] --help does NOT create the run log
+
+========================================================================
+  Script : cli_probe.py
+  Log    : cli_probe.log
+  Started: 2026-08-11 18:57:11
+========================================================================
+  [PASS] a real run DOES create the run log
+
+F2. --mode SIM|REAL parser
+  [PASS] --mode SIM -> 0
+  [PASS] --mode=real -> 1
+  [PASS] absent -> None
+  [PASS] invalid value exits with usage
+
+G. Endpoint configuration (env overrides)
+  [PASS] defaults apply when env unset
+  [PASS] C5 resolves its push target from the route
+  [PASS] emulator defaults match the tests
+  [PASS] env overrides reach dual_arm_common
+  [PASS] env overrides reach C5 (RM_HOST_IP still pins it)
+  [PASS] env overrides reach the emulator
+  [PASS] default gearing: both 1to1, full -> 300
+  [PASS] RM_RIGHT_LIFT_GEAR=2to3 pins a pre-upgrade controller
+  [PASS] RM_SYNC_BACKEND=planned is LOCKED (vendor defect)
+  [PASS] RM_UNLOCK_PLANNED_SYNC=1 re-opens it for post-fix re-tests
+
+F1h. C11 rehearsal residual
+  [PASS] predicted_path labels every point with its stage
+  [PASS] on-path sample: zero deviation, correct stage
+  [PASS] off-path sample: deviation measured exactly
+  [PASS] lopsided capture still attributes to every stage
+
+F1k. IK frame naming (controller <-> URDF)
+  [PASS] right: all 6 ik frames present, correctly prefixed
+  [PASS] right: every controller name fits in 11 chars  (longest 'R_index_tip')
+  [PASS] right: names are unique after mapping
+  [PASS] right: mapping is the documented rule
+  [PASS] left: all 6 ik frames present, correctly prefixed
+  [PASS] left: every controller name fits in 11 chars  (longest 'L_index_tip')
+  [PASS] left: names are unique after mapping
+  [PASS] left: mapping is the documented rule
+  [PASS] an over-long name RAISES rather than truncating
+  [PASS] right: frame map covers every ik frame
+  [PASS] right: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] left: frame map covers every ik frame
+  [PASS] left: Arm_Tip offset = ConnectorLink offset + 15.3 mm Z
+  [PASS] the hinge task's ik_frame R_glove_frame_4 is mapped
+  [PASS] the frame writer imports the residual, not a copy of it
+
+F1j. Plan resolution (lab laptop has no workspace)
+  [PASS] plan is bundled in the repo  (1268 KB)
+  [PASS] the repo's plans/ copy is the resolved plan
+  [PASS] a workspace elsewhere does NOT change the plan
+  [PASS] bundled plan yields the 4 arm stages
+  [PASS] bundled plan waypoints are radians, 7 joints
+
+F1m. C11 capture reduction
+  [PASS] path stage found by SIZE, not by stage name
+  [PASS] a short stage stays at its two endpoints
+  [PASS] arc-length resampling covers the traverse  (11/11 distinct)
+  [PASS] index subsampling clusters in the dwell (the bug this replaces)  (only 2/11 distinct)
+  [PASS] a capture that never moved degrades safely
+
+F1i. UDP push target resolution
+  [PASS] route lookup yields a real local address
+  [PASS] RM_HOST_IP pins the push target
+  [PASS] unroutable arm still yields an address (falls back)
+
+P1. Hand angle conversion
+  [PASS] release rad->counts reproduces the bench values  ([993, 993, 993, 993, 981, 992] vs [993, 993, 993, 993, 981, 992])
+  [PASS] half_grasp rad->counts reproduces the bench values  ([517, 517, 517, 517, 133, 944] vs [516, 516, 516, 516, 133, 944])
+  [PASS] grasp rad->counts reproduces the bench values  ([33, 33, 33, 33, 133, 944] vs [33, 33, 33, 33, 133, 944])
+  [PASS] open_tenth is nearly closed, NOT open  (130 counts (alias would give 993))
+  [PASS] quarter_grasp is mostly open, NOT a full grasp  (750 counts (alias would give 33))
+  [PASS] counts are clamped into 0..1000
+  [PASS] a missing finger RAISES rather than defaulting
+
+P2. Task config + serialization
+  [PASS] all four tasks load
+  [PASS] side is read per task
+  [PASS] ik_frame comes from the task, not the arm default
+  [PASS] groups resolve from arm_defaults by suffix
+  [PASS] cleaning runs at the task's full scaling
+  [PASS] everything else runs at half
+  [PASS] the pole saturates against the DRIVE, not MoveIt's limit
+  [PASS] the intended (pre-policy) speed stays visible
+  [PASS] hinge_area_right: no stage drives two devices
+  [PASS] hinge_area_right: every motion stage maps to one device
+  [PASS] hinge_area_left: no stage drives two devices
+  [PASS] hinge_area_left: every motion stage maps to one device
+  [PASS] toplid_right: no stage drives two devices
+  [PASS] toplid_right: every motion stage maps to one device
+  [PASS] toplid_left: no stage drives two devices
+  [PASS] toplid_left: every motion stage maps to one device
+  [PASS] conditional stages are resolved, not blindly run
+  [PASS] hinge KEEPS pre_start (use_prestart_stage: true)
+  [PASS] contact contract is loaded per ik_frame
+
+P3. Cleaning path resolution
+  [PASS] hinge_area_right: 44 waypoints from the chained sequence  (got 44)
+  [PASS] hinge_area_left: 44 waypoints from the chained sequence  (got 44)
+  [PASS] toplid_right: 28 waypoints from the chained sequence  (got 28)
+  [PASS] toplid_left: 28 waypoints from the chained sequence  (got 28)
+  [PASS] translation delta is applied in the reference frame
+  [PASS] zero rotation delta leaves the anchor orientation untouched
+  [PASS] a non-chained cleaning_sequence RAISES
+  [PASS] a missing anchor RAISES (lookback must be supplied)
+  [PASS] movel program queues every segment
+  [PASS] movel program selects the task's own tool frame
+  [PASS] pole height shifts the whole path by 215 mm  (215.0 mm)
+  [PASS] raising the pole shifts commanded targets along -Z
+  [PASS] orientation is unchanged by pole height
+
+P4. Stage runner invariant
+  [PASS] task is serialized (one device per stage)  (8 device stages)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+    ok   move_pole_to_quarter_height  [pole]   0.00s  DRY set_lift_height(50%, 75)
+    ok   hand_grasp                   [hand]   0.00s  DRY set_hand_angle(quarter_grasp) [750, 750, 750, 750, 1000, 944] from plan
+    ok   move_to_pre_start            [arm ]   0.00s  DRY movej([7.2, -36.7, -15.1, 95.2, -25.6, -32.1, 23.4], v=50%)
+    ok   move_to_start                [arm ]   0.00s  DRY movej([6.1, -33.8, -15.9, 100.7, -22.3, -40.4, 20.9], v=50%)
+    ok   execute_path                 [arm ]   0.03s  DRY tool=R_glove_4 43 chained movel, r=10%, v=100%
+    ok   move_to_rest                 [arm ]   0.00s  DRY movej([0.0, -82.0, -26.0, 98.0, 6.0, 62.0, 69.0], v=50%)
+    ok   hand_release                 [hand]   0.00s  DRY set_hand_angle(release) [993, 993, 993, 993, 981, 992] from plan
+  [PASS] stage sequence completed  (8 stages ran)
+  [PASS] dry run walks the whole sequence
+  [PASS] every stage reported a result
+  [PASS] the pole is recorded so the path can be resolved
+  [PASS] a concurrent device dispatch RAISES (F9 invariant)
+    [WARN] arm dispatch for 'y' while pole is still in flight — concurrent devices in the planned domain truncate each other (F9)
+  [PASS] RM_SERIALIZE=0 reports but does not block
+  [PASS] the cleaning path refuses to run before the pole
+
+P5. Contact contract
+  [PASS] hinge_area_right: contact window read from allow/forbid_collision  (all over {'move_to_start', 'execute_path'})
+  [PASS] toplid_left: contact window read from allow/forbid_collision  (seat_and_lid over {'move_to_start', 'execute_path'})
+  [PASS] stages outside the bracket are NOT contact stages
+  [PASS] declared objects map to scene meshes
+    [WARN] contact object 'bin_link' has no scene mesh mapping — treated as NOT allowed
+  [PASS] an unmapped contact object is NOT silently allowed
+  [PASS] every commode task declares a fixture articulation
+
+P6. Controller speed limits
+  [PASS] all six limit families read back
+  [PASS] a percentage is reported in PHYSICAL units  (movel: cleaning 100% = 0.250 m/s, transit 50% = 0.125 m/s (c)
+  [PASS] raising a limit past the F10 envelope RAISES
+  [PASS] lowering is allowed and returns the previous value
+  [PASS] restore puts the envelope back
+
+P7. SDK call-site audit
+  [PASS] every SDK call site matches the real signature arity  (176 call sites checked)
+
+P8. Controller base frame + SIM
+  [PASS] the mounting rotation is applied to commanded poses
+  [PASS] commanded poses are plausible for this arm (|p| < 1.2 m)  (|p|=0.883 m)
+  [PASS] SIM assumes the pole and still RECORDS its height
+  [PASS] SIM assumes the hand
+
+P9. Disabled-joint gate
+  [PASS] de-enabled joints are seen as an error surface
+  [PASS] the gate REFUSES with disabled joints
+  [PASS] the description warns about teach mode
+  [PASS] all-enabled arm is clean
+  [PASS] a missing en-state getter degrades to the old gate
+
+P10. Hover and power telemetry
+  [PASS] hinge_area_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_right: declares start AND pre_start (hover needs both)
+  [PASS] toplid_left: declares start AND pre_start (hover needs both)
+  [PASS] hinge_area_left: declares start AND pre_start (hover needs both)
+  [PASS] toplid's local +Z points INTO the surface (sign proof against the local-axis convention)
+  [PASS] hover shifts every waypoint by exactly 10 mm
+  [PASS] the shift is one CONSTANT vector (the declared retreat)
+  [PASS] hover without a declared retreat REFUSES (never guesses)
+  [PASS] orientations are untouched by hover
+  [PASS] the program records its hover
+  [PASS] probe: the sagging joint is flagged with dip count and depth
+  [PASS] probe: a clean joint stays clean
+
+P11. Controller capabilities + mount source
+  [PASS] every capability reads back
+  [PASS] the report flags what is OFF but wanted
+  [INFO] controller capabilities (test):
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision            False  <-- OFF, Phase 2 wants it ON
+    endeff_collision          False
+    collision_stage               4
+    static_collision              0
+    collision_remove          False
+    enabling: avoid_singularity=1, self_collision=True
+  [PASS] prepare() switches singularity avoidance ON
+  [PASS] restore() puts the controller back as found
+  [PASS] mount angle is read from rm_get_install_pose
+  [WARN] install pose Y=75.00 deg differs from the measured 90.0 deg — using the CONTROLLER's value (it is the authority)
+  [PASS] a DIFFERENT install pose wins over the constant
+  [PASS] a non-Ry mounting REFUSES rather than mis-modelling
+  [WARN] install pose unreadable (RuntimeError("ret={'return_code': 1}")) — falling back to the measured constant 90.0 deg about Y. If either arm has been re-mounted this is WRONG.
+  [PASS] an unreadable install pose falls back to the measured constant
+
+P12. Run recorder
+  [PASS] scalar arrays stay inline (plan style)
+  [PASS] floats render at 6 decimals
+  [PASS] bools/None render as JSON literals
+  [PASS] nested arrays-of-arrays expand one per line
+  [PASS] output is valid JSON
+  [PASS] header width matches a row's width
+  [PASS] the recorder does NOT request hand_state (bench: ALL-ZERO)
+  [PASS] 100 Hz default (cycle=2, 5 ms units)
+  [PASS] an EMULATED recorder writes outside runs/
+  [PASS] a HARDWARE recorder writes INTO runs/  (MDemo_DualArmConcept/runs/20260811T185712_t_left)
+  [PASS] an unparseable frame is COUNTED, not swallowed
+
+====================================================================
+Dry run: 249/249 passed
+====================================================================
