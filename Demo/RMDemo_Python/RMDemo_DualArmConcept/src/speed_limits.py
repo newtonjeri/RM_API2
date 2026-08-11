@@ -59,6 +59,27 @@ CONFIGURED = {
     "angular_acc": 4.000,       # rad/s^2
 }
 
+# From RealMan's JSON-protocol documentation, transcribed 2026-08-10:
+#   develop.realman-robotics.com/en/robot/json/armConfig/
+#   develop.realman-robotics.com/en/robot/json/jointParameter/
+#
+# CARTESIAN — set_arm_max_line_speed (m/s) / set_arm_max_line_acc (m/s^2),
+#   both 0.001 resolution, and a HARD CONSTRAINT the controller enforces:
+#       max linear ACCELERATION / max linear SPEED  >=  3
+#   The same ratio applies to the angular pair. As shipped we are at
+#   1.600 / 0.250 = 6.4, so there is headroom to raise the speed to
+#   1.600 / 3 = 0.533 m/s without touching acceleration.
+#
+# JOINT — set_joint_max_speed is in RPM (default 30 RPM = 180 deg/s, which
+#   matches what both arms report) and set_joint_max_acc is in RPM/s,
+#   **default 500 and documented "no more than 500"** — so joint
+#   acceleration is already AT its ceiling and is not a lever. Its own
+#   constraint is acc/speed >= 1.5 (500/30 = 16.7, satisfied).
+CARTESIAN_ACC_SPEED_RATIO = 3.0
+JOINT_ACC_SPEED_RATIO = 1.5
+JOINT_MAX_ACC_RPM_S = 500.0     # documented ceiling, and the default
+RPM_TO_DEG_S = 6.0              # 1 RPM = 360/60 deg/s
+
 _GETTERS = {
     "line_speed": "rm_get_arm_max_line_speed",
     "line_acc": "rm_get_arm_max_line_acc",
@@ -122,6 +143,24 @@ def apply(robot, allow_raise: bool = False, **values) -> dict:
     is the machine's safety configuration, not a per-task knob.
     """
     before = read(robot)
+    # The controller REJECTS a pair that violates acc/speed >= 3 (>= 1.5
+    # for joints). Catching it here names the constraint; letting the
+    # controller catch it returns a bare ret=1.
+    merged = {k: (values.get(k, before.get(k))) for k in
+              ("line_speed", "line_acc", "angular_speed", "angular_acc")}
+    for spd, acc, ratio, what in (
+            ("line_speed", "line_acc", CARTESIAN_ACC_SPEED_RATIO, "linear"),
+            ("angular_speed", "angular_acc", CARTESIAN_ACC_SPEED_RATIO,
+             "angular")):
+        v_s, v_a = merged.get(spd), merged.get(acc)
+        if isinstance(v_s, float) and isinstance(v_a, float) and v_s > 0:
+            if v_a / v_s < ratio:
+                raise ValueError(
+                    f"{what}: acceleration/speed = {v_a:.3f}/{v_s:.3f} = "
+                    f"{v_a / v_s:.2f}, below the documented minimum of "
+                    f"{ratio:.0f}. Raise {acc} to at least "
+                    f"{ratio * v_s:.3f} or lower {spd} to at most "
+                    f"{v_a / ratio:.3f}.")
     for key, want in values.items():
         if key not in _SETTERS:
             raise KeyError(f"not a settable limit: {key!r}")

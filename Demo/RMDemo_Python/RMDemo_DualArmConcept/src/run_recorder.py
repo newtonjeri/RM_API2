@@ -283,7 +283,44 @@ class RunRecorder:
         if cap:
             out["cap_mm_s"] = float(cap) * 1000.0
             out["pct_of_cap"] = typical / float(cap) * 100.0
+        out.update(self._smoothness(sm, typical))
         return out
+
+    @staticmethod
+    def _smoothness(sm, cruise):
+        """How often does the tool nearly stop between waypoints?
+
+        Added 2026-08-10 after Newton observed the arm pausing AT the
+        points. Measurement, not impression: `toplid_right` decelerated to
+        **0.0 mm/s at corners of 30-35 degrees**, where the geometry
+        plainly allows a blend, and `toplid_left` showed ~32 dips for 27
+        segments — about one per waypoint. That is blending not taking
+        effect, not a path that forbids it.
+
+        A DIP is a local minimum below half the typical cruise speed. The
+        count against the segment count is the number to watch: one dip
+        per segment means every waypoint is a stop.
+        """
+        if not sm or cruise <= 0:
+            return {}
+        thr = 0.5 * cruise
+        dips, i = [], 1
+        while i < len(sm) - 1:
+            if sm[i] < thr and sm[i] <= sm[i - 1] and sm[i] <= sm[i + 1]:
+                j = i
+                while j + 1 < len(sm) and sm[j + 1] < thr:
+                    j += 1
+                dips.append((min(sm[i:j + 1]), j - i + 1))
+                i = j + 1
+            else:
+                i += 1
+        below = sum(n for _lo, n in dips)
+        return {
+            "dips": len(dips),
+            "deepest_dip_mm_s": min((lo for lo, _n in dips), default=0.0)
+                                * 1000.0,
+            "fraction_below_half_cruise": below / len(sm),
+        }
 
     def mark(self, stage, device, t_start, t_end, ok, detail):
         """Record a stage span on the SAME clock as the stream."""
@@ -357,6 +394,14 @@ class RunRecorder:
             print("  [WARN] NO samples recorded — check that the push "
                   f"target {self.host_ip}:{self.udp_port} is this machine "
                   "and that the callback stayed registered")
+        if speed and speed.get("dips"):
+            seg = (self.meta.get("commanded") or {}).get("segments")
+            per = f", {speed['dips'] / seg:.2f} per segment" if seg else ""
+            print(f"  [INFO] smoothness: {speed['dips']} decelerations below "
+                  f"half cruise{per}, deepest "
+                  f"{speed['deepest_dip_mm_s']:.0f} mm/s, "
+                  f"{100 * speed['fraction_below_half_cruise']:.0f}% of the "
+                  "stage spent below it")
         if speed and speed.get("pct_of_cap") is not None \
                 and speed["pct_of_cap"] < 80:
             print(f"  [WARN] the arm reached only "
