@@ -345,8 +345,20 @@ class EmuController:
         # F10: read from both arms 2026-08-07.
         self.limits = {"line_speed": 0.250, "line_acc": 1.600,
                        "angular_speed": 0.600, "angular_acc": 4.000}
-        self.joint_max_speed = [180.0] * 6 + [225.0]
-        self.joint_max_acc = [600.0] * 7
+        # MEASURED off the left arm 2026-08-11, not assumed. The old value
+        # here was [180]*6 + [225] — wrong for J3..J6, which are 225 not
+        # 180, so every offline utilisation figure computed against the
+        # emulator overstated the load on four joints by 25 %.
+        # rm_get_joint_max_speed AND rm_get_joint_drive_max_speed both
+        # return this, so plan and drive limits are identical on this arm.
+        self.joint_max_speed = [180.0, 180.0, 225.0, 225.0, 225.0, 225.0,
+                                225.0]                       # deg/s
+        # 600 deg/s^2 = 100 RPM/s, against a documented ceiling of
+        # 500 RPM/s = 3000 deg/s^2 — the arm ships at 20 % of what it is
+        # allowed, so joint acceleration IS a lever (5x). An earlier note
+        # claiming it was already at its ceiling read the default from the
+        # docs instead of the arm.
+        self.joint_max_acc = [600.0] * 7                     # deg/s^2
         # As read from both arms 2026-08-08: every assist OFF,
         # dynamics collision stage 4.
         self.caps = {"avoid_singularity": 0, "endeff_collision": False,

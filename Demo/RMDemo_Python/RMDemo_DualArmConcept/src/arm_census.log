@@ -1,0 +1,15 @@
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 16:58:25
+========================================================================
+unknown argument: '--sied'
+
+Usage: python3 arm_census.py [--side left|right|both] [--save]
+       [--diff FILE] [--all] [-h|--help]
+  --side S     which arm (default: both)
+  --save       write census/<side>.json
+  --diff FILE  compare a saved census against the arm now
+  --all        print every field, not just the interesting ones
+  -h, --help   show this documentation and exit

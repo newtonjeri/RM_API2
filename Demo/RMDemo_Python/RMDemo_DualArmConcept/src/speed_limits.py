@@ -70,11 +70,23 @@ CONFIGURED = {
 #   1.600 / 0.250 = 6.4, so there is headroom to raise the speed to
 #   1.600 / 3 = 0.533 m/s without touching acceleration.
 #
-# JOINT — set_joint_max_speed is in RPM (default 30 RPM = 180 deg/s, which
-#   matches what both arms report) and set_joint_max_acc is in RPM/s,
-#   **default 500 and documented "no more than 500"** — so joint
-#   acceleration is already AT its ceiling and is not a lever. Its own
-#   constraint is acc/speed >= 1.5 (500/30 = 16.7, satisfied).
+# JOINT — MEASURED off the left arm 2026-08-11, correcting an earlier note
+#   that read the DEFAULTS out of the documentation instead of the robot:
+#
+#     rm_get_joint_max_speed  = [180, 180, 225, 225, 225, 225, 225] deg/s
+#     rm_get_joint_max_acc    = [600] * 7                            deg/s^2
+#     the *_drive_* variants return exactly the same values
+#
+#   Two corrections follow, and both matter:
+#   (1) J3..J6 are **225 deg/s, not 180**. Scoring them against 180
+#       overstates their load by 25 %.
+#   (2) 600 deg/s^2 = **100 RPM/s against a documented ceiling of 500
+#       RPM/s (= 3000 deg/s^2)**. The arm ships at 20 % of its allowed
+#       joint acceleration, so **joint acceleration IS a lever, worth 5x** —
+#       the opposite of what was recorded here before. Since acceleration,
+#       not speed, is what binds this path, it is the lever that matters.
+#   The joint ratio constraint acc/speed >= 1.5 holds throughout:
+#   600/180 = 3.3 now, 3000/180 = 16.7 if raised.
 CARTESIAN_ACC_SPEED_RATIO = 3.0
 JOINT_ACC_SPEED_RATIO = 1.5
 JOINT_MAX_ACC_RPM_S = 500.0     # documented ceiling, and the default
