@@ -37,6 +37,7 @@ import inspect
 import json
 import pathlib
 import sys
+import threading
 
 from dual_arm_common import (
     handle_cli, LEFT_IP, RIGHT_IP, ROBOT_PORT,
@@ -50,7 +51,7 @@ USAGE = (
     "  --side S     which arm (default: both)\n"
     "  --save       write census/<side>.json\n"
     "  --diff FILE  compare a saved census against the arm now\n"
-    "  --all        print every field, not just the interesting ones\n"
+    "  --all        print every field, not just the interesting ones\n  --timeout S  per-getter timeout, default 3 s. A getter that\n               waits on absent hardware cannot be Ctrl-C'd, so\n               every call is bounded.\n"
     "  -h, --help   show this documentation and exit")
 
 # Getters that need an argument, or that would do something other than
@@ -108,9 +109,46 @@ def _plain(v):
     return repr(v)
 
 
-def read_all(robot):
-    """Call every no-argument rm_get_*. Never raises; records failures."""
-    out, failed = {}, {}
+def _call_with_timeout(fn, seconds):
+    """Run fn() in a daemon thread and give up after `seconds`.
+
+    A `ctypes` call into the SDK does not release control back to Python
+    until the C function returns, so a getter that waits on a device that
+    is not there **cannot be interrupted by Ctrl-C** — the signal is only
+    delivered when the interpreter regains control. The first version of
+    this file had no timeout and no progress output, so a single blocking
+    getter looked like the whole tool freezing.
+
+    The thread is a daemon: if the C call never returns, the thread leaks
+    but the process can still exit. `join(seconds)` runs in the MAIN
+    thread, which is interruptible, so Ctrl-C works again.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = fn()
+        except BaseException as exc:      # noqa: BLE001 - recorded, not raised
+            box["e"] = exc
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        raise TimeoutError(f"no answer in {seconds:.0f}s")
+    if "e" in box:
+        raise box["e"]
+    return box.get("v")
+
+
+def read_all(robot, timeout=3.0, verbose=True, give_up_after=5):
+    """Call every no-argument rm_get_*. Never raises; records failures.
+
+    Prints each name BEFORE calling it, flushed, so that if one does hang
+    the log names the culprit instead of ending mid-air.
+    """
+    out, failed, timed_out = {}, {}, []
+    names = []
     for name in sorted(dir(robot)):
         if not name.startswith("rm_get") or name in SKIP:
             continue
@@ -119,13 +157,49 @@ def read_all(robot):
             sig = inspect.signature(fn)
         except (TypeError, ValueError):
             continue
+        # Only REQUIRED named parameters disqualify a getter. *args and
+        # **kwargs also report "no default", so testing that alone would
+        # silently skip any method declared with them.
         if any(p.default is inspect.Parameter.empty
+               and p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                              inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                              inspect.Parameter.KEYWORD_ONLY)
                for p in sig.parameters.values()):
-            continue                      # needs an argument; handled below
+            continue                      # needs an argument
+        names.append((name, fn))
+    consecutive = 0
+    for i, (name, fn) in enumerate(names, 1):
+        if verbose:
+            print(f"    [{i:2d}/{len(names)}] {name[7:]:<42}", end="",
+                  flush=True)
         try:
-            out[name] = _plain(fn())
+            out[name] = _plain(_call_with_timeout(fn, timeout))
+            consecutive = 0
+            if verbose:
+                print("ok", flush=True)
+        except TimeoutError as exc:
+            timed_out.append(name)
+            failed[name] = f"TIMED OUT after {timeout:.0f}s"
+            consecutive += 1
+            if verbose:
+                print("TIMEOUT", flush=True)
+            if consecutive >= give_up_after:
+                print(f"\n  [WARN] {consecutive} getters timed out in a row — "
+                      "the SDK link looks wedged. Stopping this arm rather "
+                      "than hanging on every remaining call.")
+                for rest, _f in names[i:]:
+                    failed[rest] = "not attempted (link wedged)"
+                break
         except Exception as exc:
             failed[name] = repr(exc)[:120]
+            consecutive = 0
+            if verbose:
+                print(f"err {repr(exc)[:40]}", flush=True)
+    if timed_out:
+        print(f"\n  [WARN] {len(timed_out)} getter(s) did not answer within "
+              f"{timeout:.0f}s: {', '.join(n[7:] for n in timed_out)}")
+        print("         Most likely a device that is not fitted (no RealMan "
+              "gripper, no rm_plus end effector) — the SDK waits on it.")
     return out, failed
 
 
@@ -270,7 +344,8 @@ def connect(ip):
 
 def main() -> int:
     handle_cli(__doc__, extra_flags=("--save", "--all"),
-               value_flags=("--side", "--diff"), usage=USAGE,
+               value_flags=("--side", "--diff", "--timeout"),
+               usage=USAGE,
                allow_common=False)
     argv = sys.argv[1:]
 
@@ -288,7 +363,7 @@ def main() -> int:
         if robot is None:
             print(f"\n  [SKIP] {side} arm not reachable")
             continue
-        census, failed = read_all(robot)
+        census, failed = read_all(robot, timeout=float(arg("--timeout", 3.0)))
         frames = read_frames(robot, census)
         bad_total += report(side, census, failed, frames, "--all" in argv)
         if "--save" in argv:
