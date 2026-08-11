@@ -1,0 +1,1031 @@
+{
+  "getters": {
+    "rm_get_DH_data": [
+      0,
+      {
+        "a": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": [
+          -90.0,
+          90.0,
+          -90.0,
+          90.0,
+          -90.0,
+          90.0,
+          0.0
+        ],
+        "d": [
+          0.24050000309944153,
+          0.0,
+          0.25600001215934753,
+          0.0,
+          0.20999999344348907,
+          0.0,
+          0.16120000183582306
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "rm_get_arm_all_state": [
+      0,
+      {
+        "err": {
+          "err": [
+            "0"
+          ],
+          "err_len": 1
+        },
+        "joint_current": [
+          -24.0,
+          -682.0,
+          240.0,
+          -3029.0,
+          -5.0,
+          -707.0,
+          -24.0
+        ],
+        "joint_en_flag": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "joint_err_code": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joint_temperature": [
+          37.0,
+          37.0,
+          38.0,
+          40.0,
+          39.0,
+          40.0,
+          42.0
+        ],
+        "joint_voltage": [
+          22.0,
+          22.0,
+          22.0,
+          22.0,
+          22.0,
+          22.0,
+          22.0
+        ]
+      }
+    ],
+    "rm_get_arm_current_trajectory": {
+      "data": [
+        1.1319999694824219,
+        -106.86499786376953,
+        1.2450000047683716,
+        106.61499786376953,
+        -4.934999942779541,
+        9.338000297546387,
+        0.31700000166893005
+      ],
+      "return_code": 0,
+      "trajectory_type": 0
+    },
+    "rm_get_arm_max_angular_acc": [
+      0,
+      4.0
+    ],
+    "rm_get_arm_max_angular_speed": [
+      0,
+      0.6000000238418579
+    ],
+    "rm_get_arm_max_line_acc": [
+      0,
+      2.4000000953674316
+    ],
+    "rm_get_arm_max_line_speed": [
+      0,
+      0.800000011920929
+    ],
+    "rm_get_arm_power_state": [
+      0,
+      1
+    ],
+    "rm_get_arm_run_mode": [
+      0,
+      1
+    ],
+    "rm_get_arm_software_info": [
+      0,
+      {
+        "algorithm_info": {
+          "version": "1.5.9-0b8919e1"
+        },
+        "ctrl_info": {
+          "build_time": "2025/12/16 20:12:03",
+          "version": "V1.7.4-355fb1b"
+        },
+        "dynamic_info": {
+          "model_version": "2"
+        },
+        "plan_info": {
+          "build_time": "2025/12/16 20:12:21",
+          "version": "V1.7.4-c30d45c"
+        },
+        "product_version": "RM75-6FB"
+      }
+    ],
+    "rm_get_avoid_singularity_mode": [
+      0,
+      0
+    ],
+    "rm_get_collision_detection": [
+      0,
+      0
+    ],
+    "rm_get_collision_remove_enable": [
+      0,
+      false
+    ],
+    "rm_get_collision_stage": [
+      0,
+      3
+    ],
+    "rm_get_controller_rs485_mode": {
+      "baudrate": 460800,
+      "mode": 0,
+      "return_code": 0,
+      "timeout": 0
+    },
+    "rm_get_controller_rs485_mode_v4": [
+      -4,
+      {
+        "baudrate": 0,
+        "mode": 0
+      }
+    ],
+    "rm_get_controller_state": {
+      "current": 0.5720000267028809,
+      "return_code": 0,
+      "system_error": 0,
+      "temperature": 53.09700012207031,
+      "voltage": 22.393999099731445
+    },
+    "rm_get_current_arm_state": [
+      0,
+      {
+        "err": {
+          "err": [
+            "0"
+          ],
+          "err_len": 1
+        },
+        "joint": [
+          1.1319999694824219,
+          -106.86499786376953,
+          1.246999979019165,
+          106.61399841308594,
+          -4.934999942779541,
+          9.338000297546387,
+          0.3149999976158142
+        ],
+        "pose": [
+          0.761378,
+          0.013645,
+          0.239697,
+          -2.737,
+          1.399,
+          -2.723
+        ]
+      }
+    ],
+    "rm_get_current_joint_current": [
+      0,
+      [
+        -7.0,
+        -680.0,
+        191.0,
+        -3018.0,
+        -5.0,
+        -709.0,
+        -14.0
+      ]
+    ],
+    "rm_get_current_joint_temperature": [
+      0,
+      [
+        37.0,
+        37.0,
+        38.0,
+        40.0,
+        39.0,
+        40.0,
+        42.0
+      ]
+    ],
+    "rm_get_current_joint_voltage": [
+      0,
+      [
+        22.0,
+        22.0,
+        22.0,
+        22.0,
+        22.0,
+        22.0,
+        22.0
+      ]
+    ],
+    "rm_get_default_run_program": [
+      0,
+      0
+    ],
+    "rm_get_drag_teach_sensitivity": [
+      0,
+      100
+    ],
+    "rm_get_electronic_fence_config": [
+      0,
+      {
+        "form": "cube",
+        "name": "",
+        "x_max_limit": 0.0,
+        "x_min_limit": 0.0,
+        "y_max_limit": 0.0,
+        "y_min_limit": 0.0,
+        "z_max_limit": 0.0,
+        "z_min_limit": 0.0
+      }
+    ],
+    "rm_get_electronic_fence_enable": [
+      0,
+      {
+        "effective_region": 0,
+        "enable_state": false,
+        "in_out_side": 0
+      }
+    ],
+    "rm_get_electronic_fence_list_infos": {
+      "electronic_fence_list": [],
+      "len": 0,
+      "return_code": 0
+    },
+    "rm_get_electronic_fence_list_names": {
+      "job_names": [],
+      "len": 0,
+      "return_code": 0
+    },
+    "rm_get_expand_state": [
+      0,
+      {
+        "current": 820,
+        "err_flag": 0,
+        "mode": 0,
+        "pos": 75
+      }
+    ],
+    "rm_get_flowchart_program_run_state": [
+      -4,
+      {
+        "id": 0,
+        "modal_id": "",
+        "name": "",
+        "plan_speed": 0,
+        "run_state": 0,
+        "step_mode": 0
+      }
+    ],
+    "rm_get_force_data": [
+      0,
+      {
+        "force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7d61887ed250>",
+        "tool_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7d61887ed450>",
+        "work_zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7d61887ed3d0>",
+        "zero_force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7d61887ed350>"
+      }
+    ],
+    "rm_get_force_drag_mode": [
+      0,
+      1
+    ],
+    "rm_get_fz": [
+      -4,
+      {
+        "Fz": 0.0,
+        "tool_zero_Fz": 0.0,
+        "work_zero_Fz": 0.0,
+        "zero_Fz": 0.0
+      }
+    ],
+    "rm_get_gripper_state": [
+      0,
+      {
+        "actpos": 0,
+        "current_force": 0,
+        "enable_state": 0,
+        "error": 0,
+        "mode": 0,
+        "status": 0,
+        "temperature": 0
+      }
+    ],
+    "rm_get_init_pose": [
+      0,
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "rm_get_io_input": [
+      0,
+      [
+        1,
+        1,
+        1,
+        -1
+      ]
+    ],
+    "rm_get_io_output": [
+      0,
+      [
+        0,
+        1,
+        0,
+        0
+      ]
+    ],
+    "rm_get_joint_degree": [
+      0,
+      [
+        1.1319999694824219,
+        -106.86399841308594,
+        1.246999979019165,
+        106.61599731445312,
+        -4.934999942779541,
+        9.336999893188477,
+        0.3179999887943268
+      ]
+    ],
+    "rm_get_joint_drive_max_acc": [
+      0,
+      [
+        600.0,
+        600.0,
+        600.0,
+        600.0,
+        600.0,
+        600.0,
+        600.0
+      ]
+    ],
+    "rm_get_joint_drive_max_pos": [
+      0,
+      [
+        183.0,
+        135.0,
+        183.0,
+        169.0,
+        360.0,
+        133.0,
+        365.0
+      ]
+    ],
+    "rm_get_joint_drive_max_speed": [
+      0,
+      [
+        180.0,
+        180.0,
+        225.0,
+        225.0,
+        225.0,
+        225.0,
+        225.0
+      ]
+    ],
+    "rm_get_joint_drive_min_pos": [
+      0,
+      [
+        -183.0,
+        -135.0,
+        -183.0,
+        -169.0,
+        -360.0,
+        -133.0,
+        -365.0
+      ]
+    ],
+    "rm_get_joint_en_state": [
+      0,
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    ],
+    "rm_get_joint_err_flag": {
+      "brake_state": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "err_flag": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "return_code": 0
+    },
+    "rm_get_joint_odom": [
+      0,
+      [
+        52924604.0,
+        23996928.0,
+        33203676.0,
+        45212480.0,
+        32986266.0,
+        23723060.0,
+        65695092.0
+      ]
+    ],
+    "rm_get_lift_state": [
+      0,
+      {
+        "current": 819,
+        "err_flag": 0,
+        "mode": 0,
+        "pos": 75
+      }
+    ],
+    "rm_get_program_run_state": [
+      0,
+      {
+        "edit_id": 8,
+        "id": 0,
+        "run_state": 0
+      }
+    ],
+    "rm_get_rm_plus_base_info": [
+      1,
+      {
+        "angle_low": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "angle_up": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "bee": 0,
+        "bv": "",
+        "check": 0,
+        "dof": 0,
+        "force": false,
+        "force_low": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "force_up": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hand": 0,
+        "hv": "",
+        "id": 0,
+        "manu": "",
+        "pos_low": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "pos_up": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "speed_low": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "speed_up": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "sv": "",
+        "touch": false,
+        "touch_num": 0,
+        "touch_sw": 0,
+        "type": 0
+      }
+    ],
+    "rm_get_rm_plus_mode": [
+      0,
+      0
+    ],
+    "rm_get_rm_plus_state_info": [
+      1,
+      {
+        "angle": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "current": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dof_err": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dof_state": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "force": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "normal_force": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "pos": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "speed": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "sys_state": 0,
+        "tangential_force": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "tangential_force_dir": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "tma": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "touch_data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "tsa": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "rm_get_rm_plus_touch": [
+      -3,
+      0
+    ],
+    "rm_get_robot_info": [
+      0,
+      {
+        "arm_dof": 7,
+        "arm_model": "RM_75",
+        "force_type": "6FB",
+        "robot_controller_version": 3
+      }
+    ],
+    "rm_get_self_collision_enable": [
+      0,
+      true
+    ],
+    "rm_get_self_endeffector_collision_enable": [
+      0,
+      true
+    ],
+    "rm_get_sn": [
+      -2,
+      ""
+    ],
+    "rm_get_system_runtime": {
+      "day": 36,
+      "hour": 7,
+      "min": 1,
+      "return_code": 0,
+      "sec": 28
+    },
+    "rm_get_teach_frame": [
+      0,
+      0
+    ],
+    "rm_get_tool_io_state": {
+      "IO_Mode": [
+        1,
+        1
+      ],
+      "IO_state": [
+        1,
+        1
+      ],
+      "return_code": 0
+    },
+    "rm_get_tool_rs485_mode": {
+      "baudrate": 115200,
+      "mode": 1,
+      "return_code": 0,
+      "timeout": 2000
+    },
+    "rm_get_tool_rs485_mode_v4": [
+      -4,
+      {
+        "baudrate": 0,
+        "mode": 0
+      }
+    ],
+    "rm_get_tool_software_version": [
+      0,
+      {
+        "version": 409
+      }
+    ],
+    "rm_get_tool_voltage": [
+      0,
+      3
+    ],
+    "rm_get_torque_data": [
+      -2,
+      [],
+      0
+    ],
+    "rm_get_total_tool_frame": {
+      "len": 8,
+      "return_code": 0,
+      "tool_names": [
+        "Arm_Tip",
+        "Hand",
+        "L_glove_1",
+        "L_glove_2",
+        "L_glove_3",
+        "L_glove_4",
+        "L_tip",
+        "L_index_ti"
+      ]
+    },
+    "rm_get_total_work_frame": {
+      "len": 2,
+      "return_code": 0,
+      "work_names": [
+        "World",
+        "Base"
+      ]
+    },
+    "rm_get_virtual_wall_config": [
+      0,
+      {
+        "name": ""
+      }
+    ],
+    "rm_get_virtual_wall_enable": [
+      0,
+      {
+        "effective_region": 0,
+        "enable_state": false,
+        "in_out_side": 0
+      }
+    ],
+    "rm_get_voltage": [
+      0,
+      3
+    ],
+    "rm_get_webserver_enabled": [
+      -2,
+      0
+    ],
+    "rm_get_wifi_net": [
+      0,
+      {
+        "channel": 6,
+        "ip": "192.168.33.80",
+        "mac": "20:00:3c:87:85:a2",
+        "mask": "255.255.255.0",
+        "mode": "ap",
+        "password": "12345678",
+        "ssid": "RM75-6F-3731"
+      }
+    ],
+    "rm_get_wired_net": {
+      "ip": "192.168.1.10",
+      "mac": "00:00:3c:87:85:a2",
+      "mask": "255.255.255.0",
+      "return_code": 0
+    }
+  },
+  "side": "left",
+  "taken": "2026-08-11T19:49:16",
+  "tool_frames": {
+    "Arm_Tip": {
+      "name": "Arm_Tip",
+      "payload": 0.0,
+      "pose": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "Hand": {
+      "name": "Hand",
+      "payload": 0.706,
+      "pose": [
+        -0.035,
+        0.01,
+        0.259999,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.012,
+      "y": 0.044,
+      "z": 0.128
+    },
+    "L_glove_1": {
+      "name": "L_glove_1",
+      "payload": 0.626,
+      "pose": [
+        -0.05,
+        0.0,
+        0.1553,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.009,
+      "y": 0.032,
+      "z": 0.188
+    },
+    "L_glove_2": {
+      "name": "L_glove_2",
+      "payload": 0.567,
+      "pose": [
+        -0.02,
+        0.0,
+        0.1803,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.024,
+      "y": 0.042,
+      "z": 0.222
+    },
+    "L_glove_3": {
+      "name": "L_glove_3",
+      "payload": 0.565,
+      "pose": [
+        -0.075,
+        0.007,
+        0.1853,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.025,
+      "y": 0.041,
+      "z": 0.224
+    },
+    "L_glove_4": {
+      "name": "L_glove_4",
+      "payload": 0.639,
+      "pose": [
+        -0.055,
+        0.007,
+        0.2203,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": 0.002,
+      "y": 0.02,
+      "z": 0.16
+    },
+    "L_index_ti": {
+      "name": "L_index_ti",
+      "payload": 0.565,
+      "pose": [
+        -0.0242,
+        0.0288,
+        0.2403,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.027,
+      "y": 0.042,
+      "z": 0.226
+    },
+    "L_tip": {
+      "name": "L_tip",
+      "payload": 0.568,
+      "pose": [
+        -0.015,
+        0.005,
+        0.2453,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "x": -0.025,
+      "y": 0.04,
+      "z": 0.224
+    }
+  },
+  "unavailable": {
+    "rm_get_current_tool_frame": "TIMED OUT after 3s",
+    "rm_get_current_work_frame": "TIMED OUT after 3s",
+    "rm_get_install_pose": "TIMED OUT after 3s",
+    "rm_get_joint_max_acc": "TIMED OUT after 3s",
+    "rm_get_joint_max_pos": "TIMED OUT after 3s",
+    "rm_get_joint_max_speed": "TIMED OUT after 3s",
+    "rm_get_joint_min_pos": "TIMED OUT after 3s",
+    "rm_get_joint_software_version": "TIMED OUT after 3s"
+  }
+}

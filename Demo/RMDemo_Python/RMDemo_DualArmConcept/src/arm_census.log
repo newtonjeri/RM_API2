@@ -13,3 +13,187 @@ Usage: python3 arm_census.py [--side left|right|both] [--save]
   --diff FILE  compare a saved census against the arm now
   --all        print every field, not just the interesting ones
   -h, --help   show this documentation and exit
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 19:36:52
+========================================================================
+current c api version:  1.1.6
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 19:40:21
+========================================================================
+current c api version:  1.1.6
+
+========================================================================
+  Script : arm_census.py
+  Log    : arm_census.log
+  Started: 2026-08-11 19:48:50
+========================================================================
+current c api version:  1.1.6
+    [ 1/78] DH_data                                   ok
+    [ 2/78] arm_all_state                             ok
+    [ 3/78] arm_current_trajectory                    ok
+    [ 4/78] arm_max_angular_acc                       ok
+    [ 5/78] arm_max_angular_speed                     ok
+    [ 6/78] arm_max_line_acc                          ok
+    [ 7/78] arm_max_line_speed                        ok
+    [ 8/78] arm_power_state                           ok
+    [ 9/78] arm_run_mode                              ok
+    [10/78] arm_software_info                         ok
+    [11/78] avoid_singularity_mode                    ok
+    [12/78] collision_detection                       ok
+    [13/78] collision_remove_enable                   ok
+    [14/78] collision_stage                           ok
+    [15/78] controller_rs485_mode                     ok
+    [16/78] controller_rs485_mode_v4                  ok
+    [17/78] controller_state                          ok
+    [18/78] current_arm_state                         ok
+    [19/78] current_joint_current                     ok
+    [20/78] current_joint_temperature                 ok
+    [21/78] current_joint_voltage                     ok
+    [22/78] current_tool_frame                        TIMEOUT
+    [23/78] current_work_frame                        TIMEOUT
+    [24/78] default_run_program                       ok
+    [25/78] drag_teach_sensitivity                    ok
+    [26/78] electronic_fence_config                   ok
+    [27/78] electronic_fence_enable                   ok
+    [28/78] electronic_fence_list_infos               ok
+    [29/78] electronic_fence_list_names               ok
+    [30/78] expand_state                              ok
+    [31/78] flowchart_program_run_state               ok
+    [32/78] force_data                                ok
+    [33/78] force_drag_mode                           ok
+    [34/78] fz                                        ok
+    [35/78] gripper_state                             ok
+    [36/78] init_pose                                 ok
+    [37/78] install_pose                              TIMEOUT
+    [38/78] io_input                                  ok
+    [39/78] io_output                                 ok
+    [40/78] joint_degree                              ok
+    [41/78] joint_drive_max_acc                       ok
+    [42/78] joint_drive_max_pos                       ok
+    [43/78] joint_drive_max_speed                     ok
+    [44/78] joint_drive_min_pos                       ok
+    [45/78] joint_en_state                            ok
+    [46/78] joint_err_flag                            ok
+    [47/78] joint_max_acc                             TIMEOUT
+    [48/78] joint_max_pos                             TIMEOUT
+    [49/78] joint_max_speed                           TIMEOUT
+    [50/78] joint_min_pos                             TIMEOUT
+    [51/78] joint_odom                                ok
+    [52/78] joint_software_version                    TIMEOUT
+    [53/78] lift_state                                ok
+    [54/78] program_run_state                         ok
+    [55/78] rm_plus_base_info                         ok
+    [56/78] rm_plus_mode                              ok
+    [57/78] rm_plus_state_info                        ok
+    [58/78] rm_plus_touch                             ok
+    [59/78] robot_info                                ok
+    [60/78] self_collision_enable                     ok
+    [61/78] self_endeffector_collision_enable         ok
+    [62/78] sn                                        ok
+    [63/78] system_runtime                            ok
+    [64/78] teach_frame                               ok
+    [65/78] tool_io_state                             ok
+    [66/78] tool_rs485_mode                           ok
+    [67/78] tool_rs485_mode_v4                        ok
+    [68/78] tool_software_version                     ok
+    [69/78] tool_voltage                              ok
+    [70/78] torque_data                               ok
+    [71/78] total_tool_frame                          ok
+    [72/78] total_work_frame                          ok
+    [73/78] virtual_wall_config                       ok
+    [74/78] virtual_wall_enable                       ok
+    [75/78] voltage                                   ok
+    [76/78] webserver_enabled                         ok
+    [77/78] wifi_net                                  ok
+    [78/78] wired_net                                 ok
+
+  [WARN] 8 getter(s) did not answer within 3s: current_tool_frame, current_work_frame, install_pose, joint_max_acc, joint_max_pos, joint_max_speed, joint_min_pos, joint_software_version
+         Most likely a device that is not fitted (no RealMan gripper, no rm_plus end effector) — the SDK waits on it.
+
+==========================================================================
+  LEFT arm — 70 getters answered, 8 unavailable
+==========================================================================
+
+  IDENTITY
+    sn                         [-2, ""]
+    robot_info                 [0, {"arm_dof": 7, "arm_model": "RM_75", "force_type": "6FB", "robot_controller_version": 3}]
+    arm_software_info          [0, {"product_version": "RM75-6FB", "algorithm_info": {"version": "1.5.9-0b8919e1"}, "ctrl_info": {"build_time": "2025/12/16 20:12:03", "version": "V1
+    tool_software_version      [0, {"version": 409}]
+    system_runtime             {"return_code": 0, "day": 36, "hour": 7, "min": 1, "sec": 28}
+
+  LIMITS — the class of value that has bitten us twice
+    joint_drive_max_speed        [0, [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0]]
+    joint_drive_max_acc          [0, [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]]
+    arm_max_line_speed           [0, 0.800000011920929]
+    arm_max_line_acc             [0, 2.4000000953674316]
+    arm_max_angular_speed        [0, 0.6000000238418579]
+    arm_max_angular_acc          [0, 4.0]
+
+  SAFETY / CAPABILITY
+    collision_stage                          [0, 3]
+    collision_detection                      [0, 0]
+    self_collision_enable                    [0, true]
+    self_endeffector_collision_enable        [0, true]
+    collision_remove_enable                  [0, false]
+    avoid_singularity_mode                   [0, 0]
+    arm_run_mode                             [0, 1]
+    arm_power_state                          [0, 1]
+    joint_en_state                           [0, [1, 1, 1, 1, 1, 1, 1]]
+    joint_err_flag                           {"return_code": 0, "err_flag": [0, 0, 0, 0, 0, 0, 0], "brake_state": [0, 0, 0, 0, 0, 0, 0]}
+    electronic_fence_enable                  [0, {"enable_state": false, "in_out_side": 0, "effective_region": 0}]
+    virtual_wall_enable                      [0, {"enable_state": false, "in_out_side": 0, "effective_region": 0}]
+
+  PERIPHERALS
+    lift_state                     [0, {"pos": 75, "current": 819, "err_flag": 0, "mode": 0}]
+    expand_state                   [0, {"pos": 75, "current": 820, "err_flag": 0, "mode": 0}]
+    gripper_state                  [0, {"enable_state": 0, "status": 0, "error": 0, "mode": 0, "current_force": 0, "temperature": 0, "actpos": 0}]
+    tool_voltage                   [0, 3]
+    tool_rs485_mode                {"return_code": 0, "mode": 1, "baudrate": 115200, "timeout": 2000}
+    controller_rs485_mode          {"return_code": 0, "mode": 0, "baudrate": 460800, "timeout": 0}
+    rm_plus_base_info              [1, {"manu": "", "type": 0, "hv": "", "sv": "", "bv": "", "id": 0, "dof": 0, "check": 0, "bee": 0, "force": false, "touc
+    rm_plus_state_info             [1, {"sys_state": 0, "dof_state": [0, 0, 0, 0, 0, 0], "dof_err": [0, 0, 0, 0, 0, 0], "pos": [0, 0, 0, 0, 0, 0], "speed":
+    force_data                     [0, {"force_data": "<Robotic_Arm.rm_ctypes_wrap.c_float_Array_6 object at 0x7d61887ed250>", "zero_force_data": "<Robotic
+    fz                             [-4, {"Fz": 0.0, "zero_Fz": 0.0, "work_zero_Fz": 0.0, "tool_zero_Fz": 0.0}]
+
+  TOOL FRAMES (8)
+    name            payload  centroid mm              pose
+    Arm_Tip           0.000  (0.0, 0.0, 0.0)          [0.0, 0.0, 0.0]
+    Hand              0.706  (-0.0, 0.0, 0.1)         [-0.035, 0.01, 0.26]
+    L_glove_1         0.626  (-0.0, 0.0, 0.2)         [-0.05, 0.0, 0.1553]
+    L_glove_2         0.567  (-0.0, 0.0, 0.2)         [-0.02, 0.0, 0.1803]
+    L_glove_3         0.565  (-0.0, 0.0, 0.2)         [-0.075, 0.007, 0.1853]
+    L_glove_4         0.639  (0.0, 0.0, 0.2)          [-0.055, 0.007, 0.2203]
+    L_tip             0.568  (-0.0, 0.0, 0.2)         [-0.015, 0.005, 0.2453]
+    L_index_ti        0.565  (-0.0, 0.0, 0.2)         [-0.0242, 0.0288, 0.2403]
+
+  DOES THE ARM AGREE WITH OUR CODE?
+     ?    joint_max_speed  code=[180.0, 180.0, 225.0, 225.0, 225.0   arm=null
+     ?    joint_max_acc    code=[600.0, 600.0, 600.0, 600.0, 600.0   arm=null
+    WRONG line_speed       code=0.25                                 arm=0.800000011920929
+          -> our value lives in speed_limits.CONFIGURED
+    WRONG line_acc         code=1.6                                  arm=2.4000000953674316
+          -> our value lives in speed_limits.CONFIGURED
+     ok   angular_speed    code=0.6                                  arm=0.6000000238418579
+     ok   angular_acc      code=4.0                                  arm=4.0
+     ?    install_pose     code=[0.0, 90.0, 0.0]                     arm=null
+     ok   arm model        code="RM_75"                              arm="RM_75"
+
+    6/8 agree   2 DISAGREE — fix the code, not the arm
+
+  UNAVAILABLE (8) — firmware or model does not support these
+    current_tool_frame                       TIMED OUT after 3s
+    current_work_frame                       TIMED OUT after 3s
+    install_pose                             TIMED OUT after 3s
+    joint_max_acc                            TIMED OUT after 3s
+    joint_max_pos                            TIMED OUT after 3s
+    joint_max_speed                          TIMED OUT after 3s
+    joint_min_pos                            TIMED OUT after 3s
+    joint_software_version                   TIMED OUT after 3s
+
+  wrote /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/census/left.json
