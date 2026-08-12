@@ -193,18 +193,49 @@ and the right arm has REAL runs for the first time.
 
 ### `line_acc` works. It was wrong to demote it.
 
-| arm | `ls / la` | duration | cruise | J4 peak |
-|---|---|---|---|---|
-| left | 0.45 / 1.6 | 31.5 s | 282 mm/s | 177 |
-| left | 0.45 / 2.4 | 29.0 s | 347 | 194 |
-| left | 0.45 / 3.6 | **28.0 s** | 394 | 215 |
-| right | 0.45 / 1.6 | 33.3 s | 283 | 169 |
-| right | 0.45 / 2.4 | 29.1 s | 353 | 188 |
-| right | 0.45 / 3.6 | **27.5 s** | 396 | 207 |
-| right | 0.50 / 3.6 | 27.1 s | 396 | 218 |
-| right | 0.60 / 3.6 | — | — | **225 → STALLED** |
+Durations below are the **`execute_path` stage**, not the whole run. An
+earlier version of this table used `duration_s` (which includes hand, pole,
+transit and rest stages) and that made every comparison against the plan
+wrong by ~7 s.
 
-**−17 % run time from `line_acc` alone**, at unchanged `line_speed`.
+| arm | `ls / la` | `execute_path` | whole run | cruise | J4 peak |
+|---|---|---|---|---|---|
+| left | 0.45 / 1.6 | 23.80 s | 31.5 s | 282 mm/s | 177 |
+| left | 0.45 / 2.4 | 21.28 s | 29.0 s | 347 | 194 |
+| left | 0.45 / 3.6 | **20.22 s** | 28.0 s | 394 | 215 |
+| right | 0.45 / 1.6 | 24.20 s | 33.3 s | 283 | 169 |
+| right | 0.45 / 2.4 | 21.53 s | 29.1 s | 353 | 188 |
+| right | 0.45 / 3.6 | **20.14 s** | 27.5 s | 396 | 207 |
+| right | 0.50 / 3.6 | 19.62 s | 27.1 s | 396 | 218 |
+| right | 0.60 / 3.6 | — | — | — | **225.0 → STALLED** |
+
+**−15 % (left) / −17 % (right) of stroke time from `line_acc` alone**, at
+unchanged `line_speed`.
+
+### How close are the COMPLETING runs, really?
+
+Samples in `execute_path` at or above a fraction of `joint_max_speed`:
+
+| run | `ls/la` | ≥80 % | ≥90 % | ≥95 % | ≥99 % |
+|---|---|---|---|---|---|
+| left `220322` | 0.45/1.6 | 0 | 0 | 0 | 0 |
+| left `220453` | 0.45/2.4 | 14 (0.7 %) | 0 | 0 | 0 |
+| left `220617` | 0.45/3.6 | 22 (1.1 %) | 7 (0.3 %) | 1 | 0 |
+| right `221720` | 0.45/1.6 | 0 | 0 | 0 | 0 |
+| right `221929` | 0.45/2.4 | 5 (0.2 %) | 0 | 0 | 0 |
+| right `222049` | 0.45/3.6 | 14 (0.7 %) | 2 (0.1 %) | 0 | 0 |
+| right `222354` | 0.50/3.6 | 18 (0.9 %) | 5 (0.3 %) | 2 (0.1 %) | 0 |
+
+**Zero samples above 99 % in any completing run**, and the fastest touches
+95 % for 20 ms out of 19.6 s. So "we are at the limit" is true of a *single
+instant*, not of the stroke: 99.7 % of it runs below 90 %.
+
+### THE HEADLINE: we are at the joint velocity limit
+
+`rm_get_joint_max_speed` reports 225 °/s for J4. The 0.600 run measured
+**225.0** and the arm stopped. This is not a torque problem, a collision
+problem, or a Cartesian-limit problem — **the task, at this configuration,
+saturates J4.** Everything else in this document is downstream of that.
 
 ### Correction: `line_acc` DOES raise peak joint speed
 
@@ -385,6 +416,51 @@ came from an analysis that did not hold. **The question worth their time is
   Effective ramp acceleration measures **1.58 m/s² against a `line_acc` of
   2.4**. Acceleration is the largest single lever in the run and has never
   been varied. *(`20260811T183500`, 28 dips, measured by dip duration)*
+- **H46** — **the joint speed is spent holding ORIENTATION, not translating.**
+  Numerical 6×7 Jacobian at the binding instant of `20260811T222049`
+  (`q = [-16.4, -30.5, 25.0, 58.5, -6.0, 27.6, 17.5]`, flange
+  `Ry = 58.1°` — 31.9° clear of gimbal lock):
+  * TCP is translating at **336 mm/s** and rotating at only **6 °/s**
+  * min-norm joint rates for the identical 6-DOF twist: **205 °/s**;
+    the controller actually used **207** — **within 1 % of optimal**, so
+    the 7-DOF redundancy has essentially nothing to give back here
+  * the same 336 mm/s with orientation **free**: **70 °/s**
+  * → **holding tool orientation costs 135 of the 205 °/s, i.e. 66 % of the
+    budget**, while the orientation barely changes
+  * Jacobian singular values 0.0106 / 0.0064 / 0.0025 m per °/s —
+    **4.2× anisotropy**, and the stroke direction sits near the worst axis
+  * per-axis relaxation (rx 194, ry 75, rz 186 °/s) is in **Euler-rate**
+    space, so which physical axis carries the cost needs the proper
+    angular-velocity form before acting on it. The 205-vs-70 comparison
+    does not depend on that parameterisation.
+  ⚠ A position-only (3×7) Jacobian says 70 °/s and implies the controller
+  wastes 196 % on null-space motion. **That is an artifact of letting
+  orientation drift** — with the real 6-DOF constraint the controller is
+  near-optimal. Do not quote the 3-DOF number as waste.
+- **H47** — **the orientation cost is universal across all four cleaning
+  tasks, and the hinge tasks are worse.** `src/orientation_cost.py`, offline,
+  over each saved plan (stride 20):
+
+  | task | median cost | max | at peak demand | peak joint util |
+  |---|---|---|---|---|
+  | toplid_left | 1.7× | 3.8× @ 77 % | 1.6× @ 55 % | **83 % J4** |
+  | toplid_right | 1.6× | 3.5× @ 89 % | 1.7× @ 63 % | **77 % J4** |
+  | hinge_area_left | 2.1× | **70.4× @ 17 %** | 2.7× @ 56 % | **88 % J3** |
+  | hinge_area_right | 2.1× | **34.7× @ 17 %** | 2.1× @ 56 % | **90 % J1** |
+
+  Three things follow.
+  * **It is not a toplid quirk.** Holding tool orientation costs 39–63 % of
+    the joint-speed budget at the peak-demand point of every task.
+  * **The binding joint is task-specific** — J4 on toplid, J3 on
+    `hinge_area_left`, J1 on `hinge_area_right`. There is no single weak
+    joint to design around.
+  * ⚠ **The hinge tasks plan 6–13 points closer to the limit than toplid
+    (88–90 % vs 77–83 %), and only toplid has ever been speed-tested.**
+    `toplid_right` plans at 77 % and *executed* at 97 % at `ls=0.500`.
+    PREDICTION: the hinge tasks will saturate at a lower `line_speed` than
+    toplid. Start them at 0.250, not at toplid's settings.
+  * the 70.4× and 34.7× spikes at 17 % of both hinge paths are near-singular
+    configurations — worth locating before any hinge speed work.
 - **H44** — peak J4 speed is linear in achieved TCP speed:
   `J4peak = 0.368 × p95_mm_s`, R² 0.85 over all five REAL runs. Regressing on
   **achieved** rather than commanded speed cancels the unreadable pendant

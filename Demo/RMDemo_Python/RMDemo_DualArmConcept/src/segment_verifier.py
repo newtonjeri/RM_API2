@@ -73,8 +73,27 @@ def resolve_plan(name: str) -> pathlib.Path:
     is committed here is what every machine runs. Point somewhere else
     deliberately with `--plan PATH` — never by accident, never by which
     machine you happen to be on.
+
+    A MISSING plan is a normal situation — a task exists in the config tree
+    but has not been bundled here yet — so say what to do about it. Before
+    2026-08-12 this returned the path regardless and the caller died on a
+    bare FileNotFoundError several frames later.
     """
-    return BUNDLED_PLANS / name
+    p = BUNDLED_PLANS / name
+    if not p.exists():
+        task = name.replace("_ruckig_pro_only.json", "")
+        have = sorted(x.name.replace("_ruckig_pro_only.json", "")
+                      for x in BUNDLED_PLANS.glob("*_ruckig_pro_only.json"))
+        raise SystemExit(
+            f"no bundled plan for task {task!r}.\n"
+            f"  looked for : {p}\n"
+            f"  bundled    : {len(have)} task(s) — {', '.join(have[:6])}"
+            f"{' …' if len(have) > 6 else ''}\n"
+            f"  Plans are versioned artifacts of THIS repo (see resolve_plan);\n"
+            f"  copy the one you want in deliberately, e.g.\n"
+            f"    cp <ws>/cleaning_tasks/plans/commode_c/hardware/{name} "
+            f"{BUNDLED_PLANS}/")
+    return p
 
 
 def _arm_link_filter(side: str):

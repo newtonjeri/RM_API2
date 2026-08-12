@@ -179,13 +179,19 @@ def render(now, left, right, lp, rp, host_line) -> str:
         ("Serial number via API", left["sn"], right["sn"]),
         ("Run mode at query time", left["mode"], right["mode"]),
     ]
+    # Notes that depend on the readings must be computed, not hardcoded:
+    # a fixed "levels differ" string outlives the mismatch it describes.
+    stage_note = ("levels match"
+                  if lp["collision_stage"] == rp["collision_stage"]
+                  else "**levels differ ⇒ align them**")
+
     caps = [
         ("Dynamics collision detection (`collision_stage`)",
-         "collision_stage", "levels differ ⇒ align them"),
+         "collision_stage", stage_note),
         ("Static-state collision switch", "static_collision",
          "added in V1.7.1"),
         ("Singularity-avoidance switch", "singularity",
-         "7-axis support lands in V1.7.3"),
+         "7-axis support since V1.7.3"),
         ("Arm self-collision detection", "self_collision",
          "simulation-mode only"),
         ("Payload/end-effector self-collision", "payload_collision",
@@ -195,7 +201,8 @@ def render(now, left, right, lp, rp, host_line) -> str:
          "collision_release", "V1.7.4 feature"),
         ("Joint torque data (`rm_get_torque_data`)", "torque",
          "N/A on RM75-6FB (wrist force sensor)"),
-        ("SN read (`rm_get_sn`)", "sn", "needs newer firmware"),
+        ("SN read (`rm_get_sn`)", "sn",
+         "no release ≤V1.7.5 documents Gen-3 SN — treat as unsupported"),
     ]
 
     out = [BEGIN,

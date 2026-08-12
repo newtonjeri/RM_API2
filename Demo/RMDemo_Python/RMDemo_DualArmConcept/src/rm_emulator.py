@@ -39,6 +39,7 @@ data, hands, CANFD passthrough, online programming, fence/collision config.
 """
 
 import itertools
+import math
 import os
 import pathlib
 import sys as _sys
@@ -102,6 +103,148 @@ def _fk_pose(joints_deg, tool=None):
     return list(_ALGO.rm_algo_forward_kinematics(list(joints_deg), 1))[:6]
 
 
+# ─── Mount rotation + orientation interpolation ─────────────────────────────
+#
+# THE ALGO LIBRARY WORKS IN THE URDF BASE FRAME; `rm_movel` TAKES POSES IN
+# THE CONTROLLER'S BASE FRAME. The arms are mounted rotated, and the
+# controller reports it as install pose (0, 90, 0) — so
+#     controller = Ry(+90 deg) . urdf        (x,y,z) -> (z, y, -x)
+# Three independent sources agree and all are exact (URDF xacro, the
+# controller's own `rm_get_install_pose`, and a Kabsch fit over 16 captures
+# with <= 0.038 mm translation). `cleaning_path.movel_joint_timeline` has
+# applied this since the first REAL run; `_plan_cartesian` did NOT, and the
+# result was measured 2026-08-12: **3406 of 3469 samples (98.2 %) with no IK
+# solution** on `toplid_left`, because every target sat 868 mm from where the
+# solver looked. The emulator then interpolated across the gaps and reported
+# joint rates of 3 % of limit for a stroke the hardware runs at 92 %.
+#
+# Orientation is interpolated by QUATERNION SLERP, not by wrapping Euler
+# deltas. The waypoints carry angles near +-pi; linear Euler interpolation
+# walks the long way round and injects rotations that never happen.
+
+
+def _mat3(a, b, c):
+    return [list(a), list(b), list(c)]
+
+
+def _Ry3(t):
+    c, s = math.cos(t), math.sin(t)
+    return _mat3((c, 0, s), (0, 1, 0), (-s, 0, c))
+
+
+def _mm(A, B):
+    return [[sum(A[i][k] * B[k][j] for k in range(3)) for j in range(3)]
+            for i in range(3)]
+
+
+def _mv(A, v):
+    return [sum(A[i][k] * v[k] for k in range(3)) for i in range(3)]
+
+
+def _euler_to_R(rx, ry, rz):
+    cx, sx = math.cos(rx), math.sin(rx)
+    cy, sy = math.cos(ry), math.sin(ry)
+    cz, sz = math.cos(rz), math.sin(rz)
+    Rx = _mat3((1, 0, 0), (0, cx, -sx), (0, sx, cx))
+    Ry = _mat3((cy, 0, sy), (0, 1, 0), (-sy, 0, cy))
+    Rz = _mat3((cz, -sz, 0), (sz, cz, 0), (0, 0, 1))
+    return _mm(Rz, _mm(Ry, Rx))
+
+
+def _R_to_euler(R):
+    sy = math.hypot(R[0][0], R[1][0])
+    if sy < 1e-9:
+        return (math.atan2(-R[1][2], R[1][1]), math.atan2(-R[2][0], sy), 0.0)
+    return (math.atan2(R[2][1], R[2][2]), math.atan2(-R[2][0], sy),
+            math.atan2(R[1][0], R[0][0]))
+
+
+def _R_to_quat(R):
+    t = R[0][0] + R[1][1] + R[2][2]
+    if t > 0:
+        s = math.sqrt(t + 1.0) * 2
+        return [0.25 * s, (R[2][1] - R[1][2]) / s,
+                (R[0][2] - R[2][0]) / s, (R[1][0] - R[0][1]) / s]
+    i = max(range(3), key=lambda k: R[k][k])
+    j, k = (i + 1) % 3, (i + 2) % 3
+    s = math.sqrt(1.0 + R[i][i] - R[j][j] - R[k][k]) * 2
+    q = [0.0] * 4
+    q[0] = (R[k][j] - R[j][k]) / s
+    q[i + 1] = 0.25 * s
+    q[j + 1] = (R[j][i] + R[i][j]) / s
+    q[k + 1] = (R[k][i] + R[i][k]) / s
+    return q
+
+
+def _quat_to_R(q):
+    w, x, y, z = q
+    return _mat3(
+        (1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)),
+        (2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)),
+        (2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)))
+
+
+def _slerp(qa, qb, t):
+    d = sum(a * b for a, b in zip(qa, qb))
+    if d < 0:
+        qb, d = [-v for v in qb], -d
+    if d > 0.9995:
+        out = [a + (b - a) * t for a, b in zip(qa, qb)]
+    else:
+        th = math.acos(max(-1.0, min(1.0, d)))
+        s = math.sin(th)
+        out = [(math.sin((1 - t) * th) / s) * a + (math.sin(t * th) / s) * b
+               for a, b in zip(qa, qb)]
+    n = math.sqrt(sum(v * v for v in out)) or 1.0
+    return [v / n for v in out]
+
+
+def _ctrl_to_algo(pose6, mount_ry_deg):
+    """Controller-frame pose -> Algo (URDF) frame. Returns (xyz, R)."""
+    Rm = _Ry3(math.radians(-float(mount_ry_deg)))
+    pos = _mv(Rm, [float(v) for v in pose6[:3]])
+    R = _mm(Rm, _euler_to_R(*[float(v) for v in pose6[3:6]]))
+    return pos, R
+
+
+def _ik_min_motion(seed_deg, pose6, span_deg=60.0, step_deg=5.0):
+    """IK choosing the ARM ANGLE that moves the joints least.
+
+    `rm_algo_inverse_kinematics` leaves the RM75's one redundant DOF free
+    and picks whatever its own scheme lands on. MEASURED 2026-08-12 on
+    `toplid_left`: that walks J5 through 1127 deg of travel where the saved
+    plan uses 113 — a factor of TEN — while J4 (which the redundancy cannot
+    reach) matches the plan to 1 %. Free-redundancy IK is therefore useless
+    for predicting joint RATES, which is the whole point of the exercise.
+
+    This variant searches the arm angle around the seed's own value and
+    keeps the solution with the smallest max joint step, i.e. it resolves
+    the redundancy by minimum motion instead of by solver preference.
+    Returns (ret, joints_deg).
+    """
+    if _ALGO is None:
+        return 1, None
+    r0, a0 = _ALGO.rm_algo_calculate_arm_angle_from_config_rm75(
+        list(seed_deg))
+    if r0 != 0:
+        return _ik_seeded(seed_deg, pose6)
+    best, best_cost = None, None
+    n = int(span_deg / step_deg)
+    params = _ik_params_t(q_in=list(seed_deg), q_pose=list(pose6), flag=1)
+    for k in range(-n, n + 1):
+        ret, q = _ALGO.rm_algo_inverse_kinematics_rm75_for_arm_angle(
+            params, float(a0 + k * step_deg))
+        if ret != 0 or q is None:
+            continue
+        q = list(q)[:7]
+        cost = max(abs(a - b) for a, b in zip(q, seed_deg))
+        if best_cost is None or cost < best_cost:
+            best, best_cost = q, cost
+    if best is None:
+        return _ik_seeded(seed_deg, pose6)
+    return 0, best
+
+
 def _ik_seeded(seed_deg, pose6):
     """Seeded IK via RealMan's own solver (the controller's scheme).
 
@@ -115,7 +258,28 @@ def _ik_seeded(seed_deg, pose6):
 
 # ─── Timing model (measured values where available) ─────────────────────────
 ARM_MAX_DEG_S = 180.0          # synchronized-profile joint speed at v=100
-RM75_LIMIT_DEG = [177.6, 130.0, 177.6, 135.0, 177.6, 128.0, 360.0]
+
+# JOINT POSITION LIMITS, READ FROM THE ARMS 2026-08-11 (census/{left,right}
+# .json, `rm_get_joint_drive_{max,min}_pos`; symmetric about zero on both).
+#
+# CORRECTED 2026-08-12. The single list that stood here —
+#   [177.6, 130.0, 177.6, 135.0, 177.6, 128.0, 360.0]
+# — was TIGHTER THAN THE MACHINE on every joint, and wrong by 2x on J5
+# (177.6 against a real 360). It rejected a `toplid_left` stroke that the
+# hardware runs, at J5 = 177.6 deg. An emulator stricter than the arm
+# refuses work the arm accepts, which is the F25/H3 failure inverted and
+# just as expensive.
+#
+# The arms also DIFFER: J4 is +-169 on the left and +-140 on the right
+# (H37). One shared list cannot express that, so the limits are per side.
+JOINT_LIMIT_DEG = {
+    "left":  [183.0, 135.0, 183.0, 169.0, 360.0, 133.0, 365.0],
+    "right": [183.0, 135.0, 183.0, 140.0, 360.0, 133.0, 365.0],
+}
+# Kept for callers that predate the per-side split; the TIGHTER of the two,
+# so a check against it can only be conservative.
+RM75_LIMIT_DEG = [min(JOINT_LIMIT_DEG["left"][j], JOINT_LIMIT_DEG["right"][j])
+                  for j in range(7)]
 # Latched-fault codes after an abrupt trajectory abort. The BEHAVIOUR is
 # hardware-observed (joint errors latch; motion stays rejected until
 # rm_clear_system_err); these specific numbers are placeholders — replace
@@ -278,6 +442,36 @@ class _Motion:
         self.done.set()
 
 
+class _PathMotion(_Motion):
+    """A motion through MANY joint waypoints, not just start -> target.
+
+    `_Motion` interpolates one straight line in joint space, which is what
+    `movej` does. A Cartesian `movel` chain is a joint-space CURVE, and
+    the whole point of emulating it is that the curve is where the joint
+    rates live — a straight line between its endpoints would report a
+    fraction of the true rate and hide exactly what we are looking for.
+
+    Walks the waypoint list at uniform time, so d(position)/dt over the
+    recorded stream reproduces the same profile a SIM run gives.
+    """
+
+    def __init__(self, waypoints, duration_s, on_done):
+        self.waypoints = [list(w) for w in waypoints]
+        super().__init__(self.waypoints[0], self.waypoints[-1],
+                         duration_s, on_done)
+
+    def current(self):
+        a = self.progress()
+        n = len(self.waypoints) - 1
+        if n <= 0:
+            return list(self.waypoints[0])
+        x = a * n
+        i = min(n - 1, int(x))
+        f = x - i
+        lo, hi = self.waypoints[i], self.waypoints[i + 1]
+        return [lo[k] + (hi[k] - lo[k]) * f for k in range(len(lo))]
+
+
 class EmuController:
     """State + motion engine for one emulated RM75-6FB arm with pole lift."""
 
@@ -296,6 +490,8 @@ class EmuController:
         #  reports 4 on BOTH arms — see self.caps below)
         # (still unaligned on the fleet — see PHASE_PLAN R4)
         side = "left" if ip == EMU_LEFT_IP else "right"
+        # Per-side joint POSITION limits: J4 is +-169 left, +-140 right (H37).
+        self.joint_limit_deg = list(JOINT_LIMIT_DEG[side])
         # Both arms run true-mm 1:1 since the right's 2026-08-07 upgrade;
         # RM_*_LIFT_GEAR=2to3 still models a pre-upgrade controller.
         self.lift_hw_to_phys, self.lift_hw_max = _gear(side, "1to1")
@@ -407,14 +603,41 @@ class EmuController:
         f = self.tool_frames.get(self.active_tool)
         return f.get("pose") if f else None
 
-    def movel_chain(self, n_segments: int, v: int, block: int) -> int:
+    def movel_chain(self, poses, v: int, block: int) -> int:
         """Execute a queued movel chain as ONE trajectory, ONE event.
 
-        Cartesian geometry is not modelled — the emulator has no IK — so
-        the joints are left alone. What IS modelled is the part the
-        dispatcher depends on: a chain takes roughly n segments' worth of
-        time, preempts an in-flight pole exactly as any planned move does
-        (F9), and completes with a single device-0 arrival event.
+        CARTESIAN GEOMETRY IS MODELLED (added 2026-08-12). Until then this
+        method slept `0.25 * n_segments * 20/v` and LEFT THE JOINTS ALONE,
+        so an emulated cleaning stroke exercised the dispatch and nothing
+        about the motion. That made the emulator blind to the one thing
+        that has actually stopped the arm: joint-speed saturation. It is
+        also the F25/H3 failure mode in the other direction — an emulator
+        that models less than the controller certifies runs the hardware
+        then refuses.
+
+        What it now does, using RealMan's OWN offline solver (the same
+        `_ALGO` the pose getters use, so FK/IK agree with the controller's
+        scheme):
+
+          1. seeds from the current joints and the current tool pose
+          2. walks the queued poses as a Cartesian polyline, sampling
+             every CART_STEP_M
+          3. solves seeded IK at each sample; an IK failure or a solution
+             past a joint POSITION limit returns ret 1, which is what the
+             controller answers
+          4. times each segment on a trapezoidal profile from the arm's
+             OWN `line_speed` / `line_acc` limits, scaled by v% — so the
+             stop-at-every-waypoint behaviour that dominates the measured
+             stroke (H43: 42 % of time in dips) appears here too
+          5. drives the joints through the solutions
+
+        DELIBERATELY NOT MODELLED: joint speed limits are NOT enforced.
+        Hardware demonstrably exceeds them without clamp or fault (H41),
+        and the emulator must not be stricter than the machine. The
+        emulator therefore COMPLETES a stroke that saturates a joint —
+        exactly as SIM does (`20260811T184017` completed with J4 at 100 %
+        while the REAL run at the same settings stopped silently). The
+        saturation is there to be measured, not to be caught here.
         """
         with self._lock:
             if self.motion_locked:
@@ -426,23 +649,132 @@ class EmuController:
         with self._lock:
             self._truncate_lift_locked()
             fail = self._consume_fail_flag()
-        dur = _scaled(0.25 * n_segments * (20.0 / max(1, int(v))))
+            seed = self.current_joints_locked()
+            tool = self._active_tool_pose()
+            ls = float(self.limits.get("line_speed", 0.25))
+            la = float(self.limits.get("line_acc", 1.6))
 
-        def run():
-            time.sleep(dur)
-            self._emit(0, ok=not fail)
+        path, dur = self._plan_cartesian(seed, tool, poses, v, ls, la)
+        if path is None:
+            return 1                      # IK failure / limit — controller ret 1
+
+        with self._lock:
+            if self._arm_motion and not self._arm_motion.done.is_set():
+                self._arm_motion.cancel()
+            motion = _PathMotion(path, _scaled(dur), self._arm_done)
+            motion.will_fail = fail
+            self._arm_motion = motion
         if block:
-            run()
-        else:
-            threading.Thread(target=run, daemon=True).start()
+            motion.done.wait(_scaled(dur) + 5.0)
         return 0
+
+    # Cartesian sampling step. 2 mm over a ~5.8 m stroke is ~2900 IK
+    # solves — about a second offline, and fine enough that the joint
+    # trajectory resolves the corners that produce the dips.
+    CART_STEP_M = 0.002
+    # Mounting angle about +Y, degrees — the same value `rm_get_install_pose`
+    # reports. `rm_movel` poses are in the controller frame; the Algo library
+    # solves in the URDF frame; this is what separates them.
+    mount_ry_deg = 90.0
+    # Largest plausible joint move for one CART_STEP_M sample. The saved
+    # plans step at most ~8 deg between adjacent waypoints at full
+    # resolution, so 10 deg over 2 mm is generous; anything past it is a
+    # solver branch flip.
+    MAX_JOINT_STEP_DEG = 10.0
+
+    def _plan_cartesian(self, seed, tool, poses, v, line_speed, line_acc):
+        """(joint waypoints, duration) for a Cartesian polyline, or (None, 0).
+
+        The profile is per SEGMENT, not per chain: blending does not take
+        effect on this hardware (H35 — ~1 deceleration per waypoint, full
+        stops at 30-35 degree corners), so each segment accelerates from
+        rest and returns to rest.
+        """
+        if _ALGO is None:
+            return None, 0.0
+        # `_fk_pose` answers in the ALGO frame; `poses` arrive in the
+        # CONTROLLER frame. Convert the latter, and carry orientation as a
+        # quaternion so it can be SLERPed rather than Euler-interpolated.
+        s_pos = list(_fk_pose(seed, tool))
+        pts = [(s_pos[:3], _R_to_quat(_euler_to_R(*s_pos[3:6])))]
+        for p in poses:
+            pos, R = _ctrl_to_algo(p, self.mount_ry_deg)
+            pts.append((pos, _R_to_quat(R)))
+        scale = max(1, min(100, int(v))) / 100.0
+        vmax = max(1e-3, line_speed * scale)
+        amax = max(1e-3, line_acc * scale)
+
+        out, total = [list(seed)], 0.0
+        q = list(seed)
+        unsolved = 0
+        total_samples = 0
+        for (pa, qa), (pb, qb) in zip(pts, pts[1:]):
+            d = math.dist(pa, pb)
+            n = max(1, int(math.ceil(d / self.CART_STEP_M)))
+            seg_seed = list(q)
+            for k in range(1, n + 1):
+                f = k / n
+                pos = [pa[i] + (pb[i] - pa[i]) * f for i in range(3)]
+                rx, ry, rz = _R_to_euler(_quat_to_R(_slerp(qa, qb, f)))
+                target = pos + [rx, ry, rz]
+                total_samples += 1
+                ret, q_new = _ik_seeded(q, target)
+                if ret != 0 or q_new is None:
+                    # Retry from the segment's own start before giving up:
+                    # seeded IK can walk itself into a branch it cannot
+                    # continue from.
+                    ret, q_new = _ik_seeded(seg_seed, target)
+                if ret != 0 or q_new is None:
+                    # MEASURED 2026-08-12: all 28 commanded endpoints of
+                    # `toplid_left` solve, yet 4 of 27 segments contain an
+                    # INTERPOLATED point the offline solver cannot reach —
+                    # while the controller executes those segments. So an
+                    # unsolvable intermediate is a limitation of the
+                    # offline library, not a statement about the arm.
+                    # Carry the last good solution and continue: aborting
+                    # here would make the emulator refuse strokes the
+                    # hardware runs, which is the F25 error inverted.
+                    unsolved += 1
+                    continue
+                if any(abs(x) > lim + 1e-6
+                       for x, lim in zip(q_new, self.joint_limit_deg)):
+                    return None, 0.0
+                # BRANCH-FLIP GUARD. A CART_STEP_M move cannot need tens of
+                # degrees on a joint; when it appears, the solver has jumped
+                # to another IK branch. Accepting it would inject a joint
+                # rate that never happens on the arm — and joint rate is the
+                # whole reason this trajectory is being built.
+                if max(abs(x - y) for x, y in zip(q_new, q)) > \
+                        self.MAX_JOINT_STEP_DEG:
+                    unsolved += 1
+                    continue
+                q = q_new
+                out.append(list(q))
+            # trapezoid if the segment is long enough to reach vmax,
+            # triangle otherwise
+            if d >= vmax * vmax / amax:
+                total += d / vmax + vmax / amax
+            else:
+                total += 2.0 * math.sqrt(max(d, 0.0) / amax)
+        if unsolved:
+            self.last_unsolved = (unsolved, total_samples)
+            if unsolved > 0.05 * max(1, total_samples):
+                print("[emu] WARNING: %d of %d Cartesian samples had no IK "
+                      "solution (%.1f %%) — the emulated joint trajectory is "
+                      "interpolated across them and its rates are an "
+                      "UNDER-estimate"
+                      % (unsolved, total_samples,
+                         100.0 * unsolved / total_samples))
+        else:
+            self.last_unsolved = (0, total_samples)
+        return out, max(total, MIN_MOTION_S)
 
     # ── arm motion ──
     def movej(self, target_deg, v: int, block: int) -> int:
         if not (1 <= int(v) <= 100):
             return 1                       # real controller: parameter error
         if any(abs(q) > lim + 1e-6
-               for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
+               for q, lim in zip(target_deg, self.joint_limit_deg)):
             return 1                       # target beyond RM75 joint limits
         with self._lock:
             if self.motion_locked:
@@ -574,7 +906,7 @@ class EmuController:
         if ret != 0:
             return 1                # IK failure — the controller's ret 1
         if any(abs(q) > lim + 1e-6
-               for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
+               for q, lim in zip(target_deg, self.joint_limit_deg)):
             return 1                # solution beyond joint limits
         # The offline algo lib can return ret 0 with a best-effort solution
         # for UNREACHABLE poses (observed: 2 m target, ret 0). The real
@@ -684,7 +1016,7 @@ class EmuController:
             if self.motion_locked:
                 return 1
             if any(abs(q) > lim + 1e-6
-                   for q, lim in zip(target_deg, RM75_LIMIT_DEG)):
+                   for q, lim in zip(target_deg, self.joint_limit_deg)):
                 return 1
             # a passthrough setpoint supersedes any planned motion cleanly
             if self._arm_motion and not self._arm_motion.done.is_set():
@@ -1033,9 +1365,9 @@ class RoboticArm:
             q.append(pose)
             return 0                # queued: no motion, no event
         # closing segment: the whole chain executes as ONE trajectory
-        n = len(q) + 1
+        chain = list(q) + [pose]
         self._movel_queue = []
-        return self._ctrl.movel_chain(n, v, block)
+        return self._ctrl.movel_chain(chain, v, block)
 
     def rm_change_tool_frame(self, name):
         name = name.decode() if isinstance(name, bytes) else str(name)

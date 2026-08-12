@@ -26,52 +26,98 @@ Dual-arm setup (Butterfli robot). Both arms queried live over the API on **2026-
 
 | Capability | Left — `192.168.1.10` | Right — `192.168.1.103` | Notes |
 |---|---|---|---|
-| Dynamics collision detection (`collision_stage`) | **level 4** | **level 4** | levels differ ⇒ align them |
+| Dynamics collision detection (`collision_stage`) | **level 4** | **level 4** | levels match |
 | Static-state collision switch | supported, off | supported, off | added in V1.7.1 |
-| Singularity-avoidance switch | supported, off | supported, off | 7-axis support lands in V1.7.3 |
+| Singularity-avoidance switch | supported, off | supported, off | 7-axis support since V1.7.3 |
 | Arm self-collision detection | supported, off | supported, off | simulation-mode only |
 | Payload/end-effector self-collision | supported, off | supported, off | simulation-mode only |
 | Electronic fence | supported, off | supported, off | simulation-mode only |
 | Manual collision-release (`collision_remove_enable`) | supported, off | supported, off | V1.7.4 feature |
 | Joint torque data (`rm_get_torque_data`) | **no response** | **no response** | N/A on RM75-6FB (wrist force sensor) |
-| SN read (`rm_get_sn`) | **no response** | **no response** | needs newer firmware |
+| SN read (`rm_get_sn`) | **no response** | **no response** | no release ≤V1.7.5 documents Gen-3 SN — treat as unsupported |
 
 <!-- END AUTO-VERSIONS -->
 ## 2. Newer controller releases and their features (Gen-3)
 
-Current release line per RealMan release notes (last updated 2026-04-29).
+Release notes re-checked **2026-08-12**: **V1.7.5 (2026-04-29) is still the newest release**; nothing has shipped since.
 
-> **⚠ MISMATCHED FIRMWARE (as of 2026-08-06):** the **left arm is on V1.7.4** (one release behind latest), the **right arm remains on V1.7.1** (four behind). The two planners differ (plan V1.7.4 vs V1.7.1), so per-arm planning/timing behavior may diverge in dual-arm runs — bring the right arm to the same version. Also: **V1.7.4 pairs with end interface board V2.0.0** — the API cannot read the end-board version, so verify it on the left arm's pendant (Configuration → Version Information); a V1.9.9 end board under V1.7.4 risks end-port/hand misbehavior.
+> **✔ BOTH ARMS NOW MATCH — both on V1.7.4** (ctrl and plan alike), per the 2026-08-07 query in §1. The earlier left-V1.7.4 / right-V1.7.1 split is resolved, so the two planners no longer diverge in dual-arm runs. Two pairing items remain **unverified**, both now applying to *both* arms:
+> - **End interface board must be V2.0.0** under V1.7.4 (it was V1.9.9 for V1.7.1–V1.7.3, and is flashed from a separate `.bin`). The API cannot read the end-board version — check each pendant: Configuration → Version Information. A V1.9.9 end board under a V1.7.4 controller risks end-port / hand misbehavior.
+> - **Host SDK skew:** this repo ships API2 **1.1.6**, but V1.7.4 pairs with API2 **1.1.4** (V1.7.5 pairs with 1.1.5). See the pairing audit in §2.1.
 
 | Version | Date | Key features | Required pairings |
 |---|---|---|---|
-| V1.7.1 *(installed — RIGHT arm)* | 2025-06-10 | Manual load identification; singularity-avoidance enable switch; static-state collision-detection mode | End board V1.9.9; joints Vd5.1.0 / Ve5.1.0 |
+| V1.7.1 | 2025-06-10 | Manual load identification; singularity-avoidance enable switch; static-state collision-detection mode; JSON return-value cleanup | End board V1.9.9; joints Vd5.1.0 / Ve5.1.0 |
 | V1.7.2 | 2025-06-17 | Load identification default/manual modes | End board V1.9.9; API2 v1.1.1 |
-| V1.7.3 | 2025-11-04 | **Cartesian velocity passthrough** (`rm_movev_canfd`); **7-axis singularity avoidance** (RM75-relevant); end-device register R/W; **UDP speed-reporting fix** | End board V1.9.9; API2 v1.1.3; ROS1 v2.6.0; ROS2 v1.6.0 |
-| V1.7.4 *(installed — LEFT arm)* | 2025-12-12 | Manual collision-release mode; current-loop drag near joint limits; user-configurable singularity protection | **End board V2.0.0** (separate `.bin` flash); API2 v1.1.4 |
-| **V1.7.5** *(latest)* | 2026-04-29 | Force-control teach safety check; soft-start current monitoring; new model support; **one-key upgrade** (controller + joints + end board in one pass, single restart) | API2 v1.1.5; joints Vd5.1.0 / Ve5.1.0 |
+| V1.7.3 | 2025-11-04 | **Cartesian velocity passthrough** (`rm_movev_canfd`); **7-axis singularity avoidance** (RM75-relevant); end-device register R/W; **UDP speed-consistency fix**; end-effector load ID with joint teaching | End board V1.9.9; API2 v1.1.3; ROS1 v2.6.0; ROS2 v1.6.0 |
+| **V1.7.4** *(installed — BOTH arms)* | 2025-12-12 | Manual collision-release mode + configurable error-clearing; current-loop drag with limit-position detection; user-configurable singularity protection; **joint-overspeed fix at 1% teach speed**; **real-time speed adjustment with power-off memory**; dynamic soft limits during teach motion; `movep_follow` quaternion fix; Modbus write-range and TCP-close fixes | **End board V2.0.0** (separate `.bin` flash); joints Vd5.1.0 / Ve5.1.0; API2 v1.1.4 |
+| **V1.7.5** *(latest — not installed)* | 2026-04-29 | Force-control teach safety check (with sensor-zeroing prompt); soft-start real-time current monitoring; **one-key upgrade** (controller + joints + end board in one pass, single restart); **unified hard limits −183°…183°** on some models; new-model support (Vision series, RX75, ECO62-B); fixes to trajectory-replay speed variation, joint-limit setting, singularity-detection timing | API2 v1.1.5; joints Vd5.1.0 / Ve5.1.0 (end board unchanged — not re-listed) |
 
-### What the RIGHT arm still lacks on V1.7.1 (the left arm now has all but the last)
+### What both arms now have at V1.7.4
 
-- **No controller-side singularity protection for a 7-axis arm** during Cartesian-linear moves (7-axis support arrived in V1.7.3 — now active-capable on the left arm; note the switch is currently OFF on both).
-- **UDP joint-velocity reporting carries a known bug** fixed in V1.7.3 — treat the right arm's pushed `joint_speed` with caution; the left arm's is fixed.
-- No Cartesian velocity passthrough (`rm_movev_canfd`) — now available on the left arm.
-- No manual collision-release mode or configurable singularity protection (V1.7.4 — present on the left arm). Force-control teach safety checks remain V1.7.5-only on both.
+Everything through V1.7.4, including the two items that used to be left-arm-only concerns:
+
+- **7-axis singularity avoidance** (V1.7.3) is present on both — note the switch reads **OFF** on both arms in §1, so it is capable but not active.
+- **The V1.7.3 UDP speed-consistency fix is now on both arms.** Pushed `joint_speed` from the right arm is trustworthy going forward — but **any right-arm UDP velocity data logged before its upgrade is still suspect** and should not be pooled with post-upgrade samples.
+- Cartesian velocity passthrough (`rm_movev_canfd`), manual collision-release, configurable singularity protection: all available on both.
+
+### Still missing at V1.7.4 (V1.7.5-only)
+
+- Force-control teach safety check with sensor-zeroing prompt.
+- Soft-start real-time current monitoring.
+- Trajectory-replay speed-variation fix and singularity-detection timing correction.
+- One-key upgrade (relevant to *how* the next upgrade is performed, not to runtime behavior).
 
 Not affected by any firmware upgrade (Gen-3 hardware ceiling): `rm_movel_offset`, latched Gen-4 e-stop, named trajectory-file playback, flowchart APIs, `rm_run_tool_action`.
+
+### Release-note items that touch current work in this repo
+
+- **V1.7.4 — "real-time speed adjustment with power-off memory support":** a speed override now *survives a power cycle*. Any speed scaling left set on an arm persists across reboot, so a reboot is not a way to clear it — read it back explicitly.
+- **V1.7.4 — joint-overspeed fix at 1% teach speed** and **V1.7.5 — trajectory-replay speed variation fix**: both bear on speed-characterization results; the second is *not* yet installed.
+- **V1.7.5 — unified hard limit ranges (−183°…183°) on some models** and a joint-limit-setting fix: relevant to the limit-management scripts. Whether RM75-6FB is among the affected models is not stated — confirm with support before assuming limits change on upgrade.
+- **V1.7.5 — singularity-detection timing correction**: only meaningful once the singularity switch is turned on.
+
+## 2.1 Version pairing audit (vs. the V1.7.4 release-note table)
+
+The vendor's standalone **"Historical Version Correspondence" table is stale** — checked 2026-08-12, its newest row is **controller V1.6.5 (2024-11-11)** and it contains **no V1.7.x rows at all**. For anything in the V1.7 line the authoritative pairing source is the **per-release "Firmware Compatibility" table inside each release note**, which is what the audit below uses.
+
+| Pairing item (required by V1.7.4) | Required | Observed on our arms | Verdict |
+|---|---|---|---|
+| Controller software | V1.7.4 | V1.7.4-355fb1b, both arms | ✔ match |
+| Planning layer | (ships with controller) | V1.7.4-c30d45c, both arms | ✔ match |
+| Joint drivers (RM/RML/ECO line) | Vd5.1.0 / Ve5.1.0 | `54544 × 6, 58640` → see decode below | ✔ match *(decode inferred)* |
+| GEN drives | J1,3,4 Vd8.2.5; J2 Vd8.a.5; J5,6,7 Vd8.d.5 | not GEN-drive joints | n/a |
+| End interface board | **V2.0.0** | **not readable via API** | ⚠ **unverified — check pendant** |
+| API2 SDK | V1.1.4 | **1.1.6** in this repo (`C/include/rm_version.h`, `rm_api_version()`) | ⚠ **ahead by two minors** |
+
+**Joint-firmware decode.** The API returns joint versions as decimals, which read as the vendor's `Vd/Ve` strings once converted to hex:
+
+- `54544` → `0xD510` → **Vd5.1.0** (joints 1–6)
+- `58640` → `0xE510` → **Ve5.1.0** (joint 7)
+
+That is exactly the `Vd5.1.0 / Ve5.1.0` pairing required by every release from V1.7.0 through V1.7.5 — so **no joint flash is needed to reach V1.7.5**. The hex reading is an inference from an exact two-for-two match, not vendor-documented; confirm with support if it gates a decision.
+
+**On the SDK skew.** No released controller pairs with API2 1.1.6 — the newest pairing published is 1.1.5 (V1.7.5), so this repo's SDK is ahead of *every* shipped controller. A newer SDK is generally the safer direction (it is the client, not the controller), but it exposes calls whose controller-side support does not exist on V1.7.4. That is the most likely explanation for the **`rm_get_sn` and `rm_get_torque_data` "no response" (ret −2)** results in §1: the SDK sends a command the V1.7.4 controller does not answer. Treat "no response" as *unsupported by this controller*, not as a fault.
 
 ## 3. Upgrade path
 
 - Firmware packages (`.realman` files) are **not publicly downloadable** — request them from RealMan technical support / after-sales, quoting: model **RM75-6FB**, **Gen-3 controller**, current versions from the table above, target version. A package is model-specific.
 - Upgrade is performed through the **web teach pendant** (browse to the arm's IP): Configuration → Robotic Arm Config → Version Information → Select File → Start Upgrade (~4–5 min) → wait for continuous beeping → restart → **Ctrl+F5** to clear the cached UI.
-- Targeting ≥ V1.7.4 additionally requires flashing the end interface board to V2.0.0 (`.bin` upload); V1.7.5's one-key upgrade folds this into a single pass.
+- Targeting ≥ V1.7.4 additionally requires flashing the end interface board to V2.0.0 (`.bin` upload); V1.7.5's one-key upgrade folds this into a single pass. **Both arms are already on V1.7.4, so both are already subject to this requirement** — it is a verification task now, not a future one.
 - Undocumented (confirm with support before upgrading): whether saved programs/configs survive, and whether downgrades are possible. Back up online-programming projects, tool/work frames, payload and network settings first.
-- Upgrade both arms to the **same version** to keep the dual-arm setup consistent, and align the client SDK to the paired API2 version afterwards. **Current action item (2026-08-06): bring the RIGHT arm to V1.7.4 to match the left** (the package is evidently in hand), or take both to V1.7.5 in one pass; then re-run `docs/update_arm_version_info.py`.
+- Both arms are on the **same version (V1.7.4)** — keep them that way; upgrade them together or not at all.
+
+### Open action items (as of 2026-08-12)
+
+1. **Verify end interface board = V2.0.0 on both arms** via each pendant (Configuration → Version Information). This is the one required V1.7.4 pairing that cannot be checked from the API, and it is currently unknown on both arms.
+2. **Decide on the API2 1.1.6 vs 1.1.4 skew.** No action is strictly required — the SDK is the client — but do not read a `-2` "no response" from a newer SDK call as a hardware fault (see §2.1).
+3. **V1.7.5 upgrade is optional.** Joints already satisfy its pairing (Vd5.1.0 / Ve5.1.0), and it is the first release with one-key upgrade. Weigh its trajectory-replay speed-variation fix against its unified `−183°…183°` hard-limit change, whose applicability to RM75-6FB is unconfirmed.
+4. Re-run `docs/update_arm_version_info.py` whenever the arms are powered up (both were unreachable on 2026-08-12, so §1 still reflects the 2026-08-07 query).
 
 ### Sources
 
-- Release notes: <https://develop.realman-robotics.com/robot/releaseNotes/releaseNotes/>
+- Release notes (authoritative for V1.7.x pairings): <https://develop.realman-robotics.com/en/robot/releaseNotes/releaseNotes/#v-1-7-4>
 - Gen-3 upgrade procedure: <https://develop.realman-robotics.com/en/robot/teachingPendant/systemUpgrade/>
-- Version pairing table: <https://develop.realman-robotics.com/en/robot/releaseNotes/versionComparisonTable/>
+- Version pairing table — **stale, do not use for V1.7.x**; newest row is V1.6.5 (2024-11-11): <https://develop.realman-robotics.com/en/robot/releaseNotes/versionComparisonTable/>
 - Package distribution policy: <https://develop.realman-robotics.com/robot/download/redevelopment/>, forum thread [bbs #224](https://bbs.realman-robotics.cn/question/224.html)
 - Upgrade walkthrough with end-board steps: forum thread [bbs #323](https://bbs.realman-robotics.cn/question/323.html)

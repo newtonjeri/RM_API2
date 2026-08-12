@@ -17,8 +17,12 @@ trajectory-connect problem instead (H35).
 import csv
 import json
 import math
+import os
 import pathlib
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from log_utils import wants_help  # noqa: E402
 
 DEAD_M_S = 0.010        # below this the arm is stopped, not ramping
 JOINT_SPEED_LIMIT = [180, 180, 225, 225, 225, 225, 225]   # deg/s
@@ -112,6 +116,10 @@ def report(run):
     print(f"    joint error bits: {errs or 'none'}   arm_status seen: {st}"
           f"   {'*** RM_STOP_E ***' if 9 in st else ''}")
 
+
+if wants_help() or len(sys.argv) < 2:
+    print(__doc__)
+    raise SystemExit(0)
 
 for a in sys.argv[1:]:
     report(a)
