@@ -27,6 +27,13 @@ controller at whatever it was.
     python3 reset_limits.py --side both
 
 Run it BEFORE and AFTER every hardware session.
+
+✔ THE RESTORE TARGET IS THE FACTORY DEFAULT (H64, confirmed 2026-08-12).
+Newton established it on a NEVER-USED arm of the same model, reading the
+values back after pressing the pendant's "Default" button: 0.250 m/s /
+1.600 m/s^2 / 0.600 rad/s / 4.000 rad/s^2. That is exactly what `SAFE`
+writes, and exactly what the F10 read of both our arms returned — so
+`--apply` is a genuine factory restore, not a pin to a value of our own.
 """
 import sys
 
@@ -35,7 +42,8 @@ sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from dual_arm_common import handle_cli, LEFT_IP, RIGHT_IP, ROBOT_PORT  # noqa
 import speed_limits  # noqa
 
-SAFE = dict(speed_limits.CONFIGURED)     # the F10 envelope: 0.250 / 1.600
+# 0.250 / 1.600 / 0.600 / 4.000 — the FACTORY DEFAULTS, confirmed H64.
+SAFE = dict(speed_limits.CONFIGURED)
 KEYS = ("line_speed", "line_acc", "angular_speed", "angular_acc")
 
 

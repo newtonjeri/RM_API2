@@ -1,0 +1,106 @@
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:43:22
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.250 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.60 m, mean segment 100 mm
+     corners [15, 30, 45, 60, 90] deg   blends [0, 10, 25, 50] %
+     orientation is constant in the path file, so the angular cap
+     cannot time-scale any segment (H67) — a dip IS the corner
+==========================================================================
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.10
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:44:00
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.600 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.60 m, mean segment 100 mm
+     corners [15, 30, 45, 60, 90] deg   blends [0, 10, 25, 50] %
+     orientation is constant in the path file, so the angular cap
+     cannot time-scale any segment (H67) — a dip IS the corner
+==========================================================================
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.10
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:44:21
+========================================================================
+SEQUENCE names not in POSES_MM: ['startpose']
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:44:35
+========================================================================
+SEQUENCE names not in POSES_MM: ['startpose']
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:44:59
+========================================================================
+  [INFO] not Cartesian waypoints, skipped: startpose
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.600 m/s
+     path   ../paths/test_motion_001.py
+     36 points, 34 corners, 5.12 m, mean segment 146 mm
+     corners [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None] deg   blends [25] %
+     orientation is constant in the path file, so the angular cap
+     cannot time-scale any segment (H67) — a dip IS the corner
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 357.35 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.10
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:45:23
+========================================================================
+  [INFO] not Cartesian waypoints, skipped: startpose
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.600 m/s
+     path   ../paths/test_motion_001.py
+     36 points, 34 corners, 5.12 m, mean segment 146 mm
+     corners 34 (unlabelled)   blends [25] %
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 26.24 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.10
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 12:45:29
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.250 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.60 m, mean segment 100 mm
+     corners [15, 30, 45, 60, 90] deg   blends [0, 10, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [SKIP] hardware not reachable at 192.168.1.10
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 13:38:11
+========================================================================
+usage: --mode SIM|REAL  (got 'FAST')

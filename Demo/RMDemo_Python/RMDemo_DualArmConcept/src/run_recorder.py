@@ -237,11 +237,13 @@ class RunRecorder:
         if len(rows) < 60:
             return None
         # Scope to the LONGEST arm stage — in practice `execute_path`.
-        # A whole-run figure mixes the movej transits, whose speed is a
-        # percentage of the JOINT cap, with the movel path, whose speed is
-        # a percentage of the LINE cap; comparing that mixture against the
-        # line cap overstates the achieved fraction (67% vs the movel
-        # stage's real 43% on the 2026-08-10 run).
+        # A whole-run figure mixes the movej transits with the movel path,
+        # and the two scale against DIFFERENT baselines: `movej`'s v% is a
+        # fraction of the JOINT speed limit, `movel`'s of the TCP speed
+        # constraint (RealMan, 2026-08-12 — see SPEED_INVESTIGATION §1).
+        # Comparing that mixture against the line cap overstates the
+        # achieved fraction (67% vs the movel stage's real 43% on the
+        # 2026-08-10 run).
         arm = [st for st in self.stages if st.get("device") == "arm"]
         span = None
         if arm:
@@ -404,13 +406,33 @@ class RunRecorder:
                   "stage spent below it")
         if speed and speed.get("pct_of_cap") is not None \
                 and speed["pct_of_cap"] < 80:
-            print(f"  [WARN] the arm reached only "
+            print(f"  [INFO] the arm reached "
                   f"{speed['typical_mm_s']:.0f} mm/s typical against a "
                   f"commanded cap of {speed['cap_mm_s']:.0f} mm/s "
-                  f"({speed['pct_of_cap']:.0f}%). The pendant has a GLOBAL "
-                  "speed override slider that scales everything and that "
-                  "the SDK cannot read or set — check it is at 100% before "
-                  "trusting any timing from this run.")
+                  f"({speed['pct_of_cap']:.0f}%). This is EXPECTED, not a "
+                  "fault: the median is bound by ACCELERATION. MEASURED "
+                  "2026-08-12 at line_speed 0.45 with v=100 fixed, it rose "
+                  "62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> "
+                  "2.4 -> 3.6 while p95 stayed pinned at the cap (H57). "
+                  "Raise line_acc, not line_speed, to close the gap — but "
+                  "see H62: RealMan advises against changing the TCP "
+                  "defaults, citing immediate-stop behaviour.")
+        # H59: the pendant's real-time override multiplies everything and is
+        # unreadable through the SDK — but p95 betrays it after the fact. At
+        # 100% the tool overshoots the cap by 5-11%; a p95 well under the cap
+        # means the slider was down and every timing number here is scaled.
+        if speed and speed.get("p95_mm_s") and speed.get("cap_mm_s"):
+            p95_frac = speed["p95_mm_s"] / speed["cap_mm_s"]
+            if p95_frac < 0.95:
+                print(f"  [WARN] p95 reached only "
+                      f"{100 * p95_frac:.0f}% of the commanded cap. At a "
+                      "100% pendant override p95 lands AT or slightly ABOVE "
+                      "the cap (measured 105-110%, H59). This run looks "
+                      "DERATED — check the pendant's real-time speed "
+                      "adjustment before trusting any timing from it.")
+            else:
+                print(f"  [INFO] p95 at {100 * p95_frac:.0f}% of cap — "
+                      "consistent with the pendant override at 100% (H59).")
         print(f"  [INFO] recorded {len(rows)} samples "
               f"({meta['measured_rate_hz']:.1f} Hz measured) -> "
               f"{self.dir}")

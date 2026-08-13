@@ -48,6 +48,37 @@ from segment_verifier import WS
 CONFIG_ROOT = WS / "cleaning_tasks" / "config"
 CONTACT_LINKS = CONFIG_ROOT / "contact_links.yaml"
 
+# IN-WORKSPACE COPY OF THE TASK CONFIGS, and it WINS when present.
+# `../task_configs/` holds the same tree the ROS workspace serves from
+# `cleaning_tasks/config/commode_cleaning/` — the fixture directories and
+# `task_parameters_defaults.yaml` — so this repo can screen and run every
+# task without butterfli_ws being checked out beside it.
+#
+# It takes precedence deliberately: with two copies on disk the ambiguous
+# outcome is the dangerous one (`plans/README.md` exists because two
+# machines once verified different files under one name). Which copy was
+# used is PRINTED by `config_source()` rather than left to be inferred.
+# `RM_TASK_CONFIG_DIR` overrides both.
+LOCAL_CONFIG_DIR = pathlib.Path(__file__).resolve().parent.parent / "task_configs"
+
+
+def config_category_dir(category: str) -> pathlib.Path:
+    """Directory holding the fixtures and defaults for `category`."""
+    env = os.environ.get("RM_TASK_CONFIG_DIR")
+    if env:
+        return pathlib.Path(env)
+    if (LOCAL_CONFIG_DIR / "task_parameters_defaults.yaml").exists():
+        return LOCAL_CONFIG_DIR
+    return CONFIG_ROOT / category
+
+
+def config_source(category: str = "commode_cleaning") -> str:
+    """Where task configs are being read from — for logs and run metadata."""
+    d = config_category_dir(category)
+    if os.environ.get("RM_TASK_CONFIG_DIR"):
+        return f"{d}  (RM_TASK_CONFIG_DIR)"
+    return f"{d}  ({'in-workspace' if d == LOCAL_CONFIG_DIR else 'butterfli_ws'})"
+
 # ── Speed scaling: MoveIt's scaling IS the controller's percentage ──
 #
 # MoveIt scales against butterfli_moveit_config/config/joint_limits.yaml,
@@ -298,7 +329,7 @@ class TaskConfig:
     # ── loading ──
     @classmethod
     def load(cls, task, fixture="commode_c", category="commode_cleaning"):
-        cat = CONFIG_ROOT / category
+        cat = config_category_dir(category)
         defaults = yaml.safe_load(
             (cat / "task_parameters_defaults.yaml").read_text())
         tpath = cat / fixture / f"{task}_cleaning_points.yaml"

@@ -626,7 +626,9 @@ class EmuController:
              past a joint POSITION limit returns ret 1, which is what the
              controller answers
           4. times each segment on a trapezoidal profile from the arm's
-             OWN `line_speed` / `line_acc` limits, scaled by v% — so the
+             OWN `line_speed` / `line_acc` limits, with `line_speed`
+             scaled by v% (vendor-confirmed: for `movel` the baseline is
+             the TCP speed constraint — see `_plan_cartesian`) — so the
              stop-at-every-waypoint behaviour that dominates the measured
              stroke (H43: 42 % of time in dips) appears here too
           5. drives the joints through the solutions
@@ -700,9 +702,27 @@ class EmuController:
         for p in poses:
             pos, R = _ctrl_to_algo(p, self.mount_ry_deg)
             pts.append((pos, _R_to_quat(R)))
-        scale = max(1, min(100, int(v))) / 100.0
-        vmax = max(1e-3, line_speed * scale)
-        amax = max(1e-3, line_acc * scale)
+        # WHAT `v` SCALES — RealMan, 2026-08-12, consistent across both of
+        # their replies (SPEED_INVESTIGATION.md §1):
+        #
+        #     movej:  v_interface x realtime_adjust x JOINT speed limit
+        #     movel:  v_interface x realtime_adjust x TCP speed constraint
+        #
+        # The baseline DIFFERS BY COMMAND. For movel it is the TCP speed
+        # constraint, i.e. `line_speed` — which is what this code models.
+        #
+        # `realtime_adjust` is the pendant's global override. It is NOT
+        # modelled here: it is unreadable from the API (H58) and was measured
+        # at 100 % for every run we have (H59).
+        #
+        # ACCELERATION IS LEFT UNSCALED: the vendor describes v as a *speed*
+        # ratio coefficient and says nothing about acceleration, and line_acc
+        # is a separately-named constraint. This is a judgement call, and it
+        # is unobservable today because every dispatch in this project is
+        # v=100 — where scaled and unscaled acceleration coincide.
+        vpct = max(1, min(100, int(v))) / 100.0
+        vmax = max(1e-3, line_speed * vpct)
+        amax = max(1e-3, line_acc)
 
         out, total = [list(seed)], 0.0
         q = list(seed)
@@ -753,9 +773,10 @@ class EmuController:
             # trapezoid if the segment is long enough to reach vmax,
             # triangle otherwise
             if d >= vmax * vmax / amax:
-                total += d / vmax + vmax / amax
+                seg_t = d / vmax + vmax / amax
             else:
-                total += 2.0 * math.sqrt(max(d, 0.0) / amax)
+                seg_t = 2.0 * math.sqrt(max(d, 0.0) / amax)
+            total += seg_t
         if unsolved:
             self.last_unsolved = (unsolved, total_samples)
             if unsolved > 0.05 * max(1, total_samples):

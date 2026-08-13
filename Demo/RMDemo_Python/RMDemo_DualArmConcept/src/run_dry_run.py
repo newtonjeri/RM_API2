@@ -1195,9 +1195,18 @@ def main() -> int:
               ("line_speed", "line_acc", "angular_speed", "angular_acc",
                "joint_speed", "joint_acc")))
     txt = _sl.describe(lim, 100, 50)
-    check("a percentage is reported in PHYSICAL units",
+    # The baseline DIFFERS BY COMMAND (RealMan, 2026-08-12): movel
+    # scales against the TCP constraint (0.250 -> 0.250 at 100 %, 0.125 at
+    # 50 %), movej against the joint limit (225 -> 112 at 50 %). BOTH must
+    # appear: reporting only one baseline is what made this misleading.
+    check("each percentage is reported against its OWN baseline",
           "0.250 m/s" in txt and "0.125 m/s" in txt and "112 deg/s" in txt,
           txt[:60])
+    # REGRESSION GUARD: these are targets, not achieved speeds — the pendant
+    # override multiplies them and ramping holds the median below them. The
+    # word must survive, or the operator reads a target as a measurement.
+    check("the figures are labelled TARGETS, not achieved speeds",
+          "TARGET" in txt.upper(), txt[:60])
     # The limits are global controller state and the machine's safety
     # envelope — raising one must be deliberate, never incidental.
     _raised = False
