@@ -41,14 +41,26 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from log_utils import wants_help                      # noqa: E402
 import test_blend_corner as tb                        # noqa: E402
 
-# 8 points — the MEASURED envelope, not an aspiration. The residual is a
-# systematic +5 to +6 point HIGH bias: excluding the samples that straddle a
-# vertex also excludes the ones nearest it, where the true minimum sits, so
-# retention reads slightly generous. That direction is deliberate — it
-# UNDER-reports deceleration, so this test cannot flatter the hypothesis it
-# exists to check. Setting the tolerance tighter than the method delivers
-# would only make the self-test dishonest in the other direction.
-TOL_PT = 0.08
+# 10 points — the MEASURED envelope under the real sampling behaviour, not an
+# aspiration. Was 8 while every case here assumed a perfect sampler; adding
+# the measured position-field aliasing showed the true envelope. The response
+# is monotonic and slightly COMPRESSED — a prescribed 100/70/50/30/20 comes
+# back as 91/73/54/36/24 — so the top end reads a little low and the bottom a
+# little high, and the ordering between corners, which is what the test is
+# read for, survives intact. Setting the tolerance tighter than the method
+# delivers would only make the self-test dishonest.
+TOL_PT = 0.10
+
+# Once the blend passes ~40 % of a segment the dips from its two ends MEET:
+# the approach never returns to cruise, so retention is measured against a
+# depressed reference and reads high. That is geometry, not a defect in the
+# analysis — no estimator can recover a plateau that the motion does not
+# contain. Measured at a blend of 50 % of a 65 mm segment: 12 points high
+# against a known 50 %. It is allowed a wider band here, and `main` prints a
+# warning on any run that sweeps a blend this wide, so the number is never
+# read as if it carried the same weight as the others.
+TOL_PT_WIDE = 0.15
+WIDE_DIP = 0.40
 
 
 def build(poses):
@@ -61,9 +73,30 @@ def build(poses):
     return seg, vert, sum(seg)
 
 
+# The MEASURED aliasing of the UDP position field, as a fraction of one
+# sample step. The push clock is clean (dt = 10.0 +-0.14 ms) but the position
+# it carries is not synchronous with it, so the reported point runs ahead of
+# and behind the true one. Differencing consecutive samples then gives step
+# ratios with median 1.00, p10 0.39, p90 1.63 (run 20260813T183639, J2/J4/J6
+# against the controller's own joint-speed channel, which is smooth).
+#
+# The sequence is FIXED, not random: a self-test that passes on a different
+# draw each time is not a regression test. Its mean is zero, so it moves
+# where each sample is reported without changing where the path goes.
+POS_JITTER = [0.0, .30, -.30, .10, .45, -.45, .20, -.10, .35, -.35,
+              .05, .40, -.40, .15, -.15, .25, -.25, .50, -.50, .10]
+
+
 def synth(poses, seg, vert, total, retain, cruise=0.25, hz=100.0,
-          dip_frac=0.10, frame_rot=False):
-    """Walk the path at `cruise`, dipping to retain[k]*cruise at vertex k."""
+          dip_frac=0.10, frame_rot=False, jitter=0.0):
+    """Walk the path at `cruise`, dipping to retain[k]*cruise at vertex k.
+
+    `jitter` scales POS_JITTER: 1.0 reproduces the aliasing measured on
+    hardware. It perturbs WHERE ALONG THE PATH each sample is reported, not
+    the path or the speed profile — so the prescribed retention is still the
+    right answer, and any error it causes is the instrument's, not the
+    stream's.
+    """
     def speed_at(s):
         v = cruise
         for k, vs in enumerate(vert):
@@ -74,9 +107,15 @@ def synth(poses, seg, vert, total, retain, cruise=0.25, hz=100.0,
                 v = min(v, cruise * (retain[k] + (1 - retain[k]) * f))
         return max(v, 1e-4)
 
-    rows, s, t = [], 0.0, 0.0
+    rows, s, t, n = [], 0.0, 0.0, 0
     while s <= total - 1e-9:
-        rem, i = s, 0
+        step = speed_at(s) / hz
+        # Report the position the push ACTUALLY carries: the true arc offset
+        # by the sampling phase error. Clamped into the path so the last
+        # sample cannot run past the end.
+        s_rep = s + jitter * POS_JITTER[n % len(POS_JITTER)] * step
+        s_rep = min(max(s_rep, 0.0), total - 1e-9)
+        rem, i = s_rep, 0
         while i < len(seg) - 1 and rem > seg[i]:
             rem -= seg[i]
             i += 1
@@ -86,8 +125,9 @@ def synth(poses, seg, vert, total, retain, cruise=0.25, hz=100.0,
         if frame_rot:                     # World -> base: (x,y,z)->(z,y,-x)
             p = [p[2], p[1], -p[0]]
         rows.append((t, p[0], p[1], p[2]))
-        s += speed_at(s) / hz
+        s += step
         t += 1.0 / hz
+        n += 1
     return rows
 
 
@@ -119,6 +159,15 @@ def main() -> int:
          {"frame_rot": True}),
         ("widest blend in the sweep",    [0.5] * 5,
          {"dip_frac": max(blends) / 100.0}),
+        # THE CASE THAT WAS MISSING until 2026-08-13. Every case above
+        # assumes a perfect sampler, which is why this self-test passed while
+        # the hardware runs it was vouching for read a p95 of 162 % of cap.
+        # A measurement pipeline validated only on clean input is validated
+        # against a stream that does not exist.
+        ("uniform 50 %, MEASURED aliasing", [0.5] * 5, {"jitter": 1.0}),
+        ("graded, MEASURED aliasing",    [.9, .7, .5, .3, .1],
+         {"jitter": 1.0}),
+        ("no dip, MEASURED aliasing",    [1.0] * 5, {"jitter": 1.0}),
     ]
     cases = [(n, r, dict(base, **kw)) for n, r, kw in cases]
     print("C19 measurement self-test — prescribed vs recovered retention")
@@ -152,10 +201,14 @@ def main() -> int:
             cells.append("%6.0f%%%s" % (100 * r[2], "?" if thin else " "))
             if not thin:
                 worst = max(worst, abs(r[2] - want))
-        bad = worst > TOL_PT
+        tol = TOL_PT_WIDE if kw.get("dip_frac", 0) >= WIDE_DIP else TOL_PT
+        bad = worst > tol
         failures += bad
         note = ("  (%d corner%s declined — correct)"
                 % (marked, "" if marked == 1 else "s")) if marked else ""
+        if tol != TOL_PT and not marked:
+            note += "  (dip >= %d %% of the segment: no undisturbed cruise, " \
+                    "%d pt band)" % (100 * WIDE_DIP, 100 * tol)
         print("  %-30s%s  %5.1f pt %s%s"
               % (name, "".join(cells), 100 * worst,
                  "FAIL" if bad else "ok", note))

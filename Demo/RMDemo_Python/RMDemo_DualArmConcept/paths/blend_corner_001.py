@@ -64,6 +64,19 @@ BLEND = 25
 
 # The blend radii the test compares. r=0 is the no-blending control: if
 # r=0 and r=50 measure the same, the radius is not being applied at all.
+#
+# r=10 IS DELIBERATELY ABSENT, and that is a gap worth naming: 10 is what
+# `stage_runner` actually dispatches on every cleaning stroke, so this sweep
+# does not cover the operating configuration. It cannot, on this geometry —
+# an r=10 blend on a 65 mm segment is a 6.5 mm dip, and after the analysis
+# excludes the samples whose window straddles the vertex there is nothing
+# left to take a minimum over. Adding it made `verify_blend_measure` fail by
+# 21 points against a KNOWN input, which is the self-test doing its job.
+#
+# To measure r=10 the SEGMENTS must be longer, not the speed lower: at the
+# 214 mm segments a real cleaning stroke averages, r=10 is a 21 mm dip and
+# resolves comfortably. A two-corner path at 214 mm fits inside the same
+# proven box (389 mm of x). That is the follow-up, not a change here.
 BLEND_SWEEP = [0, 25, 50]
 
 # Interior turn angle at each corner, degrees, in traversal order. Used to
@@ -79,7 +92,25 @@ STARTPOSE_SPEED = 30
 # Configured in the ARM controller, printed by the test for the record.
 # 0.250 / 1.600 / 0.600 / 4.000 are the confirmed factory defaults (H64).
 
-TCP_LINEAR_VELOCITY = 0.20
+# 0.20 until 2026-08-13. The corner measurement is resolution-limited by how
+# many 100 Hz samples land inside the blend, and the UDP position field is
+# not synchronous with the push, so single samples cannot be trusted and the
+# analysis smooths 70 ms. At 0.20 m/s an r=25 blend on a 65 mm segment is
+# only ~8 samples wide and the smoothing plus the corner-straddle exclusion
+# swallow it: recovered retention came back 10-30 points high against a
+# KNOWN input. At 0.10 m/s the same blend is ~16 samples and the worst error
+# over a prescribed 100/70/50/30/20 % falls to 9 points.
+#
+# It also stays well under the 0.250 m/s factory default, so no limit is
+# raised to run this.
+#
+# TO MEASURE AT AN OPERATING SPEED, pass --speed. Be aware what it costs: at
+# 0.45 m/s the ramp is 63 mm against a 65 mm segment, so the tool never
+# reaches cruise and there is no plateau to retain — retention is undefined
+# there, and the test says so rather than printing a number. Real cleaning
+# strokes average 214 mm segments and DO reach cruise at 0.45, which is why
+# the mechanism measured here transfers to them.
+TCP_LINEAR_VELOCITY = 0.10
 TCP_LINEAR_ACCELERATION = 1.60
 
 TCP_ANGULAR_VELOCITY = 0.60

@@ -198,14 +198,42 @@ def path_followed(rows, poses, tol=0.15):
     return abs(rec - cmd) / cmd <= tol, rec, cmd
 
 
+# 7 samples = 70 ms. Chosen by measurement, not taste: swept 3-11 samples
+# against synthetic streams carrying the MEASURED aliasing and a prescribed
+# retention of 100/70/50/30/20 %, 7 was the minimum-error window (9.2 points
+# worst case, monotonic). 3 gives 23.7, 11 gives 10.5 and starts smearing the
+# dip. `run_recorder` smooths 50 ms for the same reason; this is the same
+# correction tuned to a narrower feature.
+SPEED_WINDOW = 7
+
+
 def corner_speeds(rows, poses, t_start, t_end):
-    """(cruise, v_min, retained) per interior corner, from the TCP stream.
+    """(cruise, v_min, retained, n, n_near, flat) per interior corner.
 
     A corner is located by ARC LENGTH, not by time: the arm's speed is what
     we are measuring, so using time to find the corner would assume the
     answer. Cruise is the median speed over the middle half of the incoming
-    segment; the corner window is +-15 % of a segment either side of the
+    segment; the corner window is +-30 % of a segment either side of the
     vertex.
+
+    SPEED IS DIFFERENCED OVER `SPEED_WINDOW` SAMPLES, NOT ONE. The position
+    field of the UDP push is NOT synchronous with the 100 Hz push rate — it
+    advances unevenly, so consecutive-sample differencing aliases badly even
+    though the timebase itself is clean (measured 2026-08-13 on run
+    `20260813T183639`: dt = 10.0 +-0.14 ms, yet 24-36 % of moving intervals
+    advance less than 40 % of the median step). Two independent proofs that
+    the fault is in the position channel and not the motion:
+      * the controller's OWN joint-speed channel climbs smoothly over the
+        same window (J4: -47.9 -> -119.3 deg/s monotonic) while differencing
+        the reported joint POSITION over the same samples gives -112, -68,
+        -27, -164, -25 deg/s. Median ratio 1.00, p10 0.39, p90 1.63;
+      * single-interval TCP speed reaches a p95 of 730 mm/s against a
+        450 mm/s cap (162 %) — not physically possible. At a 30 ms window
+        that falls to 484 mm/s = 108 % of cap, the H59 signature.
+    `v_min` is a MINIMUM, so raw differencing lands on the worst alias and
+    biases retention LOW — it would manufacture deceleration. This is the
+    same 50 ms smoothing `run_recorder._speed_report` already applies; the
+    two now agree by construction.
     """
     pts = [r for r in rows if t_start <= r[0] <= t_end]
     # The last sample can be a partial step — the recording stops mid-interval,
@@ -219,10 +247,13 @@ def corner_speeds(rows, poses, t_start, t_end):
     for p in xs[1:]:
         cum.append(cum[-1] + math.dist(p[1:4], prev[1:4]))
         prev = p
-    spd = [0.0]
-    for i in range(1, len(xs)):
-        dt = xs[i][0] - xs[i - 1][0]
-        spd.append(math.dist(xs[i][1:4], xs[i - 1][1:4]) / dt if dt > 1e-6
+    half = SPEED_WINDOW // 2
+    spd = []
+    for i in range(len(xs)):
+        a = max(0, i - half)
+        b = min(len(xs) - 1, i + half)
+        dt = xs[b][0] - xs[a][0]
+        spd.append(math.dist(xs[b][1:4], xs[a][1:4]) / dt if dt > 1e-6
                    else 0.0)
     seg = [math.dist(poses[i][:3], poses[i + 1][:3])
            for i in range(len(poses) - 1)]
@@ -247,11 +278,18 @@ def corner_speeds(rows, poses, t_start, t_end):
     # short interval survives. Excluding the immediate neighbourhood covers
     # that: measured, a sample landing exactly on a vertex still read 8 %
     # low with only the single interval removed.
+    #
+    # With a windowed speed the contamination spreads to every sample whose
+    # window spans the vertex, so the exclusion widens by the window's half
+    # width. This costs dip resolution: at 0.20 m/s an r=25 blend on a 65 mm
+    # segment is only ~8 samples wide and this removes ~5 of them. Lower
+    # `TCP_LINEAR_VELOCITY` in the path file to buy that resolution back —
+    # halving the speed doubles the samples in the dip.
     straddle = set()
     for v in vert:
         for i in range(1, len(cum)):
             if cum[i - 1] <= v <= cum[i]:
-                straddle.update((i - 1, i, i + 1))
+                straddle.update(range(i - 1 - half, i + 2 + half))
                 break
 
     out = []
@@ -284,18 +322,89 @@ def corner_speeds(rows, poses, t_start, t_end):
         # points high with no other cause. A flat window varies by a few per
         # cent; anything worse is not a plateau and the corner is marked.
         flat = (mid[-1] - mid[0]) / mid[-1] if mid[-1] > 1e-9 else 1.0
-        n_ok = len(near) if flat <= 0.20 else 0
+        # The gate is 0.30, not 0.20, because 0.20 sat BELOW THE NOISE FLOOR.
+        # A synthetic stream holding a dead-constant speed, carrying only the
+        # position-field aliasing measured on hardware, scores flat = 0.22 —
+        # so the old gate declined every corner of every run including
+        # perfectly flat ones, and then blamed it on sample count. 0.30 still
+        # catches the case it exists for: once the blend approaches half the
+        # segment the dips from both ends meet, the "cruise" window is itself
+        # inside a dip, and retention reads high against a depressed cruise.
+        n_ok = len(near) if flat <= 0.30 else 0
         # `n` is how many samples the corner was measured from. Accuracy
         # tracks it directly — validated against synthetic streams holding a
         # KNOWN retention: 20 samples -> 2 pt error, 8 -> 5 pt, 4 -> 13 pt,
         # 2 -> 20 pt. Reported so a thin corner is visibly thin rather than
         # quietly wrong.
+        #
+        # `n_near` and `flat` are carried out too because a corner is
+        # declined for TWO different reasons and they need different fixes:
+        # too few samples wants a lower speed or a bigger blend, no cruise
+        # plateau wants a longer segment or a lower speed. Reporting both as
+        # "< 8 samples" sent the 2026-08-13 session looking for the wrong
+        # thing — every corner there had 11-44 samples and was declined
+        # purely on the plateau test.
         out.append((cruise, vmin, vmin / cruise if cruise > 1e-6 else 0.0,
-                    n_ok))
+                    n_ok, len(near), flat))
     return out
 
 
 MIN_CORNER_SAMPLES = 8      # >= 8 kept the validated error under ~5 points
+
+
+def goto_start(arm, poses, mon):
+    """Put the tool on `poses[0]` and PROVE it got there. True on success.
+
+    EVERY case must begin from the same pose or it is not the same
+    experiment. This is called before each case, not after, because "after"
+    is a place that can be skipped — and was.
+
+    2026-08-13, what this repairs: `run_one` dispatches `poses[1:]` and never
+    moved to `poses[0]`, so the first case ran from wherever the previous
+    program left the arm — 47 mm away, and its first segment was a different
+    geometry. The return-to-start then sat AFTER the analysis, behind a
+    `continue` that fires whenever a case is rejected; so one bad first case
+    left every later case starting from the previous case's END pose, 273 mm
+    away. Nine of the fifteen recorded runs were lost that way, and the two
+    failure modes compound silently: the arc-length guard rejected the ones
+    that were obviously wrong, but `20260813T183639` drifted 0.2 mm and was
+    ACCEPTED, so a wrong-start run can still print numbers.
+
+    Arrival is confirmed by POSE READBACK, not by the event alone. The event
+    says the controller finished planning its move; the readback says the
+    tool is where the next measurement assumes it is.
+    """
+    mon.expect(arm.handle_id, DEV_JOINT)
+    ret = arm.robot.rm_movel(poses[0], 30, 0, 0, 0)
+    arrived, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
+    if ret != 0 or not arrived or not ok:
+        print("  [FAIL] move to the start pose: ret=%s arrived=%s ok=%s"
+              % (ret, arrived, ok))
+        return False
+    sret, st = arm.robot.rm_get_current_arm_state()
+    if sret != 0 or not isinstance(st, dict) or not st.get("pose"):
+        print("  [FAIL] cannot read back the pose to confirm the start "
+              "position (ret=%s)" % sret)
+        return False
+    off = math.dist(st["pose"][:3], poses[0][:3])
+    if off > 0.005:
+        # Print BOTH poses, because the two ways this fails need different
+        # responses and the number alone does not separate them. A few mm is
+        # a genuine miss — the arm did not get there. Hundreds of mm means
+        # the readback is not in the frame the path is written in, and the
+        # check is wrong rather than the arm; the emulator does exactly this,
+        # reporting 930 mm because its IK cannot resolve this path at all.
+        print("  [FAIL] start pose is %.1f mm from where it should be, so "
+              "every later case would run a different geometry.\n"
+              "         commanded %s\n"
+              "         read back %s\n"
+              "         A few mm means the move fell short. Hundreds of mm "
+              "means the readback is in a different frame than the path."
+              % (1000 * off,
+                 ["%.1f" % (1000 * v) for v in poses[0][:3]],
+                 ["%.1f" % (1000 * v) for v in st["pose"][:3]]))
+        return False
+    return True
 
 
 def run_one(arm, poses, blend, connect, mon):
@@ -329,7 +438,7 @@ def run_one(arm, poses, blend, connect, mon):
 
 
 def main() -> int:
-    handle_cli(__doc__, extra_flags=("--connect0",),
+    handle_cli(__doc__, extra_flags=("--connect0", "--reverse"),
                value_flags=("--side", "--path", "--speed", "--line-acc"))
     forced = parse_mode_arg()
     side = "left"
@@ -342,6 +451,24 @@ def main() -> int:
 
     path = load_path(src)
     poses, labels = path["poses"], path["labels"]
+    angles_file = path["angles"]
+    if "--reverse" in sys.argv:
+        # THE CONTROL FOR "IS IT THE ANGLE, OR IS IT THE FIRST CORNER?"
+        # Every corner keeps its angle and its geometry; only the order
+        # changes, so the sharpest corner is no longer the one the tool
+        # reaches first out of the start pose. The 2026-08-13 runs need this:
+        # the 90 deg corner read 5-14 % retained at every blend radius while
+        # the other four ran 50-122 %, and it is also the corner reached
+        # 65 mm after standing still. Those two explanations predict opposite
+        # results here — if the angle is the cause the 90 deg column stays
+        # low, if the start is the cause it recovers.
+        poses = poses[::-1]
+        labels = labels[::-1]
+        angles_file = angles_file[::-1]
+        print("  [NOTE] --reverse: traversing the path end-to-start. Same "
+              "corners, same angles, opposite order — the control that "
+              "separates a corner's ANGLE from its POSITION in the run.")
+    path["angles"] = angles_file
     speed = path["speed"]
     if "--speed" in sys.argv:                 # override the file, deliberately
         speed = float(sys.argv[sys.argv.index("--speed") + 1])
@@ -421,6 +548,13 @@ def main() -> int:
             print("  [WARN] segments barely reach cruise — there is no plateau "
                   "to lose at a corner. Lengthen them in the path file or "
                   "lower the speed.")
+        wide = [b for b in path["blends"] if b >= 40]
+        if wide:
+            print("  [NOTE] blend %s %% is >= 40 %% of a segment: the dips from "
+                  "a segment's two ends MEET, so the approach never returns to "
+                  "cruise and retention is measured against a depressed "
+                  "reference. Those columns read ~12 points HIGH (measured) — "
+                  "compare them with r=0, not with 100 %%." % wide)
 
         # THE MODE IS WHATEVER YOU ASKED FOR, and nothing else. `--mode SIM`
         # runs in simulation, `--mode REAL` runs on metal; this script never
@@ -451,6 +585,11 @@ def main() -> int:
         print("%-14s %-10s %s" % ("case", "corner", hdr))
         print("-" * 74)
         for blend, connect in cases:
+            # BEFORE the recorder, every time. Putting this after the
+            # analysis meant a rejected case skipped it and poisoned all the
+            # cases that followed — see goto_start's docstring.
+            if not goto_start(arm, poses, mon):
+                break
             rec = RunRecorder(arm.robot,
                               "blend_r%d%s" % (blend, "" if connect else "_c0"),
                               side, host_ip_for(ip), UDP_PORT)
@@ -509,27 +648,31 @@ def main() -> int:
                 for r in res)))
             print("%-14s %-10s %s" % ("", "v_min m/s", "  ".join(
                 "     -   " if r is None else "%6.3f   " % r[1] for r in res)))
-            thin = [i + 1 for i, r in enumerate(res)
-                    if r is not None and r[3] < MIN_CORNER_SAMPLES]
-            if thin:
-                print("%-14s %-10s corners %s measured from < %d samples — "
-                      "treat as indicative only"
-                      % ("", "", thin, MIN_CORNER_SAMPLES))
-            # Back to the start so every case runs the identical geometry from
-            # the identical configuration — and CHECK it got there. A silent
-            # failure here leaves every later case starting from wherever the
-            # last one ended, which is a different arm posture and therefore a
-            # different measurement; the emulator run showed exactly that,
-            # with cases 2-4 tracing 0.000 m.
-            mon.expect(arm.handle_id, DEV_JOINT)
-            rret = arm.robot.rm_movel(poses[0], 30, 0, 0, 0)
-            rarr, rok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
-            if rret != 0 or not rarr or not rok:
-                print("  [FAIL] could not return to the start pose "
-                      "(ret=%s arrived=%s ok=%s). Later cases would run from "
-                      "a different configuration, so stopping here."
-                      % (rret, rarr, rok))
-                break
+            # A declined corner is declined for one of TWO reasons and they
+            # want opposite fixes, so say which. Reporting both as "too few
+            # samples" cost a session: every corner of the 2026-08-13 runs
+            # had 11-44 samples and was declined purely because the approach
+            # never held a plateau.
+            few = [i + 1 for i, r in enumerate(res)
+                   if r is not None and r[3] < MIN_CORNER_SAMPLES
+                   and r[4] < MIN_CORNER_SAMPLES]
+            noflat = [i + 1 for i, r in enumerate(res)
+                      if r is not None and r[3] < MIN_CORNER_SAMPLES
+                      and r[4] >= MIN_CORNER_SAMPLES]
+            if few:
+                print("%-14s %-10s corners %s: only %d-%d samples in the dip "
+                      "(need %d) — lower the speed or widen the blend"
+                      % ("", "", few,
+                         min(res[i - 1][4] for i in few),
+                         max(res[i - 1][4] for i in few), MIN_CORNER_SAMPLES))
+            if noflat:
+                print("%-14s %-10s corners %s: NO CRUISE PLATEAU on the "
+                      "approach (speed varies %d-%d %% across the middle of "
+                      "the segment) — the segment never settles, so there is "
+                      "no cruise to retain. Lengthen it or lower the speed."
+                      % ("", "", noflat,
+                         int(100 * min(res[i - 1][5] for i in noflat)),
+                         int(100 * max(res[i - 1][5] for i in noflat))))
         print("\n  retained = corner minimum / cruise on the approach.")
         print("  A working blend holds most of its cruise; ~0 % is a full stop.")
         print("  DECISIVE: compare r=0 with the largest r. If they match, the")
