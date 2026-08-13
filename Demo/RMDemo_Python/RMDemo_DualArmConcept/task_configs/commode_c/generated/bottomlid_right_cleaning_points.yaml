@@ -1,0 +1,1028 @@
+# =============================================================================
+# GENERATED FILE — DO NOT EDIT MANUALLY
+# Created by blend_turning_points.py
+# angle_threshold  : 90.0°
+# blend_fraction   : 0.2
+# n_blend_points   : 10
+# turns blended    : 22
+# new waypoints    : 220
+# original seq len : 23
+# new seq len      : 221
+# =============================================================================
+
+task_parameters:
+  use_prestart_stage: true
+  commode_fixture_type: lid_open
+  ik_frame: R_glove_frame_2
+  max_jerk_scaling: 0.5
+cartesian_poses:
+  # start_pose: [0.96, 0.06, 0.235, 0.020717, 0.84142, 0.047248, 0.53792]
+  # pre_start_pose: [0.85, 0.06, 0.28, 0.020717, 0.84142, 0.047248, 0.53792]
+  start_pose: [0.96, 0.03, 0.235, 0.020717, 0.84142, 0.047248, 0.53792]
+  pre_start_pose: [0.85, 0.03, 0.28, 0.020717, 0.84142, 0.047248, 0.53792]
+cleaning_points:
+  point1:
+    translation: [0.0, 0.0, 0.0]
+    rotation: [0.0, 0.0, 0.0]
+  point2:
+    translation: [-0.01, 0.04, -0.025]
+    rotation: [0.0, 0.0, 0.0]
+  point3:
+    translation: [-0.005, -0.07, -0.03]
+    rotation: [0.0, 1.0, -5.0]
+  point4:
+    translation: [-0.02, 0.05, -0.06]
+    rotation: [0.0, 4.0, 0.0]
+  point5:
+    translation: [-0.02, -0.115, -0.06]
+    rotation: [0.0, 4.0, -3.0]
+  point6:
+    translation: [-0.033, 0.05, -0.09]
+    rotation: [0.0, 6.0, 0.0]
+  point7:
+    translation: [-0.033, -0.115, -0.09]
+    rotation: [0.0, 6.0, -3.0]
+  point8:
+    translation: [-0.045, 0.05, -0.12]
+    rotation: [0.0, 8.0, 0.0]
+  point9:
+    translation: [-0.045, -0.115, -0.12]
+    rotation: [0.0, 8.0, -3.0]
+  point10:
+    translation: [-0.057, 0.05, -0.15]
+    rotation: [0.0, 10.0, 0.0]
+  point11:
+    translation: [-0.057, -0.115, -0.15]
+    rotation: [0.0, 10.0, -3.0]
+  point12:
+    translation: [-0.068, 0.05, -0.18]
+    rotation: [0.0, 12.0, 0.0]
+  point13:
+    translation: [-0.068, -0.115, -0.18]
+    rotation: [0.0, 12.0, -3.0]
+  point14:
+    translation: [-0.08, 0.05, -0.21]
+    rotation: [0.0, 14.0, 0.0]
+  point15:
+    translation: [-0.08, -0.115, -0.21]
+    rotation: [0.0, 14.0, -3.0]
+  point16:
+    translation: [-0.092, 0.05, -0.24]
+    rotation: [0.0, 15.0, 0.0]
+  point17:
+    translation: [-0.092, -0.115, -0.24]
+    rotation: [0.0, 15.0, -3.0]
+  point18:
+    translation: [-0.104, 0.05, -0.27]
+    rotation: [0.0, 17.0, 0.0]
+  point19:
+    translation: [-0.104, -0.115, -0.27]
+    rotation: [0.0, 17.0, -3.0]
+  point20:
+    translation: [-0.116, 0.05, -0.29]
+    rotation: [0.0, 18.0, 0.0]
+  point21:
+    translation: [-0.116, -0.115, -0.29]
+    rotation: [0.0, 18.0, -3.0]
+  point22:
+    translation: [-0.128, 0.05, -0.31]
+    rotation: [0.0, 20.0, 0.0]
+  point23:
+    translation: [-0.128, -0.115, -0.31]
+    rotation: [0.0, 20.0, -3.0]
+  point24:
+    translation: [-0.14, 0.05, -0.36]
+    rotation: [0.0, 21.0, 0.0]
+  point25:
+    translation: [-0.14, -0.18, -0.36]
+    rotation: [0.0, 21.0, -3.0]
+  point26:
+    translation: [-0.152, 0.05, -0.38]
+    rotation: [0.0, 22.0, 0.0]
+  point27:
+    translation: [-0.152, -0.115, -0.38]
+    rotation: [0.0, 22.0, -3.0]
+  point28:
+    translation: [-0.168, 0.05, -0.39]
+    rotation: [0.0, 21.0, 0.0]
+  point29:
+    translation: [-0.168, -0.115, -0.39]
+    rotation: [0.0, 21.0, -3.0]
+  blend_0_0:
+    translation: [-0.008, 0.032, -0.02]
+    rotation: [0.0, 0.0, 0.0]
+  blend_0_1:
+    translation: [-0.008407, 0.033407, -0.021062]
+    rotation: [0.0009, 0.0222, -0.1111]
+  blend_0_2:
+    translation: [-0.008741, 0.034074, -0.022025]
+    rotation: [0.0019, 0.0444, -0.2222]
+  blend_0_3:
+    translation: [-0.009, 0.034, -0.022889]
+    rotation: [0.0027, 0.0666, -0.3333]
+  blend_0_4:
+    translation: [-0.009185, 0.033185, -0.023654]
+    rotation: [0.0035, 0.0888, -0.4444]
+  blend_0_5:
+    translation: [-0.009296, 0.03163, -0.024321]
+    rotation: [0.0043, 0.1111, -0.5555]
+  blend_0_6:
+    translation: [-0.009333, 0.029333, -0.024889]
+    rotation: [0.005, 0.1333, -0.6666]
+  blend_0_7:
+    translation: [-0.009296, 0.026296, -0.025358]
+    rotation: [0.0057, 0.1555, -0.7778]
+  blend_0_8:
+    translation: [-0.009185, 0.022519, -0.025728]
+    rotation: [0.0064, 0.1777, -0.8889]
+  blend_0_9:
+    translation: [-0.009, 0.018, -0.026]
+    rotation: [0.007, 0.1999, -1.0]
+  blend_1_0:
+    translation: [-0.006, -0.048, -0.029]
+    rotation: [0.007, 0.8001, -3.9999]
+  blend_1_1:
+    translation: [-0.005827, -0.052321, -0.029284]
+    rotation: [0.0039, 0.8889, -4.0]
+  blend_1_2:
+    translation: [-0.005753, -0.055506, -0.029691]
+    rotation: [0.0008, 0.9778, -4.0001]
+  blend_1_3:
+    translation: [-0.005778, -0.057556, -0.030222]
+    rotation: [-0.0023, 1.0666, -4.0001]
+  blend_1_4:
+    translation: [-0.005901, -0.058469, -0.030877]
+    rotation: [-0.0054, 1.1555, -4.0002]
+  blend_1_5:
+    translation: [-0.006123, -0.058247, -0.031654]
+    rotation: [-0.0085, 1.2444, -4.0003]
+  blend_1_6:
+    translation: [-0.006444, -0.056889, -0.032556]
+    rotation: [-0.0116, 1.3332, -4.0004]
+  blend_1_7:
+    translation: [-0.006864, -0.054395, -0.03358]
+    rotation: [-0.0147, 1.4221, -4.0005]
+  blend_1_8:
+    translation: [-0.007383, -0.050765, -0.034728]
+    rotation: [-0.0178, 1.511, -4.0006]
+  blend_1_9:
+    translation: [-0.008, -0.046, -0.036]
+    rotation: [-0.021, 1.5998, -4.0007]
+  blend_2_0:
+    translation: [-0.017, 0.026, -0.054]
+    rotation: [-0.021, 3.4002, -1.0011]
+  blend_2_1:
+    translation: [-0.01763, 0.03063, -0.055259]
+    rotation: [-0.0189, 3.4668, -0.9566]
+  blend_2_2:
+    translation: [-0.018185, 0.033852, -0.05637]
+    rotation: [-0.0167, 3.5335, -0.912]
+  blend_2_3:
+    translation: [-0.018667, 0.035667, -0.057333]
+    rotation: [-0.0145, 3.6001, -0.8675]
+  blend_2_4:
+    translation: [-0.019074, 0.036074, -0.058148]
+    rotation: [-0.0122, 3.6668, -0.8229]
+  blend_2_5:
+    translation: [-0.019407, 0.035074, -0.058815]
+    rotation: [-0.0098, 3.7334, -0.7783]
+  blend_2_6:
+    translation: [-0.019667, 0.032667, -0.059333]
+    rotation: [-0.0075, 3.8001, -0.7338]
+  blend_2_7:
+    translation: [-0.019852, 0.028852, -0.059704]
+    rotation: [-0.005, 3.8667, -0.6892]
+  blend_2_8:
+    translation: [-0.019963, 0.02363, -0.059926]
+    rotation: [-0.0025, 3.9334, -0.6446]
+  blend_2_9:
+    translation: [-0.02, 0.017, -0.06]
+    rotation: [-0.0, 4.0, -0.6]
+  blend_3_0:
+    translation: [-0.02, -0.082, -0.06]
+    rotation: [-0.0, 4.0, -2.4]
+  blend_3_1:
+    translation: [-0.020032, -0.088519, -0.060074]
+    rotation: [-0.0009, 4.0444, -2.4001]
+  blend_3_2:
+    translation: [-0.020128, -0.093407, -0.060296]
+    rotation: [-0.0019, 4.0889, -2.4001]
+  blend_3_3:
+    translation: [-0.020289, -0.096667, -0.060667]
+    rotation: [-0.0028, 4.1333, -2.4002]
+  blend_3_4:
+    translation: [-0.020514, -0.098296, -0.061185]
+    rotation: [-0.0037, 4.1778, -2.4003]
+  blend_3_5:
+    translation: [-0.020802, -0.098296, -0.061852]
+    rotation: [-0.0047, 4.2222, -2.4004]
+  blend_3_6:
+    translation: [-0.021156, -0.096667, -0.062667]
+    rotation: [-0.0056, 4.2666, -2.4004]
+  blend_3_7:
+    translation: [-0.021573, -0.093407, -0.06363]
+    rotation: [-0.0065, 4.3111, -2.4005]
+  blend_3_8:
+    translation: [-0.022054, -0.088519, -0.064741]
+    rotation: [-0.0075, 4.3555, -2.4006]
+  blend_3_9:
+    translation: [-0.0226, -0.082, -0.066]
+    rotation: [-0.0084, 4.4, -2.4007]
+  blend_4_0:
+    translation: [-0.0304, 0.017, -0.084]
+    rotation: [-0.0084, 5.6, -0.6008]
+  blend_4_1:
+    translation: [-0.030946, 0.023519, -0.085259]
+    rotation: [-0.0075, 5.6445, -0.6007]
+  blend_4_2:
+    translation: [-0.031427, 0.028407, -0.08637]
+    rotation: [-0.0065, 5.6889, -0.6006]
+  blend_4_3:
+    translation: [-0.031844, 0.031667, -0.087333]
+    rotation: [-0.0056, 5.7334, -0.6005]
+  blend_4_4:
+    translation: [-0.032198, 0.033296, -0.088148]
+    rotation: [-0.0047, 5.7778, -0.6004]
+  blend_4_5:
+    translation: [-0.032486, 0.033296, -0.088815]
+    rotation: [-0.0037, 5.8222, -0.6004]
+  blend_4_6:
+    translation: [-0.032711, 0.031667, -0.089333]
+    rotation: [-0.0028, 5.8667, -0.6003]
+  blend_4_7:
+    translation: [-0.032872, 0.028407, -0.089704]
+    rotation: [-0.0019, 5.9111, -0.6002]
+  blend_4_8:
+    translation: [-0.032968, 0.023519, -0.089926]
+    rotation: [-0.0009, 5.9556, -0.6001]
+  blend_4_9:
+    translation: [-0.033, 0.017, -0.09]
+    rotation: [0.0, 6.0, -0.6]
+  blend_5_0:
+    translation: [-0.033, -0.082, -0.09]
+    rotation: [0.0, 6.0, -2.4]
+  blend_5_1:
+    translation: [-0.03303, -0.088519, -0.090074]
+    rotation: [-0.0009, 6.0444, -2.4001]
+  blend_5_2:
+    translation: [-0.033119, -0.093407, -0.090296]
+    rotation: [-0.0019, 6.0889, -2.4002]
+  blend_5_3:
+    translation: [-0.033267, -0.096667, -0.090667]
+    rotation: [-0.0028, 6.1333, -2.4003]
+  blend_5_4:
+    translation: [-0.033474, -0.098296, -0.091185]
+    rotation: [-0.0037, 6.1778, -2.4004]
+  blend_5_5:
+    translation: [-0.033741, -0.098296, -0.091852]
+    rotation: [-0.0047, 6.2222, -2.4005]
+  blend_5_6:
+    translation: [-0.034067, -0.096667, -0.092667]
+    rotation: [-0.0056, 6.2666, -2.4006]
+  blend_5_7:
+    translation: [-0.034452, -0.093407, -0.09363]
+    rotation: [-0.0066, 6.3111, -2.4007]
+  blend_5_8:
+    translation: [-0.034896, -0.088519, -0.094741]
+    rotation: [-0.0075, 6.3555, -2.4009]
+  blend_5_9:
+    translation: [-0.0354, -0.082, -0.096]
+    rotation: [-0.0084, 6.4, -2.401]
+  blend_6_0:
+    translation: [-0.0426, 0.017, -0.114]
+    rotation: [-0.0085, 7.6, -0.6011]
+  blend_6_1:
+    translation: [-0.043104, 0.023519, -0.115259]
+    rotation: [-0.0075, 7.6445, -0.601]
+  blend_6_2:
+    translation: [-0.043548, 0.028407, -0.11637]
+    rotation: [-0.0066, 7.6889, -0.6009]
+  blend_6_3:
+    translation: [-0.043933, 0.031667, -0.117333]
+    rotation: [-0.0056, 7.7334, -0.6007]
+  blend_6_4:
+    translation: [-0.044259, 0.033296, -0.118148]
+    rotation: [-0.0047, 7.7778, -0.6006]
+  blend_6_5:
+    translation: [-0.044526, 0.033296, -0.118815]
+    rotation: [-0.0038, 7.8222, -0.6005]
+  blend_6_6:
+    translation: [-0.044733, 0.031667, -0.119333]
+    rotation: [-0.0028, 7.8667, -0.6004]
+  blend_6_7:
+    translation: [-0.044881, 0.028407, -0.119704]
+    rotation: [-0.0019, 7.9111, -0.6002]
+  blend_6_8:
+    translation: [-0.04497, 0.023519, -0.119926]
+    rotation: [-0.0009, 7.9556, -0.6001]
+  blend_6_9:
+    translation: [-0.045, 0.017, -0.12]
+    rotation: [0.0, 8.0, -0.6]
+  blend_7_0:
+    translation: [-0.045, -0.082, -0.12]
+    rotation: [0.0, 8.0, -2.4]
+  blend_7_1:
+    translation: [-0.04503, -0.088519, -0.120074]
+    rotation: [-0.0009, 8.0444, -2.4001]
+  blend_7_2:
+    translation: [-0.045119, -0.093407, -0.120296]
+    rotation: [-0.0019, 8.0889, -2.4003]
+  blend_7_3:
+    translation: [-0.045267, -0.096667, -0.120667]
+    rotation: [-0.0028, 8.1333, -2.4004]
+  blend_7_4:
+    translation: [-0.045474, -0.098296, -0.121185]
+    rotation: [-0.0038, 8.1778, -2.4006]
+  blend_7_5:
+    translation: [-0.045741, -0.098296, -0.121852]
+    rotation: [-0.0047, 8.2222, -2.4007]
+  blend_7_6:
+    translation: [-0.046067, -0.096667, -0.122667]
+    rotation: [-0.0056, 8.2666, -2.4008]
+  blend_7_7:
+    translation: [-0.046452, -0.093407, -0.12363]
+    rotation: [-0.0066, 8.3111, -2.401]
+  blend_7_8:
+    translation: [-0.046896, -0.088519, -0.124741]
+    rotation: [-0.0075, 8.3555, -2.4011]
+  blend_7_9:
+    translation: [-0.0474, -0.082, -0.126]
+    rotation: [-0.0085, 8.4, -2.4013]
+  blend_8_0:
+    translation: [-0.0546, 0.017, -0.144]
+    rotation: [-0.0085, 9.6, -0.6014]
+  blend_8_1:
+    translation: [-0.055104, 0.023519, -0.145259]
+    rotation: [-0.0076, 9.6445, -0.6012]
+  blend_8_2:
+    translation: [-0.055548, 0.028407, -0.14637]
+    rotation: [-0.0066, 9.6889, -0.6011]
+  blend_8_3:
+    translation: [-0.055933, 0.031667, -0.147333]
+    rotation: [-0.0057, 9.7334, -0.6009]
+  blend_8_4:
+    translation: [-0.056259, 0.033296, -0.148148]
+    rotation: [-0.0047, 9.7778, -0.6008]
+  blend_8_5:
+    translation: [-0.056526, 0.033296, -0.148815]
+    rotation: [-0.0038, 9.8222, -0.6006]
+  blend_8_6:
+    translation: [-0.056733, 0.031667, -0.149333]
+    rotation: [-0.0028, 9.8667, -0.6005]
+  blend_8_7:
+    translation: [-0.056881, 0.028407, -0.149704]
+    rotation: [-0.0019, 9.9111, -0.6003]
+  blend_8_8:
+    translation: [-0.05697, 0.023519, -0.149926]
+    rotation: [-0.0009, 9.9556, -0.6002]
+  blend_8_9:
+    translation: [-0.057, 0.017, -0.15]
+    rotation: [0.0, 10.0, -0.6]
+  blend_9_0:
+    translation: [-0.057, -0.082, -0.15]
+    rotation: [0.0, 10.0, -2.4]
+  blend_9_1:
+    translation: [-0.057027, -0.088519, -0.150074]
+    rotation: [-0.0009, 10.0444, -2.4002]
+  blend_9_2:
+    translation: [-0.057109, -0.093407, -0.150296]
+    rotation: [-0.0019, 10.0889, -2.4003]
+  blend_9_3:
+    translation: [-0.057244, -0.096667, -0.150667]
+    rotation: [-0.0028, 10.1333, -2.4005]
+  blend_9_4:
+    translation: [-0.057435, -0.098296, -0.151185]
+    rotation: [-0.0038, 10.1778, -2.4007]
+  blend_9_5:
+    translation: [-0.057679, -0.098296, -0.151852]
+    rotation: [-0.0047, 10.2222, -2.4009]
+  blend_9_6:
+    translation: [-0.057978, -0.096667, -0.152667]
+    rotation: [-0.0057, 10.2666, -2.401]
+  blend_9_7:
+    translation: [-0.058331, -0.093407, -0.15363]
+    rotation: [-0.0066, 10.3111, -2.4012]
+  blend_9_8:
+    translation: [-0.058738, -0.088519, -0.154741]
+    rotation: [-0.0076, 10.3555, -2.4014]
+  blend_9_9:
+    translation: [-0.0592, -0.082, -0.156]
+    rotation: [-0.0085, 10.4, -2.4016]
+  blend_10_0:
+    translation: [-0.0658, 0.017, -0.174]
+    rotation: [-0.0086, 11.6, -0.6017]
+  blend_10_1:
+    translation: [-0.066262, 0.023519, -0.175259]
+    rotation: [-0.0076, 11.6445, -0.6015]
+  blend_10_2:
+    translation: [-0.066669, 0.028407, -0.17637]
+    rotation: [-0.0067, 11.6889, -0.6013]
+  blend_10_3:
+    translation: [-0.067022, 0.031667, -0.177333]
+    rotation: [-0.0057, 11.7334, -0.6011]
+  blend_10_4:
+    translation: [-0.067321, 0.033296, -0.178148]
+    rotation: [-0.0048, 11.7778, -0.6009]
+  blend_10_5:
+    translation: [-0.067565, 0.033296, -0.178815]
+    rotation: [-0.0038, 11.8222, -0.6008]
+  blend_10_6:
+    translation: [-0.067756, 0.031667, -0.179333]
+    rotation: [-0.0029, 11.8667, -0.6006]
+  blend_10_7:
+    translation: [-0.067891, 0.028407, -0.179704]
+    rotation: [-0.0019, 11.9111, -0.6004]
+  blend_10_8:
+    translation: [-0.067973, 0.023519, -0.179926]
+    rotation: [-0.001, 11.9556, -0.6002]
+  blend_10_9:
+    translation: [-0.068, 0.017, -0.18]
+    rotation: [0.0, 12.0, -0.6]
+  blend_11_0:
+    translation: [-0.068, -0.082, -0.18]
+    rotation: [0.0, 12.0, -2.4]
+  blend_11_1:
+    translation: [-0.06803, -0.088519, -0.180074]
+    rotation: [-0.001, 12.0444, -2.4002]
+  blend_11_2:
+    translation: [-0.068119, -0.093407, -0.180296]
+    rotation: [-0.0019, 12.0889, -2.4004]
+  blend_11_3:
+    translation: [-0.068267, -0.096667, -0.180667]
+    rotation: [-0.0029, 12.1333, -2.4006]
+  blend_11_4:
+    translation: [-0.068474, -0.098296, -0.181185]
+    rotation: [-0.0038, 12.1778, -2.4008]
+  blend_11_5:
+    translation: [-0.068741, -0.098296, -0.181852]
+    rotation: [-0.0048, 12.2222, -2.401]
+  blend_11_6:
+    translation: [-0.069067, -0.096667, -0.182667]
+    rotation: [-0.0057, 12.2666, -2.4012]
+  blend_11_7:
+    translation: [-0.069452, -0.093407, -0.18363]
+    rotation: [-0.0067, 12.3111, -2.4014]
+  blend_11_8:
+    translation: [-0.069896, -0.088519, -0.184741]
+    rotation: [-0.0076, 12.3555, -2.4017]
+  blend_11_9:
+    translation: [-0.0704, -0.082, -0.186]
+    rotation: [-0.0086, 12.4, -2.4019]
+  blend_12_0:
+    translation: [-0.0776, 0.017, -0.204]
+    rotation: [-0.0086, 13.6, -0.602]
+  blend_12_1:
+    translation: [-0.078104, 0.023519, -0.205259]
+    rotation: [-0.0077, 13.6445, -0.6018]
+  blend_12_2:
+    translation: [-0.078548, 0.028407, -0.20637]
+    rotation: [-0.0067, 13.6889, -0.6016]
+  blend_12_3:
+    translation: [-0.078933, 0.031667, -0.207333]
+    rotation: [-0.0057, 13.7334, -0.6013]
+  blend_12_4:
+    translation: [-0.079259, 0.033296, -0.208148]
+    rotation: [-0.0048, 13.7778, -0.6011]
+  blend_12_5:
+    translation: [-0.079526, 0.033296, -0.208815]
+    rotation: [-0.0038, 13.8222, -0.6009]
+  blend_12_6:
+    translation: [-0.079733, 0.031667, -0.209333]
+    rotation: [-0.0029, 13.8667, -0.6007]
+  blend_12_7:
+    translation: [-0.079881, 0.028407, -0.209704]
+    rotation: [-0.0019, 13.9111, -0.6004]
+  blend_12_8:
+    translation: [-0.07997, 0.023519, -0.209926]
+    rotation: [-0.001, 13.9556, -0.6002]
+  blend_12_9:
+    translation: [-0.08, 0.017, -0.21]
+    rotation: [0.0, 14.0, -0.6]
+  blend_13_0:
+    translation: [-0.08, -0.082, -0.21]
+    rotation: [0.0, 14.0, -2.4]
+  blend_13_1:
+    translation: [-0.08003, -0.088519, -0.210074]
+    rotation: [-0.0005, 14.0222, -2.4001]
+  blend_13_2:
+    translation: [-0.080119, -0.093407, -0.210296]
+    rotation: [-0.001, 14.0444, -2.4002]
+  blend_13_3:
+    translation: [-0.080267, -0.096667, -0.210667]
+    rotation: [-0.0014, 14.0667, -2.4004]
+  blend_13_4:
+    translation: [-0.080474, -0.098296, -0.211185]
+    rotation: [-0.0019, 14.0889, -2.4005]
+  blend_13_5:
+    translation: [-0.080741, -0.098296, -0.211852]
+    rotation: [-0.0024, 14.1111, -2.4006]
+  blend_13_6:
+    translation: [-0.081067, -0.096667, -0.212667]
+    rotation: [-0.0029, 14.1333, -2.4007]
+  blend_13_7:
+    translation: [-0.081452, -0.093407, -0.21363]
+    rotation: [-0.0034, 14.1555, -2.4008]
+  blend_13_8:
+    translation: [-0.081896, -0.088519, -0.214741]
+    rotation: [-0.0038, 14.1778, -2.4009]
+  blend_13_9:
+    translation: [-0.0824, -0.082, -0.216]
+    rotation: [-0.0043, 14.2, -2.4011]
+  blend_14_0:
+    translation: [-0.0896, 0.017, -0.234]
+    rotation: [-0.0043, 14.8, -0.6011]
+  blend_14_1:
+    translation: [-0.090104, 0.023519, -0.235259]
+    rotation: [-0.0039, 14.8222, -0.601]
+  blend_14_2:
+    translation: [-0.090548, 0.028407, -0.23637]
+    rotation: [-0.0034, 14.8445, -0.6009]
+  blend_14_3:
+    translation: [-0.090933, 0.031667, -0.237333]
+    rotation: [-0.0029, 14.8667, -0.6007]
+  blend_14_4:
+    translation: [-0.091259, 0.033296, -0.238148]
+    rotation: [-0.0024, 14.8889, -0.6006]
+  blend_14_5:
+    translation: [-0.091526, 0.033296, -0.238815]
+    rotation: [-0.0019, 14.9111, -0.6005]
+  blend_14_6:
+    translation: [-0.091733, 0.031667, -0.239333]
+    rotation: [-0.0014, 14.9333, -0.6004]
+  blend_14_7:
+    translation: [-0.091881, 0.028407, -0.239704]
+    rotation: [-0.001, 14.9556, -0.6002]
+  blend_14_8:
+    translation: [-0.09197, 0.023519, -0.239926]
+    rotation: [-0.0005, 14.9778, -0.6001]
+  blend_14_9:
+    translation: [-0.092, 0.017, -0.24]
+    rotation: [0.0, 15.0, -0.6]
+  blend_15_0:
+    translation: [-0.092, -0.082, -0.24]
+    rotation: [-0.0, 15.0, -2.4]
+  blend_15_1:
+    translation: [-0.09203, -0.088519, -0.240074]
+    rotation: [-0.001, 15.0444, -2.4003]
+  blend_15_2:
+    translation: [-0.092119, -0.093407, -0.240296]
+    rotation: [-0.0019, 15.0889, -2.4005]
+  blend_15_3:
+    translation: [-0.092267, -0.096667, -0.240667]
+    rotation: [-0.0029, 15.1333, -2.4008]
+  blend_15_4:
+    translation: [-0.092474, -0.098296, -0.241185]
+    rotation: [-0.0039, 15.1778, -2.401]
+  blend_15_5:
+    translation: [-0.092741, -0.098296, -0.241852]
+    rotation: [-0.0048, 15.2222, -2.4013]
+  blend_15_6:
+    translation: [-0.093067, -0.096667, -0.242667]
+    rotation: [-0.0058, 15.2666, -2.4016]
+  blend_15_7:
+    translation: [-0.093452, -0.093407, -0.24363]
+    rotation: [-0.0068, 15.3111, -2.4018]
+  blend_15_8:
+    translation: [-0.093896, -0.088519, -0.244741]
+    rotation: [-0.0077, 15.3555, -2.4021]
+  blend_15_9:
+    translation: [-0.0944, -0.082, -0.246]
+    rotation: [-0.0087, 15.4, -2.4023]
+  blend_16_0:
+    translation: [-0.1016, 0.017, -0.264]
+    rotation: [-0.0087, 16.6, -0.6025]
+  blend_16_1:
+    translation: [-0.102104, 0.023519, -0.265259]
+    rotation: [-0.0078, 16.6445, -0.6022]
+  blend_16_2:
+    translation: [-0.102548, 0.028407, -0.26637]
+    rotation: [-0.0068, 16.6889, -0.6019]
+  blend_16_3:
+    translation: [-0.102933, 0.031667, -0.267333]
+    rotation: [-0.0058, 16.7334, -0.6017]
+  blend_16_4:
+    translation: [-0.103259, 0.033296, -0.268148]
+    rotation: [-0.0049, 16.7778, -0.6014]
+  blend_16_5:
+    translation: [-0.103526, 0.033296, -0.268815]
+    rotation: [-0.0039, 16.8222, -0.6011]
+  blend_16_6:
+    translation: [-0.103733, 0.031667, -0.269333]
+    rotation: [-0.0029, 16.8667, -0.6008]
+  blend_16_7:
+    translation: [-0.103881, 0.028407, -0.269704]
+    rotation: [-0.0019, 16.9111, -0.6006]
+  blend_16_8:
+    translation: [-0.10397, 0.023519, -0.269926]
+    rotation: [-0.001, 16.9556, -0.6003]
+  blend_16_9:
+    translation: [-0.104, 0.017, -0.27]
+    rotation: [-0.0, 17.0, -0.6]
+  blend_17_0:
+    translation: [-0.104, -0.082, -0.27]
+    rotation: [-0.0, 17.0, -2.4]
+  blend_17_1:
+    translation: [-0.10403, -0.088519, -0.270049]
+    rotation: [-0.0005, 17.0222, -2.4001]
+  blend_17_2:
+    translation: [-0.104119, -0.093407, -0.270198]
+    rotation: [-0.001, 17.0444, -2.4003]
+  blend_17_3:
+    translation: [-0.104267, -0.096667, -0.270444]
+    rotation: [-0.0015, 17.0667, -2.4004]
+  blend_17_4:
+    translation: [-0.104474, -0.098296, -0.27079]
+    rotation: [-0.0019, 17.0889, -2.4006]
+  blend_17_5:
+    translation: [-0.104741, -0.098296, -0.271235]
+    rotation: [-0.0024, 17.1111, -2.4007]
+  blend_17_6:
+    translation: [-0.105067, -0.096667, -0.271778]
+    rotation: [-0.0029, 17.1333, -2.4009]
+  blend_17_7:
+    translation: [-0.105452, -0.093407, -0.27242]
+    rotation: [-0.0034, 17.1555, -2.401]
+  blend_17_8:
+    translation: [-0.105896, -0.088519, -0.27316]
+    rotation: [-0.0039, 17.1778, -2.4012]
+  blend_17_9:
+    translation: [-0.1064, -0.082, -0.274]
+    rotation: [-0.0044, 17.2, -2.4013]
+  blend_18_0:
+    translation: [-0.1136, 0.017, -0.286]
+    rotation: [-0.0044, 17.8, -0.6013]
+  blend_18_1:
+    translation: [-0.114104, 0.023519, -0.28684]
+    rotation: [-0.0039, 17.8222, -0.6012]
+  blend_18_2:
+    translation: [-0.114548, 0.028407, -0.28758]
+    rotation: [-0.0034, 17.8445, -0.601]
+  blend_18_3:
+    translation: [-0.114933, 0.031667, -0.288222]
+    rotation: [-0.0029, 17.8667, -0.6009]
+  blend_18_4:
+    translation: [-0.115259, 0.033296, -0.288765]
+    rotation: [-0.0024, 17.8889, -0.6007]
+  blend_18_5:
+    translation: [-0.115526, 0.033296, -0.28921]
+    rotation: [-0.002, 17.9111, -0.6006]
+  blend_18_6:
+    translation: [-0.115733, 0.031667, -0.289556]
+    rotation: [-0.0015, 17.9333, -0.6004]
+  blend_18_7:
+    translation: [-0.115881, 0.028407, -0.289802]
+    rotation: [-0.001, 17.9556, -0.6003]
+  blend_18_8:
+    translation: [-0.11597, 0.023519, -0.289951]
+    rotation: [-0.0005, 17.9778, -0.6001]
+  blend_18_9:
+    translation: [-0.116, 0.017, -0.29]
+    rotation: [0.0, 18.0, -0.6]
+  blend_19_0:
+    translation: [-0.116, -0.082, -0.29]
+    rotation: [0.0, 18.0, -2.4]
+  blend_19_1:
+    translation: [-0.11603, -0.088519, -0.290049]
+    rotation: [-0.001, 18.0444, -2.4003]
+  blend_19_2:
+    translation: [-0.116119, -0.093407, -0.290198]
+    rotation: [-0.002, 18.0889, -2.4006]
+  blend_19_3:
+    translation: [-0.116267, -0.096667, -0.290444]
+    rotation: [-0.0029, 18.1333, -2.4009]
+  blend_19_4:
+    translation: [-0.116474, -0.098296, -0.29079]
+    rotation: [-0.0039, 18.1778, -2.4012]
+  blend_19_5:
+    translation: [-0.116741, -0.098296, -0.291235]
+    rotation: [-0.0049, 18.2222, -2.4016]
+  blend_19_6:
+    translation: [-0.117067, -0.096667, -0.291778]
+    rotation: [-0.0059, 18.2666, -2.4019]
+  blend_19_7:
+    translation: [-0.117452, -0.093407, -0.29242]
+    rotation: [-0.0069, 18.3111, -2.4022]
+  blend_19_8:
+    translation: [-0.117896, -0.088519, -0.29316]
+    rotation: [-0.0078, 18.3555, -2.4025]
+  blend_19_9:
+    translation: [-0.1184, -0.082, -0.294]
+    rotation: [-0.0088, 18.4, -2.4028]
+  blend_20_0:
+    translation: [-0.1256, 0.017, -0.306]
+    rotation: [-0.0089, 19.6, -0.603]
+  blend_20_1:
+    translation: [-0.126104, 0.023519, -0.30684]
+    rotation: [-0.0079, 19.6445, -0.6026]
+  blend_20_2:
+    translation: [-0.126548, 0.028407, -0.30758]
+    rotation: [-0.0069, 19.6889, -0.6023]
+  blend_20_3:
+    translation: [-0.126933, 0.031667, -0.308222]
+    rotation: [-0.0059, 19.7334, -0.602]
+  blend_20_4:
+    translation: [-0.127259, 0.033296, -0.308765]
+    rotation: [-0.0049, 19.7778, -0.6017]
+  blend_20_5:
+    translation: [-0.127526, 0.033296, -0.30921]
+    rotation: [-0.004, 19.8222, -0.6013]
+  blend_20_6:
+    translation: [-0.127733, 0.031667, -0.309556]
+    rotation: [-0.003, 19.8667, -0.601]
+  blend_20_7:
+    translation: [-0.127881, 0.028407, -0.309802]
+    rotation: [-0.002, 19.9111, -0.6007]
+  blend_20_8:
+    translation: [-0.12797, 0.023519, -0.309951]
+    rotation: [-0.001, 19.9556, -0.6003]
+  blend_20_9:
+    translation: [-0.128, 0.017, -0.31]
+    rotation: [0.0, 20.0, -0.6]
+  blend_21_0:
+    translation: [-0.128, -0.082, -0.31]
+    rotation: [-0.0, 20.0, -2.4]
+  blend_21_1:
+    translation: [-0.12797, -0.088519, -0.309951]
+    rotation: [0.001, 19.9556, -2.3997]
+  blend_21_2:
+    translation: [-0.127881, -0.093407, -0.309802]
+    rotation: [0.002, 19.9111, -2.3993]
+  blend_21_3:
+    translation: [-0.127733, -0.096667, -0.309556]
+    rotation: [0.003, 19.8667, -2.399]
+  blend_21_4:
+    translation: [-0.127526, -0.098296, -0.30921]
+    rotation: [0.004, 19.8222, -2.3987]
+  blend_21_5:
+    translation: [-0.127259, -0.098296, -0.308765]
+    rotation: [0.0049, 19.7778, -2.3983]
+  blend_21_6:
+    translation: [-0.126933, -0.096667, -0.308222]
+    rotation: [0.0059, 19.7334, -2.398]
+  blend_21_7:
+    translation: [-0.126548, -0.093407, -0.30758]
+    rotation: [0.0069, 19.6889, -2.3977]
+  blend_21_8:
+    translation: [-0.126104, -0.088519, -0.30684]
+    rotation: [0.0079, 19.6445, -2.3974]
+  blend_21_9:
+    translation: [-0.1256, -0.082, -0.306]
+    rotation: [0.0089, 19.6, -2.397]
+cleaning_sequence:
+- [point1, blend_0_0]
+- [blend_0_0, blend_0_1]
+- [blend_0_1, blend_0_2]
+- [blend_0_2, blend_0_3]
+- [blend_0_3, blend_0_4]
+- [blend_0_4, blend_0_5]
+- [blend_0_5, blend_0_6]
+- [blend_0_6, blend_0_7]
+- [blend_0_7, blend_0_8]
+- [blend_0_8, blend_0_9]
+- [blend_0_9, blend_1_0]
+- [blend_1_0, blend_1_1]
+- [blend_1_1, blend_1_2]
+- [blend_1_2, blend_1_3]
+- [blend_1_3, blend_1_4]
+- [blend_1_4, blend_1_5]
+- [blend_1_5, blend_1_6]
+- [blend_1_6, blend_1_7]
+- [blend_1_7, blend_1_8]
+- [blend_1_8, blend_1_9]
+- [blend_1_9, blend_2_0]
+- [blend_2_0, blend_2_1]
+- [blend_2_1, blend_2_2]
+- [blend_2_2, blend_2_3]
+- [blend_2_3, blend_2_4]
+- [blend_2_4, blend_2_5]
+- [blend_2_5, blend_2_6]
+- [blend_2_6, blend_2_7]
+- [blend_2_7, blend_2_8]
+- [blend_2_8, blend_2_9]
+- [blend_2_9, blend_3_0]
+- [blend_3_0, blend_3_1]
+- [blend_3_1, blend_3_2]
+- [blend_3_2, blend_3_3]
+- [blend_3_3, blend_3_4]
+- [blend_3_4, blend_3_5]
+- [blend_3_5, blend_3_6]
+- [blend_3_6, blend_3_7]
+- [blend_3_7, blend_3_8]
+- [blend_3_8, blend_3_9]
+- [blend_3_9, blend_4_0]
+- [blend_4_0, blend_4_1]
+- [blend_4_1, blend_4_2]
+- [blend_4_2, blend_4_3]
+- [blend_4_3, blend_4_4]
+- [blend_4_4, blend_4_5]
+- [blend_4_5, blend_4_6]
+- [blend_4_6, blend_4_7]
+- [blend_4_7, blend_4_8]
+- [blend_4_8, blend_4_9]
+- [blend_4_9, blend_5_0]
+- [blend_5_0, blend_5_1]
+- [blend_5_1, blend_5_2]
+- [blend_5_2, blend_5_3]
+- [blend_5_3, blend_5_4]
+- [blend_5_4, blend_5_5]
+- [blend_5_5, blend_5_6]
+- [blend_5_6, blend_5_7]
+- [blend_5_7, blend_5_8]
+- [blend_5_8, blend_5_9]
+- [blend_5_9, blend_6_0]
+- [blend_6_0, blend_6_1]
+- [blend_6_1, blend_6_2]
+- [blend_6_2, blend_6_3]
+- [blend_6_3, blend_6_4]
+- [blend_6_4, blend_6_5]
+- [blend_6_5, blend_6_6]
+- [blend_6_6, blend_6_7]
+- [blend_6_7, blend_6_8]
+- [blend_6_8, blend_6_9]
+- [blend_6_9, blend_7_0]
+- [blend_7_0, blend_7_1]
+- [blend_7_1, blend_7_2]
+- [blend_7_2, blend_7_3]
+- [blend_7_3, blend_7_4]
+- [blend_7_4, blend_7_5]
+- [blend_7_5, blend_7_6]
+- [blend_7_6, blend_7_7]
+- [blend_7_7, blend_7_8]
+- [blend_7_8, blend_7_9]
+- [blend_7_9, blend_8_0]
+- [blend_8_0, blend_8_1]
+- [blend_8_1, blend_8_2]
+- [blend_8_2, blend_8_3]
+- [blend_8_3, blend_8_4]
+- [blend_8_4, blend_8_5]
+- [blend_8_5, blend_8_6]
+- [blend_8_6, blend_8_7]
+- [blend_8_7, blend_8_8]
+- [blend_8_8, blend_8_9]
+- [blend_8_9, blend_9_0]
+- [blend_9_0, blend_9_1]
+- [blend_9_1, blend_9_2]
+- [blend_9_2, blend_9_3]
+- [blend_9_3, blend_9_4]
+- [blend_9_4, blend_9_5]
+- [blend_9_5, blend_9_6]
+- [blend_9_6, blend_9_7]
+- [blend_9_7, blend_9_8]
+- [blend_9_8, blend_9_9]
+- [blend_9_9, blend_10_0]
+- [blend_10_0, blend_10_1]
+- [blend_10_1, blend_10_2]
+- [blend_10_2, blend_10_3]
+- [blend_10_3, blend_10_4]
+- [blend_10_4, blend_10_5]
+- [blend_10_5, blend_10_6]
+- [blend_10_6, blend_10_7]
+- [blend_10_7, blend_10_8]
+- [blend_10_8, blend_10_9]
+- [blend_10_9, blend_11_0]
+- [blend_11_0, blend_11_1]
+- [blend_11_1, blend_11_2]
+- [blend_11_2, blend_11_3]
+- [blend_11_3, blend_11_4]
+- [blend_11_4, blend_11_5]
+- [blend_11_5, blend_11_6]
+- [blend_11_6, blend_11_7]
+- [blend_11_7, blend_11_8]
+- [blend_11_8, blend_11_9]
+- [blend_11_9, blend_12_0]
+- [blend_12_0, blend_12_1]
+- [blend_12_1, blend_12_2]
+- [blend_12_2, blend_12_3]
+- [blend_12_3, blend_12_4]
+- [blend_12_4, blend_12_5]
+- [blend_12_5, blend_12_6]
+- [blend_12_6, blend_12_7]
+- [blend_12_7, blend_12_8]
+- [blend_12_8, blend_12_9]
+- [blend_12_9, blend_13_0]
+- [blend_13_0, blend_13_1]
+- [blend_13_1, blend_13_2]
+- [blend_13_2, blend_13_3]
+- [blend_13_3, blend_13_4]
+- [blend_13_4, blend_13_5]
+- [blend_13_5, blend_13_6]
+- [blend_13_6, blend_13_7]
+- [blend_13_7, blend_13_8]
+- [blend_13_8, blend_13_9]
+- [blend_13_9, blend_14_0]
+- [blend_14_0, blend_14_1]
+- [blend_14_1, blend_14_2]
+- [blend_14_2, blend_14_3]
+- [blend_14_3, blend_14_4]
+- [blend_14_4, blend_14_5]
+- [blend_14_5, blend_14_6]
+- [blend_14_6, blend_14_7]
+- [blend_14_7, blend_14_8]
+- [blend_14_8, blend_14_9]
+- [blend_14_9, blend_15_0]
+- [blend_15_0, blend_15_1]
+- [blend_15_1, blend_15_2]
+- [blend_15_2, blend_15_3]
+- [blend_15_3, blend_15_4]
+- [blend_15_4, blend_15_5]
+- [blend_15_5, blend_15_6]
+- [blend_15_6, blend_15_7]
+- [blend_15_7, blend_15_8]
+- [blend_15_8, blend_15_9]
+- [blend_15_9, blend_16_0]
+- [blend_16_0, blend_16_1]
+- [blend_16_1, blend_16_2]
+- [blend_16_2, blend_16_3]
+- [blend_16_3, blend_16_4]
+- [blend_16_4, blend_16_5]
+- [blend_16_5, blend_16_6]
+- [blend_16_6, blend_16_7]
+- [blend_16_7, blend_16_8]
+- [blend_16_8, blend_16_9]
+- [blend_16_9, blend_17_0]
+- [blend_17_0, blend_17_1]
+- [blend_17_1, blend_17_2]
+- [blend_17_2, blend_17_3]
+- [blend_17_3, blend_17_4]
+- [blend_17_4, blend_17_5]
+- [blend_17_5, blend_17_6]
+- [blend_17_6, blend_17_7]
+- [blend_17_7, blend_17_8]
+- [blend_17_8, blend_17_9]
+- [blend_17_9, blend_18_0]
+- [blend_18_0, blend_18_1]
+- [blend_18_1, blend_18_2]
+- [blend_18_2, blend_18_3]
+- [blend_18_3, blend_18_4]
+- [blend_18_4, blend_18_5]
+- [blend_18_5, blend_18_6]
+- [blend_18_6, blend_18_7]
+- [blend_18_7, blend_18_8]
+- [blend_18_8, blend_18_9]
+- [blend_18_9, blend_19_0]
+- [blend_19_0, blend_19_1]
+- [blend_19_1, blend_19_2]
+- [blend_19_2, blend_19_3]
+- [blend_19_3, blend_19_4]
+- [blend_19_4, blend_19_5]
+- [blend_19_5, blend_19_6]
+- [blend_19_6, blend_19_7]
+- [blend_19_7, blend_19_8]
+- [blend_19_8, blend_19_9]
+- [blend_19_9, blend_20_0]
+- [blend_20_0, blend_20_1]
+- [blend_20_1, blend_20_2]
+- [blend_20_2, blend_20_3]
+- [blend_20_3, blend_20_4]
+- [blend_20_4, blend_20_5]
+- [blend_20_5, blend_20_6]
+- [blend_20_6, blend_20_7]
+- [blend_20_7, blend_20_8]
+- [blend_20_8, blend_20_9]
+- [blend_20_9, blend_21_0]
+- [blend_21_0, blend_21_1]
+- [blend_21_1, blend_21_2]
+- [blend_21_2, blend_21_3]
+- [blend_21_3, blend_21_4]
+- [blend_21_4, blend_21_5]
+- [blend_21_5, blend_21_6]
+- [blend_21_6, blend_21_7]
+- [blend_21_7, blend_21_8]
+- [blend_21_8, blend_21_9]
+- [blend_21_9, point20]
+stage_sequence:
+- stage: setup_washroom_scene
+  conditional: true
+  condition_param: enable_washroom_scene
+- stage: current_state
+- stage: hand_release
+  pose_name: release
+  planning_group: inspire_hand_right
+- stage: move_pole_to_half_height
+  pose_name: half_length
+  planning_group: pole_right
+- stage: hand_grasp
+  pose_name: grasp
+  planning_group: inspire_hand_right
+- stage: move_to_pre_start
+  pose_name: pre_start_pose
+  planning_group: rm75_arm_right
+  conditional: true
+  condition_param: use_prestart_stage
+- stage: allow_collision
+  contact_surface: seat_and_lid
+- stage: move_to_start
+  pose_name: start_pose
+  planning_group: rm75_arm_right
+- stage: open_tenth
+  pose_name: open_tenth
+  planning_group: inspire_hand_right
+- stage: execute_path
+- stage: move_to_rest
+  pose_name: rest_pose
+  planning_group: rm75_arm_right
+- stage: forbid_collision
+  contact_surface: seat_and_lid
+- stage: move_pole_to_half_height
+  pose_name: half_length
+  planning_group: pole_right

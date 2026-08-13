@@ -1,0 +1,570 @@
+# =============================================================================
+# GENERATED FILE — DO NOT EDIT MANUALLY
+# Created by blend_turning_points.py
+# angle_threshold  : 90.0°
+# blend_fraction   : 0.2
+# n_blend_points   : 5
+# turns blended    : 21
+# new waypoints    : 105
+# original seq len : 22
+# new seq len      : 106
+# =============================================================================
+
+task_parameters:
+  use_prestart_stage: true
+  commode_fixture_type: closed
+  ik_frame: L_glove_frame_1
+  waypoint_reduction_mode: dp_and_linear
+  dp_pos_tolerance: 0.001
+  dp_rot_tolerance: 0.0017
+  waypoint_step: 1
+  max_jerk_scaling: 0.3
+cartesian_poses:
+  start_pose: [0.6025, 0.33, -0.125, 0.6506, 0.7459, 0.0823, 0.1166]
+  pre_start_pose: [0.55, 0.37, -0.07, 0.6506, 0.7459, 0.0823, 0.1166]
+cleaning_points:
+  point1:
+    translation: [0.0, 0.0, 0.0]
+    rotation: [0.0, 0.0, 0.0]
+  point2:
+    translation: [0.05, 0.0, 0.0]
+    rotation: [0.0, 0.0, 0.0]
+  point3:
+    translation: [0.1, 0.0, 0.0]
+    rotation: [0.0, -7.0, 0.0]
+  point4:
+    translation: [0.15, 0.0, 0.0]
+    rotation: [0.0, -15.0, 0.0]
+  point5:
+    translation: [0.2, 0.0, 0.0]
+    rotation: [0.0, -20.0, 0.0]
+  point6:
+    translation: [0.25, 0.0, 0.0]
+    rotation: [0.0, -25.0, 0.0]
+  point7:
+    translation: [0.3, 0.0, 0.0]
+    rotation: [0.0, -30.0, 0.0]
+  point8:
+    translation: [0.35, 0.0, 0.0]
+    rotation: [0.0, -35.0, 0.0]
+  point11:
+    translation: [-0.03, -0.015, -0.08]
+    rotation: [3.0, 5.0, 20.0]
+  point12:
+    translation: [0.02, -0.01, -0.08]
+    rotation: [2.0, -2.5, 10.0]
+  point13:
+    translation: [0.1, -0.005, -0.08]
+    rotation: [0.0, -10.0, 0.0]
+  point14:
+    translation: [0.15, -0.005, -0.08]
+    rotation: [0.0, -15.0, 0.0]
+  point15:
+    translation: [0.2, -0.005, -0.08]
+    rotation: [0.0, -20.0, 0.0]
+  point16:
+    translation: [0.25, -0.005, -0.08]
+    rotation: [0.0, -25.0, 0.0]
+  point17:
+    translation: [0.3, -0.005, -0.08]
+    rotation: [0.0, -33.0, 0.0]
+  point18:
+    translation: [0.35, -0.005, -0.08]
+    rotation: [0.0, -35.0, 0.0]
+  point21:
+    translation: [0.0, -0.02, -0.16]
+    rotation: [5.0, 10.0, 15.0]
+  point22:
+    translation: [0.05, -0.015, -0.16]
+    rotation: [2.0, 5.0, 10.0]
+  point23:
+    translation: [0.1, -0.01, -0.16]
+    rotation: [2.0, -7.0, 5.0]
+  point24:
+    translation: [0.125, -0.01, -0.16]
+    rotation: [2.0, -15.0, 0.0]
+  point25:
+    translation: [0.16, -0.01, -0.16]
+    rotation: [2.0, -20.0, 0.0]
+  point26:
+    translation: [0.21, -0.01, -0.16]
+    rotation: [2.0, -25.0, 0.0]
+  point27:
+    translation: [0.24, -0.01, -0.15]
+    rotation: [2.0, -30.0, 0.0]
+  point28:
+    translation: [0.35, -0.01, -0.16]
+    rotation: [2.0, -35.0, 0.0]
+  point31:
+    translation: [0.0, -0.02, -0.26]
+    rotation: [3.0, 12.0, 15.0]
+  point32:
+    translation: [0.05, -0.015, -0.25]
+    rotation: [3.0, 5.0, 10.0]
+  point33:
+    translation: [0.1, -0.015, -0.23]
+    rotation: [5.0, 7.0, 0.0]
+  point34:
+    translation: [0.15, -0.015, -0.22]
+    rotation: [5.0, -10.0, 0.0]
+  point35:
+    translation: [0.2, -0.015, -0.22]
+    rotation: [5.0, 0.0, 0.0]
+  point36:
+    translation: [0.25, -0.015, -0.22]
+    rotation: [5.0, 0.0, 0.0]
+  point37:
+    translation: [0.0, 0.01, -0.03]
+    rotation: [0.0, 0.0, 0.0]
+  blend_0_0:
+    translation: [0.04, -0.012, -0.2]
+    rotation: [2.3294, 4.0432, 7.975]
+  blend_0_1:
+    translation: [0.044375, -0.013125, -0.21875]
+    rotation: [2.3294, 4.0432, 7.975]
+  blend_0_2:
+    translation: [0.0475, -0.0135, -0.225]
+    rotation: [2.3294, 4.0432, 7.975]
+  blend_0_3:
+    translation: [0.049375, -0.013125, -0.21875]
+    rotation: [2.3294, 4.0432, 7.975]
+  blend_0_4:
+    translation: [0.05, -0.012, -0.2]
+    rotation: [2.3294, 4.0432, 7.975]
+  blend_1_0:
+    translation: [0.05, -0.003, -0.05]
+    rotation: [0.5289, 1.0405, 1.977]
+  blend_1_1:
+    translation: [0.050625, -0.001875, -0.031]
+    rotation: [0.6474, 1.1287, 1.4702]
+  blend_1_2:
+    translation: [0.0525, -0.0015, -0.024]
+    rotation: [0.7651, 1.218, 0.9637]
+  blend_1_3:
+    translation: [0.055625, -0.001875, -0.029]
+    rotation: [0.8821, 1.3083, 0.4573]
+  blend_1_4:
+    translation: [0.06, -0.003, -0.046]
+    rotation: [0.9982, 1.3996, -0.0489]
+  blend_2_0:
+    translation: [0.09, -0.012, -0.184]
+    rotation: [3.9958, 5.6004, -0.0491]
+  blend_2_1:
+    translation: [0.094375, -0.013125, -0.20125]
+    rotation: [3.9955, 5.2505, -0.0614]
+  blend_2_2:
+    translation: [0.0975, -0.0135, -0.207]
+    rotation: [3.9954, 4.9006, -0.0736]
+  blend_2_3:
+    translation: [0.099375, -0.013125, -0.20125]
+    rotation: [3.9952, 4.5507, -0.0859]
+  blend_2_4:
+    translation: [0.1, -0.012, -0.184]
+    rotation: [3.9952, 4.2009, -0.0981]
+  blend_3_0:
+    translation: [0.1, -0.003, -0.046]
+    rotation: [1.0048, -4.2009, -0.0981]
+  blend_3_1:
+    translation: [0.100625, -0.001875, -0.028625]
+    rotation: [1.0035, -5.0506, -0.0684]
+  blend_3_2:
+    translation: [0.1025, -0.0015, -0.0225]
+    rotation: [1.0018, -5.9003, -0.0386]
+  blend_3_3:
+    translation: [0.105625, -0.001875, -0.027625]
+    rotation: [0.9997, -6.7501, -0.0088]
+  blend_3_4:
+    translation: [0.11, -0.003, -0.044]
+    rotation: [0.9971, -7.5998, 0.0211]
+  blend_4_0:
+    translation: [0.14, -0.012, -0.176]
+    rotation: [3.9966, -9.4002, 0.0212]
+  blend_4_1:
+    translation: [0.144375, -0.013125, -0.1925]
+    rotation: [3.9991, -9.8001, 0.0071]
+  blend_4_2:
+    translation: [0.1475, -0.0135, -0.198]
+    rotation: [4.0017, -10.1999, -0.0071]
+  blend_4_3:
+    translation: [0.149375, -0.013125, -0.1925]
+    rotation: [4.0043, -10.5998, -0.0213]
+  blend_4_4:
+    translation: [0.15, -0.012, -0.176]
+    rotation: [4.0071, -10.9997, -0.0356]
+  blend_5_0:
+    translation: [0.15, -0.003, -0.044]
+    rotation: [1.0084, -14.0003, -0.036]
+  blend_5_1:
+    translation: [0.15075, -0.001812, -0.02675]
+    rotation: [0.8552, -14.7503, -0.0229]
+  blend_5_2:
+    translation: [0.153, -0.00125, -0.019]
+    rotation: [0.7012, -15.5002, -0.0077]
+  blend_5_3:
+    translation: [0.15675, -0.001313, -0.02075]
+    rotation: [0.5465, -16.2501, 0.0097]
+  blend_5_4:
+    translation: [0.162, -0.002, -0.032]
+    rotation: [0.391, -16.9999, 0.0292]
+  blend_6_0:
+    translation: [0.198, -0.008, -0.128]
+    rotation: [1.5886, -23.0001, 0.0303]
+  blend_6_1:
+    translation: [0.203125, -0.00875, -0.14]
+    rotation: [1.5899, -23.2501, 0.0266]
+  blend_6_2:
+    translation: [0.2065, -0.009, -0.144]
+    rotation: [1.5912, -23.5001, 0.0228]
+  blend_6_3:
+    translation: [0.208125, -0.00875, -0.14]
+    rotation: [1.5926, -23.7501, 0.0191]
+  blend_6_4:
+    translation: [0.208, -0.008, -0.128]
+    rotation: [1.5939, -24.0, 0.0153]
+  blend_7_0:
+    translation: [0.202, -0.002, -0.032]
+    rotation: [0.3945, -21.0, 0.015]
+  blend_7_1:
+    translation: [0.201625, -0.00125, -0.019875]
+    rotation: [0.393, -21.2499, 0.0187]
+  blend_7_2:
+    translation: [0.2025, -0.001, -0.0155]
+    rotation: [0.3914, -21.4999, 0.0225]
+  blend_7_3:
+    translation: [0.204625, -0.00125, -0.018875]
+    rotation: [0.3898, -21.7499, 0.0263]
+  blend_7_4:
+    translation: [0.208, -0.002, -0.03]
+    rotation: [0.3882, -21.9999, 0.0301]
+  blend_8_0:
+    translation: [0.232, -0.008, -0.12]
+    rotation: [1.5856, -28.0001, 0.0316]
+  blend_8_1:
+    translation: [0.235625, -0.00875, -0.13125]
+    rotation: [1.5873, -28.2501, 0.0277]
+  blend_8_2:
+    translation: [0.2385, -0.009, -0.135]
+    rotation: [1.589, -28.5001, 0.0238]
+  blend_8_3:
+    translation: [0.240625, -0.00875, -0.13125]
+    rotation: [1.5907, -28.7501, 0.0199]
+  blend_8_4:
+    translation: [0.242, -0.008, -0.12]
+    rotation: [1.5924, -29.0, 0.016]
+  blend_9_0:
+    translation: [0.248, -0.002, -0.03]
+    rotation: [0.3931, -26.0, 0.0155]
+  blend_9_1:
+    translation: [0.2495, -0.001188, -0.017875]
+    rotation: [0.295, -26.15, 0.0112]
+  blend_9_2:
+    translation: [0.252, -0.00075, -0.0115]
+    rotation: [0.1968, -26.3, 0.0072]
+  blend_9_3:
+    translation: [0.2555, -0.000688, -0.010875]
+    rotation: [0.0984, -26.45, 0.0035]
+  blend_9_4:
+    translation: [0.26, -0.001, -0.016]
+    rotation: [-0.0, -26.6, -0.0]
+  blend_10_0:
+    translation: [0.29, -0.004, -0.064]
+    rotation: [0.0, -31.4, 0.0]
+  blend_10_1:
+    translation: [0.294375, -0.004375, -0.07]
+    rotation: [0.0, -31.65, 0.0]
+  blend_10_2:
+    translation: [0.2975, -0.0045, -0.072]
+    rotation: [0.0, -31.9, 0.0]
+  blend_10_3:
+    translation: [0.299375, -0.004375, -0.07]
+    rotation: [0.0, -32.15, 0.0]
+  blend_10_4:
+    translation: [0.3, -0.004, -0.064]
+    rotation: [0.0, -32.4, 0.0]
+  blend_11_0:
+    translation: [0.3, -0.001, -0.016]
+    rotation: [0.0, -30.6, 0.0]
+  blend_11_1:
+    translation: [0.29925, -0.000688, -0.010875]
+    rotation: [0.1002, -30.45, -0.0005]
+  blend_11_2:
+    translation: [0.297, -0.00075, -0.0115]
+    rotation: [0.2003, -30.3, -0.0006]
+  blend_11_3:
+    translation: [0.29325, -0.001188, -0.017875]
+    rotation: [0.3002, -30.15, -0.0005]
+  blend_11_4:
+    translation: [0.288, -0.002, -0.03]
+    rotation: [0.4, -30.0, -0.0]
+  blend_12_0:
+    translation: [0.252, -0.008, -0.12]
+    rotation: [1.6, -30.0, -0.0]
+  blend_12_1:
+    translation: [0.246875, -0.00875, -0.13125]
+    rotation: [1.5981, -29.75, 0.004]
+  blend_12_2:
+    translation: [0.2435, -0.009, -0.135]
+    rotation: [1.5961, -29.5, 0.008]
+  blend_12_3:
+    translation: [0.241875, -0.00875, -0.13125]
+    rotation: [1.5942, -29.25, 0.012]
+  blend_12_4:
+    translation: [0.242, -0.008, -0.12]
+    rotation: [1.5924, -29.0, 0.016]
+  blend_13_0:
+    translation: [0.248, -0.002, -0.03]
+    rotation: [0.3931, -26.0, 0.0155]
+  blend_13_1:
+    translation: [0.248375, -0.00125, -0.018875]
+    rotation: [0.3948, -25.75, 0.0116]
+  blend_13_2:
+    translation: [0.2475, -0.001, -0.0155]
+    rotation: [0.3966, -25.5, 0.0077]
+  blend_13_3:
+    translation: [0.245375, -0.00125, -0.019875]
+    rotation: [0.3983, -25.25, 0.0039]
+  blend_13_4:
+    translation: [0.242, -0.002, -0.032]
+    rotation: [0.4, -25.0, 0.0]
+  blend_14_0:
+    translation: [0.218, -0.008, -0.128]
+    rotation: [1.6, -25.0, -0.0]
+  blend_14_1:
+    translation: [0.214375, -0.00875, -0.14]
+    rotation: [1.5984, -24.75, 0.0038]
+  blend_14_2:
+    translation: [0.2115, -0.009, -0.144]
+    rotation: [1.5969, -24.5, 0.0077]
+  blend_14_3:
+    translation: [0.209375, -0.00875, -0.14]
+    rotation: [1.5954, -24.25, 0.0115]
+  blend_14_4:
+    translation: [0.208, -0.008, -0.128]
+    rotation: [1.5939, -24.0, 0.0153]
+  blend_15_0:
+    translation: [0.202, -0.002, -0.032]
+    rotation: [0.3945, -21.0, 0.015]
+  blend_15_1:
+    translation: [0.2005, -0.001313, -0.02075]
+    rotation: [0.5528, -20.2502, -0.0106]
+  blend_15_2:
+    translation: [0.198, -0.00125, -0.019]
+    rotation: [0.7101, -19.5004, -0.0338]
+  blend_15_3:
+    translation: [0.1945, -0.001812, -0.02675]
+    rotation: [0.8663, -18.7505, -0.0547]
+  blend_15_4:
+    translation: [0.19, -0.003, -0.044]
+    rotation: [1.0215, -18.0006, -0.0734]
+  blend_16_0:
+    translation: [0.16, -0.012, -0.176]
+    rotation: [4.0161, -11.9994, -0.0714]
+  blend_16_1:
+    translation: [0.155625, -0.013125, -0.1925]
+    rotation: [4.0138, -11.7495, -0.0624]
+  blend_16_2:
+    translation: [0.1525, -0.0135, -0.198]
+    rotation: [4.0115, -11.4995, -0.0535]
+  blend_16_3:
+    translation: [0.150625, -0.013125, -0.1925]
+    rotation: [4.0093, -11.2496, -0.0445]
+  blend_16_4:
+    translation: [0.15, -0.012, -0.176]
+    rotation: [4.0071, -10.9997, -0.0356]
+  blend_17_0:
+    translation: [0.15, -0.003, -0.044]
+    rotation: [1.0084, -14.0003, -0.036]
+  blend_17_1:
+    translation: [0.149375, -0.001875, -0.027625]
+    rotation: [1.0127, -13.1506, -0.0664]
+  blend_17_2:
+    translation: [0.1475, -0.0015, -0.0225]
+    rotation: [1.0166, -12.3008, -0.0966]
+  blend_17_3:
+    translation: [0.144375, -0.001875, -0.028625]
+    rotation: [1.02, -11.4511, -0.1267]
+  blend_17_4:
+    translation: [0.14, -0.003, -0.046]
+    rotation: [1.0229, -10.6013, -0.1566]
+  blend_18_0:
+    translation: [0.11, -0.012, -0.184]
+    rotation: [3.9989, 2.6013, -0.1541]
+  blend_18_1:
+    translation: [0.105625, -0.013125, -0.20125]
+    rotation: [3.9979, 3.0012, -0.1401]
+  blend_18_2:
+    translation: [0.1025, -0.0135, -0.207]
+    rotation: [3.9969, 3.4011, -0.1261]
+  blend_18_3:
+    translation: [0.100625, -0.013125, -0.20125]
+    rotation: [3.996, 3.801, -0.1121]
+  blend_18_4:
+    translation: [0.1, -0.012, -0.184]
+    rotation: [3.9952, 4.2009, -0.0981]
+  blend_19_0:
+    translation: [0.1, -0.003, -0.046]
+    rotation: [1.0048, -4.2009, -0.0981]
+  blend_19_1:
+    translation: [0.099375, -0.001875, -0.029]
+    rotation: [0.8633, -4.2929, 0.4158]
+  blend_19_2:
+    translation: [0.0975, -0.0015, -0.024]
+    rotation: [0.7211, -4.3836, 0.93]
+  blend_19_3:
+    translation: [0.094375, -0.001875, -0.031]
+    rotation: [0.5779, -4.4731, 1.4445]
+  blend_19_4:
+    translation: [0.09, -0.003, -0.05]
+    rotation: [0.434, -4.5613, 1.9593]
+  blend_20_0:
+    translation: [0.06, -0.012, -0.2]
+    rotation: [2.2316, 2.645, 7.9457]
+  blend_20_1:
+    translation: [0.055, -0.013, -0.219125]
+    rotation: [2.256, 2.9946, 7.9528]
+  blend_20_2:
+    translation: [0.05, -0.013, -0.2265]
+    rotation: [2.2804, 3.3441, 7.9601]
+  blend_20_3:
+    translation: [0.045, -0.012, -0.222125]
+    rotation: [2.3049, 3.6937, 7.9674]
+  blend_20_4:
+    translation: [0.04, -0.01, -0.206]
+    rotation: [2.3294, 4.0432, 7.975]
+cleaning_sequence:
+- [point1, blend_0_0]
+- [blend_0_0, blend_0_1]
+- [blend_0_1, blend_0_2]
+- [blend_0_2, blend_0_3]
+- [blend_0_3, blend_0_4]
+- [blend_0_4, blend_1_0]
+- [blend_1_0, blend_1_1]
+- [blend_1_1, blend_1_2]
+- [blend_1_2, blend_1_3]
+- [blend_1_3, blend_1_4]
+- [blend_1_4, blend_2_0]
+- [blend_2_0, blend_2_1]
+- [blend_2_1, blend_2_2]
+- [blend_2_2, blend_2_3]
+- [blend_2_3, blend_2_4]
+- [blend_2_4, blend_3_0]
+- [blend_3_0, blend_3_1]
+- [blend_3_1, blend_3_2]
+- [blend_3_2, blend_3_3]
+- [blend_3_3, blend_3_4]
+- [blend_3_4, blend_4_0]
+- [blend_4_0, blend_4_1]
+- [blend_4_1, blend_4_2]
+- [blend_4_2, blend_4_3]
+- [blend_4_3, blend_4_4]
+- [blend_4_4, blend_5_0]
+- [blend_5_0, blend_5_1]
+- [blend_5_1, blend_5_2]
+- [blend_5_2, blend_5_3]
+- [blend_5_3, blend_5_4]
+- [blend_5_4, blend_6_0]
+- [blend_6_0, blend_6_1]
+- [blend_6_1, blend_6_2]
+- [blend_6_2, blend_6_3]
+- [blend_6_3, blend_6_4]
+- [blend_6_4, blend_7_0]
+- [blend_7_0, blend_7_1]
+- [blend_7_1, blend_7_2]
+- [blend_7_2, blend_7_3]
+- [blend_7_3, blend_7_4]
+- [blend_7_4, blend_8_0]
+- [blend_8_0, blend_8_1]
+- [blend_8_1, blend_8_2]
+- [blend_8_2, blend_8_3]
+- [blend_8_3, blend_8_4]
+- [blend_8_4, blend_9_0]
+- [blend_9_0, blend_9_1]
+- [blend_9_1, blend_9_2]
+- [blend_9_2, blend_9_3]
+- [blend_9_3, blend_9_4]
+- [blend_9_4, blend_10_0]
+- [blend_10_0, blend_10_1]
+- [blend_10_1, blend_10_2]
+- [blend_10_2, blend_10_3]
+- [blend_10_3, blend_10_4]
+- [blend_10_4, blend_11_0]
+- [blend_11_0, blend_11_1]
+- [blend_11_1, blend_11_2]
+- [blend_11_2, blend_11_3]
+- [blend_11_3, blend_11_4]
+- [blend_11_4, blend_12_0]
+- [blend_12_0, blend_12_1]
+- [blend_12_1, blend_12_2]
+- [blend_12_2, blend_12_3]
+- [blend_12_3, blend_12_4]
+- [blend_12_4, blend_13_0]
+- [blend_13_0, blend_13_1]
+- [blend_13_1, blend_13_2]
+- [blend_13_2, blend_13_3]
+- [blend_13_3, blend_13_4]
+- [blend_13_4, blend_14_0]
+- [blend_14_0, blend_14_1]
+- [blend_14_1, blend_14_2]
+- [blend_14_2, blend_14_3]
+- [blend_14_3, blend_14_4]
+- [blend_14_4, blend_15_0]
+- [blend_15_0, blend_15_1]
+- [blend_15_1, blend_15_2]
+- [blend_15_2, blend_15_3]
+- [blend_15_3, blend_15_4]
+- [blend_15_4, blend_16_0]
+- [blend_16_0, blend_16_1]
+- [blend_16_1, blend_16_2]
+- [blend_16_2, blend_16_3]
+- [blend_16_3, blend_16_4]
+- [blend_16_4, blend_17_0]
+- [blend_17_0, blend_17_1]
+- [blend_17_1, blend_17_2]
+- [blend_17_2, blend_17_3]
+- [blend_17_3, blend_17_4]
+- [blend_17_4, blend_18_0]
+- [blend_18_0, blend_18_1]
+- [blend_18_1, blend_18_2]
+- [blend_18_2, blend_18_3]
+- [blend_18_3, blend_18_4]
+- [blend_18_4, blend_19_0]
+- [blend_19_0, blend_19_1]
+- [blend_19_1, blend_19_2]
+- [blend_19_2, blend_19_3]
+- [blend_19_3, blend_19_4]
+- [blend_19_4, blend_20_0]
+- [blend_20_0, blend_20_1]
+- [blend_20_1, blend_20_2]
+- [blend_20_2, blend_20_3]
+- [blend_20_3, blend_20_4]
+- [blend_20_4, point37]
+stage_sequence:
+- stage: setup_washroom_scene
+  conditional: true
+  condition_param: enable_washroom_scene
+- stage: current_state
+- stage: hand_grasp
+  pose_name: grasp
+  planning_group: inspire_hand_left
+- stage: move_pole_to_quarter_height
+  pose_name: quarter_length
+  planning_group: pole_left
+- stage: allow_collision
+  contact_surface: all
+- stage: move_to_start
+  pose_name: start_pose
+  planning_group: rm75_arm_left
+- stage: open_tenth
+  pose_name: open_tenth
+  planning_group: inspire_hand_left
+- stage: execute_path
+- stage: forbid_collision
+  contact_surface: all
+- stage: return_to_pre_start
+  pose_name: pre_start_pose
+  planning_group: rm75_arm_left
+  conditional: true
+  condition_param: use_prestart_stage
+- stage: move_to_rest
+  pose_name: rest_pose
+  planning_group: rm75_arm_left

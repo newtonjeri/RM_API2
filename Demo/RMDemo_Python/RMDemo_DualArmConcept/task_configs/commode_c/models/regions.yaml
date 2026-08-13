@@ -1,0 +1,219 @@
+# =============================================================================
+# MESH-LEVEL REGION ANNOTATIONS (commode_c) — SINGLE SOURCE OF TRUTH
+# =============================================================================
+# This manifest is the authoritative registry for region metadata. The
+# orchestrator's regions_commode.csv is DERIVED from it (the studio server
+# syncs it on save); edit regions here, not in the CSV.
+#
+# Labeled mesh convention:
+#   - One OBJ per component, same local frame and units (metres) as the
+#     component STL (body.stl / lid.stl / seat.stl).
+#   - One OBJ object per region group:  `o <group_name>`  (Blender: split by
+#     selection, name the objects; numeric suffixes like `.001` are stripped).
+#   - Authored once, revisable any time in Blender/MeshLab or with the web
+#     editor's Paint mode (export from the Region Labels panel).
+#
+# Region entries:
+#   groups              ordered list of labeled groups; >1 group = compound
+#                       region (planned per group, chained into one task).
+#                       Each entry is a bare group name (lives in this
+#                       region's `component` OBJ) or {component, name} for a
+#                       group in a NEIGHBOURING component's OBJ — one region
+#                       may span multiple components (e.g. body + seat).
+#   component           primary component (default body); per-group override
+#                       via the {component, name} group form
+#   arm_coverage        R | L | RL_paired | RL_compound
+#   region_id           stable orchestrator id (schedules reference these);
+#                       assigned automatically by the studio when omitted
+#   articulation_state  static | open | closed — articulated-component pose
+#                       the region is cleaned in (default: closed for
+#                       lid/seat, static for body)
+#   lid_state/seat_state  open | closed — explicit full-fixture articulation
+#                       while this region is cleaned, editable from the studio
+#                       Generate tab. Overrides the component-derived guess and
+#                       drives commode_fixture_type (closed / lid_open /
+#                       lid_seat_open). Use for regions whose required state
+#                       the components can't express, e.g. a hinge region
+#                       spanning seat+lid cleaned with the lid open and the
+#                       seat down, or a body region needing the lid open.
+#                       Reality logic is enforced: seat_state open forces
+#                       lid_state open (the seat swings up against the lid).
+#   requires_lid/seat   optional overrides; default: derived from components
+#                       plus any explicit open lid_state/seat_state
+#   ugv_standoff_m      authoring default UGV standoff (METRES, e.g. 0.38) the
+#                       region's tasks are generated at; absent = fleet default
+#                       0.25. Stamped into each generated config's
+#                       task_parameters.ugv_standoff_m (the executable record
+#                       the runtime scene + orchestrator repositioning read).
+#                       Changing it does NOT retroactively update existing
+#                       configs/plans — regenerate them.
+#   surface_type        optional planner override (planar | near_planar |
+#                       single_curved | double_curved | concave_interior | annular)
+#   spacing_m           optional row-spacing override
+#
+# Mechanism pseudo-regions (lid_open, seat_open, lid_close) are not mesh
+# regions; they live only in the orchestrator CSV.
+# =============================================================================
+
+labeled_meshes:
+  body: body_regions.obj
+  lid: lid_regions.obj
+  seat: seat_regions.obj
+
+regions:
+  # --- body ---
+  front:
+    region_id: 11
+    component: body
+    groups:
+    - front
+    arm_coverage: RL_paired
+    description: Front exterior surface
+  side:
+    region_id: 1
+    component: body
+    groups: [sides]
+    arm_coverage: RL_paired
+    description: Side surface
+  top:
+    region_id: 6
+    component: body
+    groups:
+    - top
+    arm_coverage: RL_paired
+    description: Top of commode bowl rim
+  hinge_area:
+    region_id: 13
+    component: body
+    groups: [hinge_area]
+    arm_coverage: RL_paired
+    description: Hinge area (body)
+  # Bowl-interior regions are cleaned through the seat opening with BOTH the
+  # lid and the seat raised (fixture type lid_seat_open).
+  bowl_inside_front:
+    region_id: 7
+    component: body
+    groups: [bowl_inside_front]
+    arm_coverage: R
+    description: Bowl interior front section
+    lid_state: open
+    seat_state: open
+  bowl_inside_back:
+    region_id: 8
+    component: body
+    groups:
+    - bowl_inside_back
+    arm_coverage: L
+    description: Bowl interior back section
+    lid_state: open
+    seat_state: closed
+  bowl_inside_ring:
+    region_id: 9
+    component: body
+    groups: [bowl_inside_ring]
+    arm_coverage: RL_paired
+    description: Bowl interior ring section
+    lid_state: open
+    seat_state: open
+  bowl_inside_rim:
+    region_id: 15
+    component: body
+    groups: [bowl_inside_rim]
+    arm_coverage: RL_paired
+    description: Bowl interior rim
+    lid_state: open
+    seat_state: open
+  deep:
+    region_id: 20
+    component: body
+    groups: [bowl_inside_ring, bowl_inside_back]   # execution order: ring first, then back wall
+    arm_coverage: RL_paired
+    description: Deep bowl cleaning (ring + back wall)
+    surface_type: concave_interior
+    lid_state: open
+    seat_state: open
+  # --- lid ---
+  toplid:
+    region_id: 0
+    component: lid
+    groups: [toplid]
+    arm_coverage: RL_paired
+    description: Top lid surface
+  bottomlid:
+    region_id: 10
+    component: lid
+    groups: [bottomlid]
+    arm_coverage: RL_paired
+    articulation_state: open
+    description: Bottom of lid surface
+    lid_state: open
+    seat_state: closed
+  lid_side:
+    region_id: 21
+    component: lid
+    groups: [lidsides]
+    arm_coverage: RL_paired
+    description: Lid side edges
+  lidsides_back:
+    region_id: 22
+    component: lid
+    groups:
+    - lidsides_back
+    arm_coverage: RL_paired
+    description: Lid sides back
+  lidsides_front:
+    region_id: 23
+    component: lid
+    groups:
+    - lidsides_front
+    arm_coverage: RL_paired
+  # --- seat ---
+  seat_ring:
+    region_id: 3
+    component: seat
+    groups: [seat_ring]
+    arm_coverage: RL_paired
+    description: Seat ring upper surface
+  seat_ring_bottom:
+    region_id: 4
+    component: seat
+    groups: [seat_ring_bottom]
+    arm_coverage: RL_paired
+    articulation_state: open
+    description: Seat ring underside
+    lid_state: open
+    seat_state: open
+  seat_ring_sides:
+    region_id: 18
+    component: seat
+    groups:
+    - seat_ring_sides
+    arm_coverage: RL_paired
+  seat_ring_sides_front:
+    region_id: 19
+    component: seat
+    groups:
+    - seat_ring_sides_front
+    arm_coverage: RL_paired
+  lid_seat_hinge_area:
+    region_id: 24
+    component: lid
+    groups:
+    - lid_seat_hinge_area
+    - component: seat
+      name: lid_seat_hinge_area
+    arm_coverage: RL_paired
+    lid_state: open
+    seat_state: closed
+  seat_body_hinge_area:
+    region_id: 25
+    component: body
+    groups:
+    - seat_body_hinge_area
+    - component: lid
+      name: seat_body_hinge_area
+    - component: seat
+      name: seat_body_hinge_area
+    arm_coverage: RL_paired
+    lid_state: open
+    seat_state: open

@@ -1,0 +1,86 @@
+# =============================================================================
+# COMMODE CLEANING — CATEGORY-LEVEL DEFAULT TASK PARAMETERS
+# =============================================================================
+# Common parameters shared by ALL commode cleaning task YAMLs.
+# Per-task YAML values OVERRIDE these defaults.
+#
+# STRUCTURE
+#   task_parameters:           cross-arm defaults (apply to every task)
+#   arm_defaults.left/right:   per-arm defaults (planning groups, ik_frame,
+#                              joint_space_poses) — selected at load time from
+#                              task_parameters.primary_planning_group suffix
+#                              (`_left` / `_right`) or joint_space_poses group
+#                              names if task_parameters has no arm-specific keys.
+#
+# Override at launch via:
+#   - explicit launch args (e.g. max_velocity_scaling, plan_only, step_size)
+#   - generic `task_parameter_overrides:='key=value;key=value'`
+#   - `cleaning_path_mode:=...`
+# =============================================================================
+
+task_parameters:
+  # ---------------------------------------------------------------------------
+  # Frames (cross-arm)
+  # ---------------------------------------------------------------------------
+  reference_frame: "butterfli_ref_frame"
+  vector_frame_id: "butterfli_ref_frame"
+
+  # ---------------------------------------------------------------------------
+  # Visualization & MTC topic
+  # ---------------------------------------------------------------------------
+  mtc_plan_view_topic: "/Commode_Cleaning_Tasks/solution"
+  enable_visualization: true
+
+  # ---------------------------------------------------------------------------
+  # Motion / interpolation
+  # ---------------------------------------------------------------------------
+  step_size: 0.02
+  enable_interpolation: true
+  cleaning_path_mode: "ruckig_pro_only"   # totg_ruckig | totg_only | ruckig_only |
+                                      # ruckig_pro_only | pilz_lin |
+                                      # cartesian_per_segment
+
+  # ---------------------------------------------------------------------------
+  # Velocity / acceleration scaling (cross-arm; per-task YAML overrides)
+  # ---------------------------------------------------------------------------
+  max_velocity_scaling: 1.0
+  max_acceleration_scaling: 1.0
+  max_jerk_scaling: 1.0
+  start_pose_velocity_scaling: 0.5
+  start_pose_acceleration_scaling: 0.5
+
+  # ---------------------------------------------------------------------------
+  # Pole scaling
+  # ---------------------------------------------------------------------------
+  pole_max_velocity_scaling: 1.0
+  pole_max_acceleration_scaling: 1.0
+
+  # ---------------------------------------------------------------------------
+  # Execution control & scene
+  # ---------------------------------------------------------------------------
+  plan_only: true
+  enable_washroom_scene: true
+  enable_washroom_structure: true
+  record_trajectory: true
+  # enable_washroom_structure: false
+  # record_trajectory: false
+  # NOTE: use_prestart_stage and commode_fixture_type are task-specific —
+  # define them in each individual task config file, not here.
+
+# =============================================================================
+# ARM-SPECIFIC DEFAULTS
+# Selected automatically from task_parameters.primary_planning_group suffix.
+# =============================================================================
+arm_defaults:
+  left:
+    task_parameters:
+      primary_planning_group: "rm75_arm_left"
+      hand_group: "inspire_hand_left"
+      pole_group: "pole_left"
+      ik_frame: "L_glove_frame_1"
+  right:
+    task_parameters:
+      primary_planning_group: "rm75_arm_right"
+      hand_group: "inspire_hand_right"
+      pole_group: "pole_right"
+      ik_frame: "R_glove_frame_1"

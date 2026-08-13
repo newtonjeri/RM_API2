@@ -1,0 +1,24 @@
+# =============================================================================
+# Commode fixture registry
+# =============================================================================
+# default   → fixture_id used when commode_fixture_id is not passed at launch.
+# fixtures  → known variants; keys MUST match subfolder names under
+#             config/commode_cleaning/.
+#
+# To add a new variant:
+#   1. Create config/commode_cleaning/<new_id>/ with scene.yaml + cleaning configs.
+#   2. Add an entry below.  No launch file or C++ changes needed.
+# =============================================================================
+
+default: commode_c
+
+fixtures:
+  commode_a:
+    display_name: "Commode A (Karcher SG)"
+    articulated: false
+  commode_b:
+    display_name: "Commode B (Amsterdam)"
+    articulated: true
+  commode_c:
+    display_name: "Commode C"
+    articulated: true

@@ -1,0 +1,655 @@
+# =============================================================================
+# GENERATED FILE — DO NOT EDIT MANUALLY
+# Created by blend_turning_points.py
+# angle_threshold  : 90.0°
+# blend_fraction   : 0.2
+# n_blend_points   : 5
+# turns blended    : 21
+# new waypoints    : 105
+# original seq len : 22
+# new seq len      : 106
+# =============================================================================
+
+task_parameters:
+  # Execution Control
+  # -------------------------------------------------------------------------
+  commode_fixture_type: "lid_open"              # Options: "closed", "lid_open", "lid_seat_open"
+  ik_frame: L_glove_frame_2
+
+  # Motion Parameters
+  # -------------------------------------------------------------------------
+  max_jerk_scaling: 0.5
+
+
+# =============================================================================
+# CARTESIAN POSES (Position + Orientation)
+# Format: [x, y, z, qx, qy, qz, qw]
+# =============================================================================
+cartesian_poses:
+  # start_pose: [0.96, 0.15, 0.235, 0.84466, 0.026252, 0.53396, 0.027293]
+  start_pose: [0.96, 0.15, 0.235, 0.84466, 0.026252, 0.53396, 0.027293]
+
+  # +5cm in Z and -8cm in X from start pose
+  # pre_start_pose: [0.87, 0.15, 0.28, 0.84466, 0.026252, 0.53396, 0.027293]
+  pre_start_pose: [0.85, 0.15, 0.28, 0.84466, 0.026252, 0.53396, 0.027293]
+
+# =============================================================================
+# CLEANING POINTS (Translation [x,y,z] + Rotation [r,p,y])
+# Relative to vector_frame_id
+# Mirrored from right arm via XZ-plane reflection (Y negated, roll & yaw negated)
+# =============================================================================
+cleaning_points:
+  point1:
+    translation: [0.0, 0.0, 0.0]
+    rotation: [0.0, 0.0, 0.0]
+  point2:
+    translation: [-0.012, -0.04, -0.025]
+    rotation: [0.0, 0.0, 0.0]
+  point3:
+    translation: [-0.005, 0.095, -0.01]
+    rotation: [0.0, 1.0, 3.0]
+  point4:
+    translation: [-0.024, -0.05, -0.06]
+    rotation: [0.0, 4.0, 0.0]
+  point5:
+    translation: [-0.024, 0.115, -0.06]
+    rotation: [0.0, 4.0, 3.0]
+  point6:
+    translation: [-0.032, -0.05, -0.09]
+    rotation: [0.0, 6.0, 0.0]
+  point7:
+    translation: [-0.032, 0.115, -0.09]
+    rotation: [0.0, 6.0, 3.0]
+  point8:
+    translation: [-0.044, -0.05, -0.12]
+    rotation: [0.0, 8.0, 0.0]
+  point9:
+    translation: [-0.044, 0.115, -0.12]
+    rotation: [0.0, 8.0, 3.0]
+  point10:
+    translation: [-0.056, -0.05, -0.15]
+    rotation: [0.0, 10.0, 0.0]
+  point11:
+    translation: [-0.056, 0.115, -0.15]
+    rotation: [0.0, 10.0, 3.0]
+  point12:
+    translation: [-0.068, -0.05, -0.18]
+    rotation: [0.0, 12.0, 0.0]
+  point13:
+    translation: [-0.068, 0.115, -0.18]
+    rotation: [0.0, 12.0, 3.0]
+  point14:
+    translation: [-0.080, -0.05, -0.21]
+    rotation: [0.0, 14.0, 0.0]
+  point15:
+    translation: [-0.080, 0.115, -0.21]
+    rotation: [0.0, 14.0, 3.0]
+  point16:
+    translation: [-0.091, -0.05, -0.24]
+    rotation: [0.0, 15.0, 0.0]
+  point17:
+    translation: [-0.091, 0.115, -0.24]
+    rotation: [0.0, 15.0, 3.0]
+  point18:
+    translation: [-0.103, -0.05, -0.27]
+    rotation: [0.0, 17.0, 0.0]
+  point19:
+    translation: [-0.103, 0.115, -0.27]
+    rotation: [0.0, 17.0, 3.0]
+  point20:
+    translation: [-0.115, -0.05, -0.29]
+    rotation: [0.0, 18.0, 0.0]
+  point21:
+    translation: [-0.115, 0.115, -0.29]
+    rotation: [0.0, 18.0, 3.0]
+  point22:
+    translation: [-0.127, -0.05, -0.31]
+    rotation: [0.0, 20.0, 0.0]
+  point23:
+    translation: [-0.127, 0.115, -0.31]
+    rotation: [0.0, 20.0, 3.0]
+  point24:
+    translation: [-0.139, -0.12, -0.32]
+    rotation: [0.0, 21.0, 0.0]
+  point25:
+    translation: [-0.139, 0.11, -0.32]
+    rotation: [0.0, 21.0, 3.0]
+  point26:
+    translation: [-0.129, -0.12, -0.31]
+    rotation: [0.0, 20.0, 0.0]
+  point27:
+    translation: [-0.135, 0.115, -0.32]
+    rotation: [0.0, 18.0, 3.0]
+  # point26:
+  #   translation: [-0.151, -0.05, -0.38]
+  #   rotation: [0.0, 22.0, 0.0]
+  # point27:
+  #   translation: [-0.151, 0.115, -0.38]
+  #   rotation: [0.0, 22.0, 3.0]
+  point28:
+    translation: [-0.163, -0.05, -0.41]
+    rotation: [0.0, 21.0, 0.0]
+  point29:
+    translation: [-0.163, 0.115, -0.41]
+    rotation: [0.0, 21.0, 3.0]
+  blend_0_0:
+    translation: [-0.0096, -0.032, -0.02]
+    rotation: [0.0, 0.0, 0.0]
+  blend_0_1:
+    translation: [-0.010563, -0.033813, -0.022]
+    rotation: [-0.0012, 0.05, 0.15]
+  blend_0_2:
+    translation: [-0.01105, -0.03125, -0.023]
+    rotation: [-0.0024, 0.1, 0.3]
+  blend_0_3:
+    translation: [-0.011062, -0.024313, -0.023]
+    rotation: [-0.0033, 0.15, 0.45]
+  blend_0_4:
+    translation: [-0.0106, -0.013, -0.022]
+    rotation: [-0.0042, 0.2, 0.6]
+  blend_1_0:
+    translation: [-0.0064, 0.068, -0.013]
+    rotation: [-0.0042, 0.8, 2.3999]
+  blend_1_1:
+    translation: [-0.006025, 0.078, -0.012312]
+    rotation: [-0.0, 1.0, 2.4]
+  blend_1_2:
+    translation: [-0.0063, 0.081, -0.01325]
+    rotation: [0.0042, 1.2, 2.4002]
+  blend_1_3:
+    translation: [-0.007225, 0.077, -0.015813]
+    rotation: [0.0084, 1.4, 2.4003]
+  blend_1_4:
+    translation: [-0.0088, 0.066, -0.02]
+    rotation: [0.0126, 1.5999, 2.4004]
+  blend_2_0:
+    translation: [-0.0202, -0.021, -0.05]
+    rotation: [0.0126, 3.4001, 0.6007]
+  blend_2_1:
+    translation: [-0.021862, -0.031625, -0.054375]
+    rotation: [0.0094, 3.55, 0.6005]
+  blend_2_2:
+    translation: [-0.02305, -0.0345, -0.0575]
+    rotation: [0.0063, 3.7, 0.6004]
+  blend_2_3:
+    translation: [-0.023762, -0.029625, -0.059375]
+    rotation: [0.0031, 3.85, 0.6002]
+  blend_2_4:
+    translation: [-0.024, -0.017, -0.06]
+    rotation: [0.0, 4.0, 0.6]
+  blend_3_0:
+    translation: [-0.024, 0.082, -0.06]
+    rotation: [0.0, 4.0, 2.4]
+  blend_3_1:
+    translation: [-0.0241, 0.094375, -0.060375]
+    rotation: [0.0021, 4.1, 2.4002]
+  blend_3_2:
+    translation: [-0.0244, 0.0985, -0.0615]
+    rotation: [0.0042, 4.2, 2.4003]
+  blend_3_3:
+    translation: [-0.0249, 0.094375, -0.063375]
+    rotation: [0.0063, 4.3, 2.4005]
+  blend_3_4:
+    translation: [-0.0256, 0.082, -0.066]
+    rotation: [0.0084, 4.4, 2.4007]
+  blend_4_0:
+    translation: [-0.0304, -0.017, -0.084]
+    rotation: [0.0084, 5.6, 0.6008]
+  blend_4_1:
+    translation: [-0.0311, -0.029375, -0.086625]
+    rotation: [0.0063, 5.7, 0.6006]
+  blend_4_2:
+    translation: [-0.0316, -0.0335, -0.0885]
+    rotation: [0.0042, 5.8, 0.6004]
+  blend_4_3:
+    translation: [-0.0319, -0.029375, -0.089625]
+    rotation: [0.0021, 5.9, 0.6002]
+  blend_4_4:
+    translation: [-0.032, -0.017, -0.09]
+    rotation: [0.0, 6.0, 0.6]
+  blend_5_0:
+    translation: [-0.032, 0.082, -0.09]
+    rotation: [-0.0, 6.0, 2.4]
+  blend_5_1:
+    translation: [-0.03215, 0.094375, -0.090375]
+    rotation: [0.0021, 6.1, 2.4002]
+  blend_5_2:
+    translation: [-0.0326, 0.0985, -0.0915]
+    rotation: [0.0042, 6.2, 2.4005]
+  blend_5_3:
+    translation: [-0.03335, 0.094375, -0.093375]
+    rotation: [0.0063, 6.3, 2.4007]
+  blend_5_4:
+    translation: [-0.0344, 0.082, -0.096]
+    rotation: [0.0084, 6.4, 2.401]
+  blend_6_0:
+    translation: [-0.0416, -0.017, -0.114]
+    rotation: [0.0085, 7.6, 0.6011]
+  blend_6_1:
+    translation: [-0.04265, -0.029375, -0.116625]
+    rotation: [0.0063, 7.7, 0.6008]
+  blend_6_2:
+    translation: [-0.0434, -0.0335, -0.1185]
+    rotation: [0.0042, 7.8, 0.6006]
+  blend_6_3:
+    translation: [-0.04385, -0.029375, -0.119625]
+    rotation: [0.0021, 7.9, 0.6003]
+  blend_6_4:
+    translation: [-0.044, -0.017, -0.12]
+    rotation: [-0.0, 8.0, 0.6]
+  blend_7_0:
+    translation: [-0.044, 0.082, -0.12]
+    rotation: [0.0, 8.0, 2.4]
+  blend_7_1:
+    translation: [-0.04415, 0.094375, -0.120375]
+    rotation: [0.0021, 8.1, 2.4003]
+  blend_7_2:
+    translation: [-0.0446, 0.0985, -0.1215]
+    rotation: [0.0042, 8.2, 2.4006]
+  blend_7_3:
+    translation: [-0.04535, 0.094375, -0.123375]
+    rotation: [0.0064, 8.3, 2.4009]
+  blend_7_4:
+    translation: [-0.0464, 0.082, -0.126]
+    rotation: [0.0085, 8.4, 2.4013]
+  blend_8_0:
+    translation: [-0.0536, -0.017, -0.144]
+    rotation: [0.0085, 9.6, 0.6014]
+  blend_8_1:
+    translation: [-0.05465, -0.029375, -0.146625]
+    rotation: [0.0064, 9.7, 0.601]
+  blend_8_2:
+    translation: [-0.0554, -0.0335, -0.1485]
+    rotation: [0.0043, 9.8, 0.6007]
+  blend_8_3:
+    translation: [-0.05585, -0.029375, -0.149625]
+    rotation: [0.0021, 9.9, 0.6004]
+  blend_8_4:
+    translation: [-0.056, -0.017, -0.15]
+    rotation: [-0.0, 10.0, 0.6]
+  blend_9_0:
+    translation: [-0.056, 0.082, -0.15]
+    rotation: [0.0, 10.0, 2.4]
+  blend_9_1:
+    translation: [-0.05615, 0.094375, -0.150375]
+    rotation: [0.0021, 10.1, 2.4004]
+  blend_9_2:
+    translation: [-0.0566, 0.0985, -0.1515]
+    rotation: [0.0043, 10.2, 2.4008]
+  blend_9_3:
+    translation: [-0.05735, 0.094375, -0.153375]
+    rotation: [0.0064, 10.3, 2.4012]
+  blend_9_4:
+    translation: [-0.0584, 0.082, -0.156]
+    rotation: [0.0085, 10.4, 2.4016]
+  blend_10_0:
+    translation: [-0.0656, -0.017, -0.174]
+    rotation: [0.0086, 11.6, 0.6017]
+  blend_10_1:
+    translation: [-0.06665, -0.029375, -0.176625]
+    rotation: [0.0064, 11.7, 0.6013]
+  blend_10_2:
+    translation: [-0.0674, -0.0335, -0.1785]
+    rotation: [0.0043, 11.8, 0.6009]
+  blend_10_3:
+    translation: [-0.06785, -0.029375, -0.179625]
+    rotation: [0.0021, 11.9, 0.6004]
+  blend_10_4:
+    translation: [-0.068, -0.017, -0.18]
+    rotation: [0.0, 12.0, 0.6]
+  blend_11_0:
+    translation: [-0.068, 0.082, -0.18]
+    rotation: [0.0, 12.0, 2.4]
+  blend_11_1:
+    translation: [-0.06815, 0.094375, -0.180375]
+    rotation: [0.0021, 12.1, 2.4005]
+  blend_11_2:
+    translation: [-0.0686, 0.0985, -0.1815]
+    rotation: [0.0043, 12.2, 2.4009]
+  blend_11_3:
+    translation: [-0.06935, 0.094375, -0.183375]
+    rotation: [0.0064, 12.3, 2.4014]
+  blend_11_4:
+    translation: [-0.0704, 0.082, -0.186]
+    rotation: [0.0086, 12.4, 2.4019]
+  blend_12_0:
+    translation: [-0.0776, -0.017, -0.204]
+    rotation: [0.0086, 13.6, 0.602]
+  blend_12_1:
+    translation: [-0.07865, -0.029375, -0.206625]
+    rotation: [0.0065, 13.7, 0.6015]
+  blend_12_2:
+    translation: [-0.0794, -0.0335, -0.2085]
+    rotation: [0.0043, 13.8, 0.601]
+  blend_12_3:
+    translation: [-0.07985, -0.029375, -0.209625]
+    rotation: [0.0022, 13.9, 0.6005]
+  blend_12_4:
+    translation: [-0.08, -0.017, -0.21]
+    rotation: [0.0, 14.0, 0.6]
+  blend_13_0:
+    translation: [-0.08, 0.082, -0.21]
+    rotation: [-0.0, 14.0, 2.4]
+  blend_13_1:
+    translation: [-0.080138, 0.094375, -0.210375]
+    rotation: [0.0011, 14.05, 2.4003]
+  blend_13_2:
+    translation: [-0.08055, 0.0985, -0.2115]
+    rotation: [0.0022, 14.1, 2.4005]
+  blend_13_3:
+    translation: [-0.081237, 0.094375, -0.213375]
+    rotation: [0.0032, 14.15, 2.4008]
+  blend_13_4:
+    translation: [-0.0822, 0.082, -0.216]
+    rotation: [0.0043, 14.2, 2.4011]
+  blend_14_0:
+    translation: [-0.0888, -0.017, -0.234]
+    rotation: [0.0043, 14.8, 0.6011]
+  blend_14_1:
+    translation: [-0.089763, -0.029375, -0.236625]
+    rotation: [0.0033, 14.85, 0.6008]
+  blend_14_2:
+    translation: [-0.09045, -0.0335, -0.2385]
+    rotation: [0.0022, 14.9, 0.6006]
+  blend_14_3:
+    translation: [-0.090862, -0.029375, -0.239625]
+    rotation: [0.0011, 14.95, 0.6003]
+  blend_14_4:
+    translation: [-0.091, -0.017, -0.24]
+    rotation: [-0.0, 15.0, 0.6]
+  blend_15_0:
+    translation: [-0.091, 0.082, -0.24]
+    rotation: [0.0, 15.0, 2.4]
+  blend_15_1:
+    translation: [-0.09115, 0.094375, -0.240375]
+    rotation: [0.0022, 15.1, 2.4006]
+  blend_15_2:
+    translation: [-0.0916, 0.0985, -0.2415]
+    rotation: [0.0043, 15.2, 2.4012]
+  blend_15_3:
+    translation: [-0.09235, 0.094375, -0.243375]
+    rotation: [0.0065, 15.3, 2.4017]
+  blend_15_4:
+    translation: [-0.0934, 0.082, -0.246]
+    rotation: [0.0087, 15.4, 2.4023]
+  blend_16_0:
+    translation: [-0.1006, -0.017, -0.264]
+    rotation: [0.0087, 16.6, 0.6025]
+  blend_16_1:
+    translation: [-0.10165, -0.029375, -0.266625]
+    rotation: [0.0066, 16.7, 0.6019]
+  blend_16_2:
+    translation: [-0.1024, -0.0335, -0.2685]
+    rotation: [0.0044, 16.8, 0.6012]
+  blend_16_3:
+    translation: [-0.10285, -0.029375, -0.269625]
+    rotation: [0.0022, 16.9, 0.6006]
+  blend_16_4:
+    translation: [-0.103, -0.017, -0.27]
+    rotation: [0.0, 17.0, 0.6]
+  blend_17_0:
+    translation: [-0.103, 0.082, -0.27]
+    rotation: [0.0, 17.0, 2.4]
+  blend_17_1:
+    translation: [-0.10315, 0.094375, -0.27025]
+    rotation: [0.0011, 17.05, 2.4003]
+  blend_17_2:
+    translation: [-0.1036, 0.0985, -0.271]
+    rotation: [0.0022, 17.1, 2.4006]
+  blend_17_3:
+    translation: [-0.10435, 0.094375, -0.27225]
+    rotation: [0.0033, 17.15, 2.401]
+  blend_17_4:
+    translation: [-0.1054, 0.082, -0.274]
+    rotation: [0.0044, 17.2, 2.4013]
+  blend_18_0:
+    translation: [-0.1126, -0.017, -0.286]
+    rotation: [0.0044, 17.8, 0.6013]
+  blend_18_1:
+    translation: [-0.11365, -0.029375, -0.28775]
+    rotation: [0.0033, 17.85, 0.601]
+  blend_18_2:
+    translation: [-0.1144, -0.0335, -0.289]
+    rotation: [0.0022, 17.9, 0.6007]
+  blend_18_3:
+    translation: [-0.11485, -0.029375, -0.28975]
+    rotation: [0.0011, 17.95, 0.6003]
+  blend_18_4:
+    translation: [-0.115, -0.017, -0.29]
+    rotation: [-0.0, 18.0, 0.6]
+  blend_19_0:
+    translation: [-0.115, 0.082, -0.29]
+    rotation: [0.0, 18.0, 2.4]
+  blend_19_1:
+    translation: [-0.11515, 0.094375, -0.29025]
+    rotation: [0.0022, 18.1, 2.4007]
+  blend_19_2:
+    translation: [-0.1156, 0.0985, -0.291]
+    rotation: [0.0044, 18.2, 2.4014]
+  blend_19_3:
+    translation: [-0.11635, 0.094375, -0.29225]
+    rotation: [0.0066, 18.3, 2.4021]
+  blend_19_4:
+    translation: [-0.1174, 0.082, -0.294]
+    rotation: [0.0088, 18.4, 2.4028]
+  blend_20_0:
+    translation: [-0.1246, -0.017, -0.306]
+    rotation: [0.0089, 19.6, 0.603]
+  blend_20_1:
+    translation: [-0.12565, -0.029375, -0.30775]
+    rotation: [0.0067, 19.7, 0.6022]
+  blend_20_2:
+    translation: [-0.1264, -0.0335, -0.309]
+    rotation: [0.0045, 19.8, 0.6015]
+  blend_20_3:
+    translation: [-0.12685, -0.029375, -0.30975]
+    rotation: [0.0022, 19.9, 0.6007]
+  blend_20_4:
+    translation: [-0.127, -0.017, -0.31]
+    rotation: [0.0, 20.0, 0.6]
+
+
+# =============================================================================
+# CLEANING SEQUENCE
+# =============================================================================
+cleaning_sequence:
+  - [point1, blend_0_0]
+  - [blend_0_0, blend_0_1]
+  - [blend_0_1, blend_0_2]
+  - [blend_0_2, blend_0_3]
+  - [blend_0_3, blend_0_4]
+  - [blend_0_4, blend_1_0]
+  - [blend_1_0, blend_1_1]
+  - [blend_1_1, blend_1_2]
+  - [blend_1_2, blend_1_3]
+  - [blend_1_3, blend_1_4]
+  - [blend_1_4, blend_2_0]
+  - [blend_2_0, blend_2_1]
+  - [blend_2_1, blend_2_2]
+  - [blend_2_2, blend_2_3]
+  - [blend_2_3, blend_2_4]
+  - [blend_2_4, blend_3_0]
+  - [blend_3_0, blend_3_1]
+  - [blend_3_1, blend_3_2]
+  - [blend_3_2, blend_3_3]
+  - [blend_3_3, blend_3_4]
+  - [blend_3_4, blend_4_0]
+  - [blend_4_0, blend_4_1]
+  - [blend_4_1, blend_4_2]
+  - [blend_4_2, blend_4_3]
+  - [blend_4_3, blend_4_4]
+  - [blend_4_4, blend_5_0]
+  - [blend_5_0, blend_5_1]
+  - [blend_5_1, blend_5_2]
+  - [blend_5_2, blend_5_3]
+  - [blend_5_3, blend_5_4]
+  - [blend_5_4, blend_6_0]
+  - [blend_6_0, blend_6_1]
+  - [blend_6_1, blend_6_2]
+  - [blend_6_2, blend_6_3]
+  - [blend_6_3, blend_6_4]
+  - [blend_6_4, blend_7_0]
+  - [blend_7_0, blend_7_1]
+  - [blend_7_1, blend_7_2]
+  - [blend_7_2, blend_7_3]
+  - [blend_7_3, blend_7_4]
+  - [blend_7_4, blend_8_0]
+  - [blend_8_0, blend_8_1]
+  - [blend_8_1, blend_8_2]
+  - [blend_8_2, blend_8_3]
+  - [blend_8_3, blend_8_4]
+  - [blend_8_4, blend_9_0]
+  - [blend_9_0, blend_9_1]
+  - [blend_9_1, blend_9_2]
+  - [blend_9_2, blend_9_3]
+  - [blend_9_3, blend_9_4]
+  - [blend_9_4, blend_10_0]
+  - [blend_10_0, blend_10_1]
+  - [blend_10_1, blend_10_2]
+  - [blend_10_2, blend_10_3]
+  - [blend_10_3, blend_10_4]
+  - [blend_10_4, blend_11_0]
+  - [blend_11_0, blend_11_1]
+  - [blend_11_1, blend_11_2]
+  - [blend_11_2, blend_11_3]
+  - [blend_11_3, blend_11_4]
+  - [blend_11_4, blend_12_0]
+  - [blend_12_0, blend_12_1]
+  - [blend_12_1, blend_12_2]
+  - [blend_12_2, blend_12_3]
+  - [blend_12_3, blend_12_4]
+  - [blend_12_4, blend_13_0]
+  - [blend_13_0, blend_13_1]
+  - [blend_13_1, blend_13_2]
+  - [blend_13_2, blend_13_3]
+  - [blend_13_3, blend_13_4]
+  - [blend_13_4, blend_14_0]
+  - [blend_14_0, blend_14_1]
+  - [blend_14_1, blend_14_2]
+  - [blend_14_2, blend_14_3]
+  - [blend_14_3, blend_14_4]
+  - [blend_14_4, blend_15_0]
+  - [blend_15_0, blend_15_1]
+  - [blend_15_1, blend_15_2]
+  - [blend_15_2, blend_15_3]
+  - [blend_15_3, blend_15_4]
+  - [blend_15_4, blend_16_0]
+  - [blend_16_0, blend_16_1]
+  - [blend_16_1, blend_16_2]
+  - [blend_16_2, blend_16_3]
+  - [blend_16_3, blend_16_4]
+  - [blend_16_4, blend_17_0]
+  - [blend_17_0, blend_17_1]
+  - [blend_17_1, blend_17_2]
+  - [blend_17_2, blend_17_3]
+  - [blend_17_3, blend_17_4]
+  - [blend_17_4, blend_18_0]
+  - [blend_18_0, blend_18_1]
+  - [blend_18_1, blend_18_2]
+  - [blend_18_2, blend_18_3]
+  - [blend_18_3, blend_18_4]
+  - [blend_18_4, blend_19_0]
+  - [blend_19_0, blend_19_1]
+  - [blend_19_1, blend_19_2]
+  - [blend_19_2, blend_19_3]
+  - [blend_19_3, blend_19_4]
+  - [blend_19_4, blend_20_0]
+  - [blend_20_0, blend_20_1]
+  - [blend_20_1, blend_20_2]
+  - [blend_20_2, blend_20_3]
+  - [blend_20_3, blend_20_4]
+  - [blend_20_4, point23]
+  # - [point23, point24]
+  # - [point24, point25]
+  # - [point25, point26]
+  # - [point26, point27]
+
+  # - [point23, point20]
+  # - [point20, point21]
+  # - [point21, point18]
+  # - [point18, point19]
+  # - [point19, point16]
+  # - [point16, point17]
+  # - [point17, point14]
+  # - [point14, point15]
+  # - [point15, point12]
+  # - [point12, point13]
+  # - [point13, point10]
+  # - [point10, point11]
+  # - [point11, point8]
+  # - [point8, point9]
+  # - [point9, point6]
+  # - [point6, point7]
+  # - [point7, point4]
+  # - [point4, point5]
+  # - [point5, point2]
+  # - [point2, point3]
+  # - [point3, point1]
+
+# =============================================================================
+# STAGE SEQUENCE
+# Defines the execution order of stages for the bottom lid cleaning task
+# =============================================================================
+stage_sequence:
+  # 1. Setup washroom collision scene
+  - stage: "setup_washroom_scene"
+    conditional: true
+    condition_param: "enable_washroom_scene"
+
+  # 2. Initialize with current state
+  - stage: "current_state"
+
+  # 3. Move pole to quarter height for cleaning
+  # - stage: "move_pole_to_quarter_height"
+  #   pose_name: "quarter_length"
+  #   planning_group: "pole_left"
+
+  - stage: "move_pole_to_half_height"
+    pose_name: "half_length"
+    planning_group: "pole_left"
+
+  # 4. Close hand to grasp cleaning tool
+  - stage: "hand_grasp"
+    pose_name: "grasp"
+    planning_group: "inspire_hand_left"
+
+  # 5. Move to pre-start pose
+  - stage: "move_to_pre_start"
+    pose_name: "pre_start_pose"
+    planning_group: "rm75_arm_left"
+    conditional: true
+    condition_param: "use_prestart_stage"
+
+  - stage: "allow_collision"
+    contact_surface: seat_and_lid
+  - stage: "move_to_start"
+    pose_name: "start_pose"
+    planning_group: "rm75_arm_left"
+
+  # Hand onetenth grasp to allow collisions with commode lid
+  - stage: "open_tenth"
+    pose_name: "open_tenth"
+    planning_group: "inspire_hand_left"
+
+  # 7. Execute cleaning path with 6DOF trajectory
+  - stage: "execute_path"
+    # trajectory_mode: 1
+    # radio: 60
+
+  # Move to pre-start pose
+  # - stage: "move_to_pre_start"
+  #   pose_name: "pre_start_pose"
+  #   planning_group: "rm75_arm_left"
+  #   conditional: true
+  #   condition_param: "use_prestart_stage"
+  # 8. Return to ready/home position
+
+  - stage: "move_to_rest"
+    pose_name: "rest_pose"
+    planning_group: "rm75_arm_left"
+
+  - stage: "forbid_collision"
+    contact_surface: seat_and_lid
+  - stage: "hand_release"
+    pose_name: "release"
+    planning_group: "inspire_hand_left"

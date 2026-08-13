@@ -1,0 +1,81 @@
+# =============================================================================
+# FIXTURE MODEL: commode_c
+# =============================================================================
+# Meshes, articulation, and default pose for this fixture model.
+#
+# pose             → default position of this fixture relative to base_link.
+#                    The venue's washroom_scene.yaml commode_slot.position
+#                    overrides this when a venue file is loaded; this value
+#                    is used for standalone / no-venue-file bring-up.
+#
+# articulated: true  → ArticulatedSceneBuilder computes lid & seat poses from
+#                       joint kinematics.
+# =============================================================================
+
+fixture:
+  display_name: "Commode C"
+  type: "commode"
+  articulated: true
+
+  # AUTHORITATIVE position used at runtime (calibrated per-fixture).
+  # The venue washroom_scene.yaml commode_slot.position is only used as a
+  # fallback if this block is absent (i.e. when the fixture is not yet calibrated).
+  pose:
+    relative_to: "base_link"
+    # position: [1.005, 0.0, 0.40]        # x = bowl length (530mm) + 250mm (distance between UGV front and commode front tip) + half UGV length along X axis (450/2 mm)
+    # position: [1.005, 0.0, 0.415]        # x = bowl length (530mm) + 250mm (distance between UGV front and commode front tip) + half UGV length along X axis (450/2 mm)
+    position: [1.005, 0.0, 0.42]        # x = bowl length (530mm) + 250mm (distance between UGV front and commode front tip) + half UGV length along X axis (450/2 mm)
+    orientation_rpy_deg: [0.0, 0.0, 0.0]
+    # UGV-front → commode-front distance the position above was calibrated at.
+    # Tasks may declare a different task_parameters.ugv_standoff_m; the scene
+    # builders and cleaning_path_gen shift the fixture along base_link X by the
+    # difference, and the orchestrator repositions the UGV accordingly.
+    default_ugv_standoff_m: 0.25
+
+  body:
+    mesh:  "package://cleaning_tasks/config/commode_cleaning/commode_c/models/body.stl"  
+    scale: [1.0, 1.0, 1.0]
+
+  lid:
+    mesh:  "package://cleaning_tasks/config/commode_cleaning/commode_c/models/lid.stl"  
+    scale: [1.0, 1.0, 1.0]
+    joint:
+      origin:         [0.115, 0.0, 0.02]
+      origin_rpy_deg: [0.0, 0.0, 0.0]
+      axis:           [0.0, 1.0, 0.0]
+      angles_deg:
+        closed:  0.0
+        open:   -110.0
+
+  seat:
+    mesh:  "package://cleaning_tasks/config/commode_cleaning/commode_c/models/seat.stl"
+    scale: [1.0, 1.0, 1.0]
+    joint:
+      origin:         [0.115, 0.0, 0.02]
+      origin_rpy_deg: [0.0, 0.0, 0.0]
+      axis:           [0.0, 1.0, 0.0]
+      angles_deg:
+        closed:  0.0
+        open:   -110.0
+
+  # ---------------------------------------------------------------------------
+  # FLUSH BUTTON (mechanism_tasks/commode_c/flush_press.yaml)
+  # Rigid assumed position on the wall behind the commode, captured here as
+  # DATA (the scene builders do not yet emit a collision object for it; the
+  # 800 mm room's back wall at base_link X = 1.215 already models the wall,
+  # 0.11 m behind the button face). At runtime the vision system will update
+  # this pose — plug-in points: fixture_state_publisher-style CollisionObject
+  # MOVE via /apply_planning_scene, or rewrite here for a re-calibration.
+  #
+  # FIXTURE-relative on purpose: anchored to the commode origin (centred in
+  # X and Y, Z = 0.95 ABSOLUTE in base_link; revised -10 cm X 2026-07-28), so
+  # a task ugv_standoff_m change shifts the button with the commode in X while
+  # the venue wall stays put.
+  # At the calibrated fixture pose [1.005, 0.0, 0.42] this puts the button at
+  # base_link [1.005, 0.0, 0.95] = butterfli_ref_frame [1.015, 0.124, 0.424].
+  # ---------------------------------------------------------------------------
+  flush_button:
+    relative_to: "fixture"
+    position: [0.0, 0.0, 0.53]         # fixture origin + this = base_link [1.005, 0.0, 0.95]
+    press_direction: [1.0, 0.0, 0.0]    # press INTO the wall (+X base_link)
+    press_travel_m: 0.018               # start (-1 cm) -> +1.8 cm = 0.8 cm past the face
