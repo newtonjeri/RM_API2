@@ -329,3 +329,198 @@ WROTE
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.csv
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001_sequence.csv
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.png
+
+========================================================================
+  Script : path_viz.py
+  Log    : path_viz.log
+  Started: 2026-08-13 18:03:42
+========================================================================
+==============================================================================
+PATH — blend_corner_001
+==============================================================================
+  source        /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py
+  points        7 unique, from POSES_MM   (units mm: variable name POSES_MM)
+  sequence      7 steps, from SEQUENCE
+  work frame    World
+  tool frame    L_glove_4
+  blend         25
+  default_speed 100
+
+POINTS — positions mm, orientation rad, in the World frame for L_glove_4
+     label               X          Y          Z       RX       RY       RZ  visits  first
+  A  start         515.000     32.000   -323.628  -3.1170  -0.4000   0.0770       1      0
+  B  c1            515.000    -33.000   -323.628  -3.1170  -0.4000   0.0770       1      1
+  C  c2            580.000    -33.000   -323.628  -3.1170  -0.4000   0.0770       1      2
+  D  c3            636.292    -65.500   -323.628  -3.1170  -0.4000   0.0770       1      3
+  E  c4            692.583    -33.000   -323.628  -3.1170  -0.4000   0.0770       1      4
+  F  c5            755.368    -16.177   -323.628  -3.1170  -0.4000   0.0770       1      5
+  G  end           787.868     40.115   -323.628  -3.1170  -0.4000   0.0770       1      6
+
+EXTENT (mm)
+  X     515.000 ..    787.868   span  272.868  6 distinct: 515, 580, 636.292, 692.583, 755.368, 787.868
+  Y     -65.500 ..     40.115   span  105.615  5 distinct: -65.5, -33, -16.177, 32, 40.115
+  Z    -323.628 ..   -323.628   span    0.000  <-- constant
+
+MAP — the traversal, drawn on the two widest axes
+    Y +40.1 mm at the top, -65.5 mm at the bottom
+    +--------------------------------------------------------------------------+
+    |                                                                         G|
+    |A                                                                       / |
+    ||                                                                     //  |
+    ||                                                                    /    |
+    ||                                                                   /     |
+    ||                                                                 //      |
+    ||                                                                /        |
+    ||                                                           ////F         |
+    ||                                                    ///////              |
+    |B----------------C\                           //E////                     |
+    |                   \\\\                    ///                            |
+    |                       \\\\           /////                               |
+    |                           \\\\    ///                                    |
+    |                               \D//                                       |
+    +--------------------------------------------------------------------------+
+    X +515.0 mm at the left, +787.9 mm at the right   |   Z spread 0.0 mm
+    legend: A=start  B=c1  C=c2  D=c3  E=c4  F=c5  G=end
+
+SEGMENTS — geometry per step of the traversal
+  step move              from -> to        speed    len mm  rot deg    euler    cum mm
+     0 MOVEL                - -> start       100         -        -        -     0.000
+     1 MOVEL            start -> c1          100    65.000     0.00     0.00    65.000
+     2 MOVEL               c1 -> c2          100    65.000     0.00     0.00   130.000
+     3 MOVEL               c2 -> c3          100    65.000     0.00     0.00   195.000
+     4 MOVEL               c3 -> c4          100    64.999     0.00     0.00   260.000
+     5 MOVEL               c4 -> c5          100    65.000     0.00     0.00   325.000
+     6 MOVEL               c5 -> end         100    65.000     0.00     0.00   390.000
+
+TOTALS
+  path length            390.0 mm (0.3900 m) over 6 segments
+  rotation per segment   max 0.00 deg, mean 0.00 deg
+  widest orientation     0.00 deg, between start and end
+
+WROTE
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.csv
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001_sequence.csv
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.png
+
+========================================================================
+  Script : path_viz.py
+  Log    : path_viz.log
+  Started: 2026-08-13 18:04:00
+========================================================================
+==============================================================================
+PATH — test_motion_001
+==============================================================================
+  source        /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001.py
+  points        10 unique, from POSES_MM   (units mm: variable name POSES_MM)
+  sequence      37 steps, from SEQUENCE
+  work frame    World
+  tool frame    L_glove_4
+  arm_ip        192.168.1.10
+  blend         25
+  default_speed 100
+  simulation    False
+
+POINTS — positions mm, orientation rad, in the World frame for L_glove_4
+     label               X          Y          Z       RX       RY       RZ  visits  first
+  1  1             861.572    -79.923   -323.628   3.0240  -0.7490   0.2780       4      1
+  2  2             688.329    -79.923   -323.628  -3.0460  -0.2910   0.1680       4      2
+  3  3             472.855    -79.923   -323.628  -3.1120   0.0170   0.1580       5      3
+  4  4             472.855    -21.000   -323.628  -3.0530  -0.1620  -0.0080       6      4
+  5  5             688.329    -21.000   -323.628  -3.0900  -0.3760   0.0830       5      5
+  6  6             861.572    -21.000   -323.628   3.1290  -0.6790   0.1120       5      6
+  7  7             861.572     52.660   -323.628  -3.1080  -0.6620   0.0720       2     13
+  8  8             688.329     52.660   -323.628  -3.1170  -0.4000   0.0770       2     12
+  9  9             472.855     52.660   -323.628  -3.1110  -0.1770   0.0040       2     11
+  A  stoppose      472.855     52.660   -323.628  -3.1110  -0.1770   0.0040       1     36
+
+EXTENT (mm)
+  X     472.855 ..    861.572   span  388.717  3 distinct: 472.855, 688.329, 861.572
+  Y     -79.923 ..     52.660   span  132.583  3 distinct: -79.923, -21, 52.66
+  Z    -323.628 ..   -323.628   span    0.000  <-- constant
+  the 9 distinct positions form a full 3x3x1 grid
+
+JOINT TARGET — START_JOINTS (degrees), not a Cartesian point
+  J1   -0.112  J2 -100.501  J3    6.424  J4   67.532  J5   -1.656  J6   95.585  J7  171.774
+  not plotted: turning joints into a pose needs FK with the tool frame,
+  which would make this script depend on the SDK. Its Cartesian
+  neighbours are the first and last points below.
+
+DUPLICATE POSES — different labels, identical pose
+  9 == stoppose
+
+SEQUENCE STEPS WITH NO CARTESIAN POINT: startpose
+  carried through as non-Cartesian steps (a joint move, a hand step, ...)
+
+MAP — the traversal, drawn on the two widest axes
+    Y +52.7 mm at the top, -79.9 mm at the bottom
+    +--------------------------------------------------------------------------+
+    |A---------------------------------------8--------------------------------7|
+    ||                                                                        ||
+    ||                                                                        ||
+    ||                                                                        ||
+    ||                                                                        ||
+    ||                                                                        ||
+    ||                                                                        ||
+    |4------------------------------------+++5--------------------------------6|
+    ||                           /////////                                    ||
+    ||                    ///////                                             ||
+    ||           /////////                                                    ||
+    ||    ///////                                                             ||
+    |3++++-----------------------------------2--------------------------------1|
+    +--------------------------------------------------------------------------+
+    X +472.9 mm at the left, +861.6 mm at the right   |   Z spread 0.0 mm
+    [NOTE] 9 and stoppose share one cell — only A is drawn (identical points, or raise --width)
+    legend: 1=1  2=2  3=3  4=4  5=5  6=6  7=7  8=8  9=9  A=stoppose
+
+SEGMENTS — geometry per step of the traversal
+  step move              from -> to        speed    len mm  rot deg    euler    cum mm
+     0 MOVEJ/other          - -> startpose     -         -        -        -     0.000
+     1 MOVEL        startpose -> 1           100         -        -        -     0.000
+     2 MOVEL                1 -> 2           100   173.243    28.23   347.79   173.243  <-- Euler wrap
+     3 MOVEL                2 -> 3           100   215.474    18.07    17.65   388.717
+     4 MOVEL                3 -> 4           100    58.923    14.22    10.26   447.640
+     5 MOVEL                4 -> 5           100   215.474    13.27    12.26   663.114
+     6 MOVEL                5 -> 6           100   173.243    17.65   356.32   836.357  <-- Euler wrap
+     7 MOVEL                6 -> 1           100    58.923     8.23     9.51   895.280
+     8 MOVEL                1 -> 2           100   173.243    28.23   347.79  1068.523  <-- Euler wrap
+     9 MOVEL                2 -> 3           100   215.474    18.07    17.65  1283.997
+    10 MOVEL                3 -> 4           100    58.923    14.22    10.26  1342.920
+    11 MOVEL                4 -> 9           100    73.660     3.39     3.32  1416.580
+    12 MOVEL                9 -> 8           100   215.474    13.42    12.78  1632.054
+    13 MOVEL                8 -> 7           100   173.243    15.02    15.01  1805.297
+    14 MOVEL                7 -> 6           100    73.660     2.38   357.35  1878.957  <-- Euler wrap
+    15 MOVEL                6 -> 5           100   173.243    17.65   356.32  2052.200  <-- Euler wrap
+    16 MOVEL                5 -> 4           100   215.474    13.27    12.26  2267.674
+    17 MOVEL                4 -> 3           100    58.923    14.22    10.26  2326.597
+    18 MOVEL                3 -> 5           100   223.385    22.91    22.52  2549.982
+    19 MOVEL                5 -> 6           100   173.243    17.65   356.32  2723.225  <-- Euler wrap
+    20 MOVEL                6 -> 1           100    58.923     8.23     9.51  2782.148
+    21 MOVEL                1 -> 2           100   173.243    28.23   347.79  2955.391  <-- Euler wrap
+    22 MOVEL                2 -> 3           100   215.474    18.07    17.65  3170.865
+    23 MOVEL                3 -> 4           100    58.923    14.22    10.26  3229.788
+    24 MOVEL                4 -> 5           100   215.474    13.27    12.26  3445.262
+    25 MOVEL                5 -> 6           100   173.243    17.65   356.32  3618.505  <-- Euler wrap
+    26 MOVEL                6 -> 1           100    58.923     8.23     9.51  3677.428
+    27 MOVEL                1 -> 2           100   173.243    28.23   347.79  3850.671  <-- Euler wrap
+    28 MOVEL                2 -> 3           100   215.474    18.07    17.65  4066.145
+    29 MOVEL                3 -> 4           100    58.923    14.22    10.26  4125.068
+    30 MOVEL                4 -> 9           100    73.660     3.39     3.32  4198.728
+    31 MOVEL                9 -> 8           100   215.474    13.42    12.78  4414.202
+    32 MOVEL                8 -> 7           100   173.243    15.02    15.01  4587.445
+    33 MOVEL                7 -> 6           100    73.660     2.38   357.35  4661.105  <-- Euler wrap
+    34 MOVEL                6 -> 5           100   173.243    17.65   356.32  4834.348  <-- Euler wrap
+    35 MOVEL                5 -> 4           100   215.474    13.27    12.26  5049.822
+    36 MOVEL                4 -> stoppose    100    73.660     3.39     3.32  5123.482
+
+TOTALS
+  path length            5123.5 mm (5.1235 m) over 35 segments
+  rotation per segment   max 28.23 deg, mean 14.77 deg
+  widest orientation     44.68 deg, between 1 and 3
+  Euler wraps            11 segment(s) where the component-wise delta exceeds
+                         the true rotation by >90 deg — the poses straddle +/-pi.
+                         Harmless as data; only the 'rot deg' column is real.
+
+WROTE
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001.csv
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001_sequence.csv
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001.png

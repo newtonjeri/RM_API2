@@ -39,15 +39,23 @@
 #   IT IS ALSO SCREENED FOR ELBOW DEMAND, and that is not a formality: an
 #   earlier version of this path had reachable endpoints but drove J4 to
 #   319 % of its limit BETWEEN two of them. Endpoint reachability is not
-#   enough. Worst segment here is 34 % of the J4 limit. Re-screen after ANY
-#   edit:
+#   enough. Worst segment here is 65 % of the J4 limit AT 0.25 m/s, and that
+#   number is proportional to speed on this path — see SPEED_LADDER below.
+#   Re-screen after ANY edit:
 #     python3 orientation_cost.py --segments ../paths/blend_corner_001.py \
-#             --tool L_glove_2 --speed 0.25
+#             --tool L_glove_4 --speed 0.25
 #
 # The corner angles are the interior turn at each vertex: 15 and 30 are the
 # cases reported as already decelerating, 90 is the reference for "must".
 #
-# Points are in the CONTROLLER World frame, mm and radians, tool L_glove_2.
+# Points are in the CONTROLLER World frame, mm and radians, tool L_glove_4.
+# (Said L_glove_2 until 2026-08-13, which was stale from before the path was
+# moved into `test_motion_001`'s hardware-proven box — it shares that path's
+# exact z plane and tool. The frame is not cosmetic: the same points screen
+# at 51 % of the J4 limit under L_glove_2 and 65 % under L_glove_4, so the
+# wrong one understates the elbow. TOOL_FRAME below now states it outright
+# rather than leaving it to a comment and a command-line flag.)
+#
 # Free space in front of the LEFT arm; every point verified to solve IK
 # within joint limits. Re-verify if the cell changes (see above).
 # =============================================================================
@@ -78,6 +86,37 @@ BLEND = 25
 # resolves comfortably. A two-corner path at 214 mm fits inside the same
 # proven box (389 mm of x). That is the follow-up, not a change here.
 BLEND_SWEEP = [0, 25, 50]
+
+# The IK frame these points are expressed for. Stated here so the offline
+# elbow screen and the pre-flight gate cannot be run against the wrong one.
+TOOL_FRAME = "L_glove_4"
+
+# =============================================================================
+# SPEED LADDER
+# =============================================================================
+# Every rung is run in turn, ascending, each recorded separately. The climb
+# STOPS at the first rung that fails.
+#
+# THIS LADDER IS SHORTER THAN test_motion_001's, AND THAT IS THE POINT.
+# Orientation is constant here — that is what makes a speed dip mean "corner"
+# and not "the angular cap time-scaled this segment" (H67). The cost is that
+# NOTHING THROTTLES THIS PATH: no segment rotates, so no segment is slowed
+# for us, and J4 demand scales LINEARLY with line_speed:
+#
+#     0.25 -> 65 %      0.45 -> 117 %      0.70 -> 181 %
+#     0.35 -> 91 %      0.60 -> 155 %      0.80 -> 207 %
+#
+# The limit is crossed at about 0.385 m/s, so 0.35 is the top rung.
+#
+# This is not theoretical. Run `20260813T183633` at 0.45 m/s reported
+# "[FAIL] segment 5: arrival event reports failure" — segment 5 is c5->end,
+# exactly the segment screened at 117 %. The elbow, not the blend.
+#
+# `test_motion_001` takes the full 0.25-0.80 ladder safely for the opposite
+# reason: it rotates on every segment, so the angular cap throttles it and
+# its J4 demand SATURATES at 59 % above 0.45 m/s. The smooth path is the
+# dangerous one.
+SPEED_LADDER = [0.10, 0.20, 0.25, 0.35]
 
 # Interior turn angle at each corner, degrees, in traversal order. Used to
 # LABEL the results; the geometry below must match it.

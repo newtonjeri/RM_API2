@@ -40,6 +40,36 @@ STARTPOSE_SPEED = 100
 TCP_LINEAR_VELOCITY = 0.60
 TCP_LINEAR_ACCELERATION = 1.80
 
+# The IK frame these points are expressed for — stated so the offline elbow
+# screen and the pre-flight gate cannot be run against the wrong one.
+TOOL_FRAME = "L_glove_4"
+
+# =============================================================================
+# SPEED LADDER
+# =============================================================================
+# Used when this path is dispatched by `test_blend_corner.py`, which runs
+# every rung in turn, ascending, recording each separately and STOPPING at
+# the first rung that fails. Running this file directly still uses
+# TCP_LINEAR_VELOCITY above and ignores the ladder.
+#
+# `line_acc` is not listed because it is not free: the controller enforces
+# line_acc >= 3 x line_speed, so it follows from the rung (0.55 -> 1.65,
+# 0.60 -> 1.80, 0.70 -> 2.10, 0.80 -> 2.40). Only 0.25 sits at or below the
+# factory default; every rung above it RATCHETS and needs reset_limits.py.
+#
+# The full ladder is safe HERE, and the reason is worth stating because it
+# does not generalise. Every segment of this path rotates, so the angular cap
+# time-scales it (H67) and the effective velocity stops rising: worst-segment
+# J4 demand goes 35 % -> 49 % -> 56 % and then SATURATES at 59 % from 0.55
+# upward. Rungs 0.55/0.60/0.70/0.80 are predicted to be kinematically
+# identical — if they also come back identical in wall-clock that is an
+# independent confirmation of the cap, and if they do not, our model is
+# wrong. Both results are worth having, so all four stay.
+#
+# `blend_corner_001` holds orientation constant and therefore has NO such
+# protection; its ladder stops at 0.35. See that file.
+SPEED_LADDER = [0.25, 0.35, 0.45, 0.55, 0.60, 0.70, 0.80]
+
 TCP_ANGULAR_VELOCITY = 0.60
 TCP_ANGULAR_ACCELERATION = 4.00
 

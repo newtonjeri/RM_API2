@@ -36,12 +36,44 @@ the blend radius is not being applied at all. `--connect0` adds a discrete
 baseline that SHOULD stop dead at every corner; if it does not, the
 measurement is wrong rather than the controller.
 
-SPEED. `--speed` scales BOTH limits together through
-`speed_limits.scale_for`, which enforces the vendor rules: max line_speed
-1.8 m/s, and line_acc >= 3 x line_speed. Raising only the speed is rejected
-by the controller with a bare ret=1, after which the run proceeds at
-whatever was already configured and reads as "the speed made no
-difference". Whatever it sets is RESTORED at exit — these limits ratchet.
+SPEED IS A LADDER, NOT A SETTING. The path file's `SPEED_LADDER` lists the
+line_speeds to sweep; each runs in turn, ASCENDING, with its own recording
+and its own `run.json`, and the climb STOPS at the first rung that fails. A
+path with no `SPEED_LADDER` is a one-rung ladder at its own
+`TCP_LINEAR_VELOCITY`, so nothing changes for it.
+
+`--speed X` IS AN OFF-LADDER RUN and takes ANY value up to the 1.8 m/s
+vendor ceiling — including speeds the ladder would refuse. The elbow screen
+still runs and still prints, but over the limit it WARNS instead of
+stopping, because the two situations are not the same: a ladder climbs on
+its own and nobody chose its top rung, whereas `--speed` is an operator
+naming one number for one run. Every requested speed is validated against
+the ceiling BEFORE the arm is connected, so an impossible request costs
+nothing and leaves no limits raised behind it.
+
+`line_acc` is not a free parameter — `speed_limits.scale_for` derives it
+from the rung under the vendor rules (max line_speed 1.8 m/s, line_acc >=
+3 x line_speed). Setting only the speed is rejected with a bare ret=1, after
+which the run proceeds at whatever was already configured and reads as "the
+speed made no difference". The FIRST rung's limits are the ones restored at
+exit — these limits ratchet, so `reset_limits.py` is still the closing step.
+
+EVERY RUNG IS SCREENED BEFORE IT RUNS. `preflight_j4` predicts the elbow
+demand offline and refuses any rung over 100 % of J4's limit, before the
+limits are touched, so a refused rung leaves the controller untouched.
+`--allow-over-limit` overrides it. This is not hypothetical: run
+`20260813T183633` climbed to 0.45 m/s on `blend_corner_001` and returned
+"segment 5: arrival event reports failure" — segment 5 is the one this
+screen puts at 117 %. J4 is exact because the elbow angle is fixed by the
+commanded pose regardless of how the redundancy is resolved; the other six
+joints need a saved plan, so a clean screen is necessary, not sufficient.
+
+WHY THE TWO PATHS HAVE DIFFERENT LADDERS. `test_motion_001` rotates on every
+segment, so the angular cap time-scales it (H67) and its J4 demand SATURATES
+at 59 % — it takes 0.25 through 0.80 safely. `blend_corner_001` holds
+orientation constant, which is what makes a dip mean "corner"; nothing
+throttles it, J4 scales linearly, and it stops at 0.35. The smooth path is
+the dangerous one.
 
 MODE IS YOURS TO SET, and this script never changes it behind you. `--mode
 SIM` runs in simulation, `--mode REAL` runs on metal, and that is all that
@@ -71,7 +103,8 @@ any change to the analysis.
     python3 test_blend_corner.py --side left --mode SIM
     python3 test_blend_corner.py --side left --mode REAL
     python3 test_blend_corner.py --side left --mode REAL --connect0
-    python3 test_blend_corner.py --side left --mode REAL --speed 0.45
+    python3 test_blend_corner.py --side left --mode REAL --reverse
+    python3 test_blend_corner.py --side left --mode REAL --speed 0.25
     python3 test_blend_corner.py --side left --mode SIM --path ../paths/<other>.py
 """
 
@@ -115,7 +148,8 @@ def load_path(src):
         for t in node.targets:
             nm = getattr(t, "id", "")
             if nm in ("POSES_MM", "SEQUENCE", "BLEND_SWEEP", "CORNER_ANGLES",
-                      "TCP_LINEAR_VELOCITY", "SEGMENT_SPEEDS", "BLEND"):
+                      "TCP_LINEAR_VELOCITY", "SEGMENT_SPEEDS", "BLEND",
+                      "SPEED_LADDER", "TOOL_FRAME"):
                 try:
                     got[nm] = ast.literal_eval(node.value)
                 except ValueError:
@@ -137,13 +171,59 @@ def load_path(src):
         raise SystemExit("fewer than 2 Cartesian waypoints in %s" % src)
     poses = [[by[s][0] / 1000.0, by[s][1] / 1000.0, by[s][2] / 1000.0,
               by[s][3], by[s][4], by[s][5]] for s in seq]
+    speed = got.get("TCP_LINEAR_VELOCITY", 0.25)
     return {
         "poses": poses, "labels": seq,
         "blends": list(got.get("BLEND_SWEEP", [got.get("BLEND", 25)])),
         "angles": list(got.get("CORNER_ANGLES", [])),
-        "speed": got.get("TCP_LINEAR_VELOCITY", 0.25),
+        "speed": speed,
+        # A path with no SPEED_LADDER is a one-rung ladder at its own speed —
+        # so the ladder is the only code path and a file that predates the
+        # feature still behaves exactly as it used to.
+        "ladder": [float(v) for v in got.get("SPEED_LADDER", [speed])],
+        "tool": got.get("TOOL_FRAME"),
         "seg_speeds": got.get("SEGMENT_SPEEDS", {}),
     }
+
+
+J4_LIMIT_PCT = 100.0
+
+
+def preflight_j4(poses, tool, speed):
+    """(worst % of the J4 limit, segment index) predicted offline, or None.
+
+    THE GATE THAT WOULD HAVE CAUGHT `20260813T183633`. That run climbed to
+    0.45 m/s on `blend_corner_001` and came back "[FAIL] segment 5: arrival
+    event reports failure" — segment 5 is `c5->end`, the segment this screen
+    puts at 117 % of J4's limit at that speed. Nothing about the blend was
+    wrong; the elbow was asked for more than it has.
+
+    J4 is used because on an S-R-S arm the elbow angle is fixed by the
+    commanded pose, INDEPENDENT of how the 7-DOF redundancy is resolved — so
+    this number is exact without knowing which configuration the controller
+    will pick. The other six joints are not predictable without a saved plan,
+    so a clean result here is necessary and NOT sufficient.
+
+    Returns None if the screen cannot run, and a caller must treat that as
+    "unknown", never as "safe".
+    """
+    try:
+        import orientation_cost as oc
+        if tool not in oc.TOOL_OFFSETS:
+            return None
+        err = oc.selfcheck(tool)
+        if err is not None and err > 0.001:
+            return None                  # transform unverified: refuse to opine
+        worst = None
+        for r in oc.segment_report(poses, tool, speed):
+            if r["j4"] is None:
+                continue
+            pct = 100.0 * r["j4"] / oc.JOINT_LIMIT[3]
+            if worst is None or pct > worst[0]:
+                worst = (pct, r["i"])
+        return worst
+    except Exception:
+        return None
 
 
 def read_tcp(run_dir):
@@ -469,21 +549,52 @@ def main() -> int:
               "corners, same angles, opposite order — the control that "
               "separates a corner's ANGLE from its POSITION in the run.")
     path["angles"] = angles_file
-    speed = path["speed"]
-    if "--speed" in sys.argv:                 # override the file, deliberately
-        speed = float(sys.argv[sys.argv.index("--speed") + 1])
     angles = path["angles"] or [None] * (len(poses) - 2)
     req_acc = None
     if "--line-acc" in sys.argv:
         req_acc = float(sys.argv[sys.argv.index("--line-acc") + 1])
-    speed, line_acc, notes = speed_limits.scale_for(speed, acc=req_acc)
+    # THE LADDER. Every rung runs in turn, ASCENDING, each recorded on its
+    # own, and the climb STOPS at the first rung that fails — continuing past
+    # a stall is how the 0.80 run that reversed four joints in 80 ms happened.
+    # `--speed` collapses the ladder to one rung, which is also what a path
+    # file with no SPEED_LADDER gets.
+    off_ladder = "--speed" in sys.argv
+    if off_ladder:
+        rungs = [float(sys.argv[sys.argv.index("--speed") + 1])]
+        ladder_src = "--speed (off-ladder, single run)"
+    else:
+        rungs = sorted(set(path["ladder"]))
+        ladder_src = ("SPEED_LADDER in %s" % os.path.basename(src)
+                      if len(rungs) > 1 else
+                      "TCP_LINEAR_VELOCITY in %s" % os.path.basename(src))
+    tool = path["tool"]
+    allow_over = "--allow-over-limit" in sys.argv
+
+    # VALIDATE EVERY SPEED BEFORE TOUCHING THE ARM. `scale_for` enforces the
+    # 1.8 m/s vendor ceiling, but it is called inside the rung loop — by then
+    # the arm is connected, the mode is engaged and earlier rungs may already
+    # have raised the limits, so a bad number would abort a run mid-flight
+    # with the controller left reconfigured. Checked here, an impossible
+    # request costs nothing and changes nothing.
+    for v in rungs:
+        if v <= 0:
+            print("  [FAIL] speed %.3f m/s is not positive" % v)
+            return 1
+        if v > speed_limits.MAX_LINE_SPEED:
+            print("  [FAIL] speed %.3f m/s is above the vendor maximum "
+                  "%.3f m/s for line_speed. RealMan state this as a hard "
+                  "ceiling; the controller would refuse it with a bare ret=1 "
+                  "and the run would then proceed at whatever was already "
+                  "configured, reading as \"the speed made no difference\"."
+                  % (v, speed_limits.MAX_LINE_SPEED))
+            return 1
 
     ip = LEFT_IP if side == "left" else RIGHT_IP
     total = sum(math.dist(poses[i][:3], poses[i + 1][:3])
                 for i in range(len(poses) - 1))
     seg_mm = 1000 * total / max(1, len(poses) - 1)
     print("=" * 74)
-    print("C19  blend / connect corner test   side=%s  speed=%.3f m/s" % (side, speed))
+    print("C19  blend / connect corner test   side=%s" % side)
     print("     path   %s" % os.path.relpath(src))
     print("     %d points, %d corners, %.2f m, mean segment %.0f mm"
           % (len(poses), len(poses) - 2, total, seg_mm))
@@ -491,6 +602,9 @@ def main() -> int:
     print("     corners %s   blends %s %%"
           % ("%s deg" % shown if shown else "%d (unlabelled)" % len(angles),
              path["blends"]))
+    print("     speeds  %s m/s   (%s)"
+          % (", ".join("%.2f" % v for v in rungs), ladder_src))
+    print("     tool    %s" % (tool or "NOT DECLARED — elbow screen disabled"))
     print("=" * 74)
 
     # Wrap each Euler delta to the shortest arc before judging it: rz sits
@@ -520,42 +634,6 @@ def main() -> int:
     limits_before = None
     originals = {}
     try:
-        for n in notes:
-            print("  [NOTE] %s" % n)
-        lim = speed_limits.read(arm.robot)
-        print("  limits found:  line_speed %.3f  line_acc %.3f"
-              % (lim.get("line_speed", -1), lim.get("line_acc", -1)))
-        if (abs(lim.get("line_speed", -1) - speed) > 1e-6
-                or abs(lim.get("line_acc", -1) - line_acc) > 1e-6):
-            # Set BOTH together. Raising only the speed is rejected with a
-            # bare ret=1 when acc < 3x speed, and the run then silently
-            # proceeds at whatever was already configured.
-            limits_before = speed_limits.apply(
-                arm.robot, allow_raise=True,
-                line_speed=speed, line_acc=line_acc)
-            print("  limits set:    line_speed %.3f  line_acc %.3f  "
-                  "(restored at exit)" % (speed, line_acc))
-        ramp = speed ** 2 / (2 * max(line_acc, 1e-6))
-        print("  ramp %.0f mm each way against a %.0f mm mean segment (%.1fx)"
-              % (1000 * ramp, seg_mm, seg_mm / max(1000 * ramp, 1e-9)))
-        spacing_mm = 1000.0 * speed / 100.0        # 100 Hz UDP push
-        print("  sample spacing %.2f mm at %.3f m/s — a corner needs >= %d "
-              "samples in its dip for the validated +-5 pt accuracy, so a "
-              "blend of at least ~%.0f mm"
-              % (spacing_mm, speed, MIN_CORNER_SAMPLES,
-                 MIN_CORNER_SAMPLES * spacing_mm / 2))
-        if 2 * ramp > 0.5 * (seg_mm / 1000.0):
-            print("  [WARN] segments barely reach cruise — there is no plateau "
-                  "to lose at a corner. Lengthen them in the path file or "
-                  "lower the speed.")
-        wide = [b for b in path["blends"] if b >= 40]
-        if wide:
-            print("  [NOTE] blend %s %% is >= 40 %% of a segment: the dips from "
-                  "a segment's two ends MEET, so the approach never returns to "
-                  "cruise and retention is measured against a depressed "
-                  "reference. Those columns read ~12 points HIGH (measured) — "
-                  "compare them with r=0, not with 100 %%." % wide)
-
         # THE MODE IS WHATEVER YOU ASKED FOR, and nothing else. `--mode SIM`
         # runs in simulation, `--mode REAL` runs on metal; this script never
         # switches between them on your behalf. `apply_run_mode` engages the
@@ -563,6 +641,10 @@ def main() -> int:
         # refuses — a SIM request that silently stayed REAL would move real
         # metal. Run SIM first, then REAL if it completed, exactly as the
         # rest of the suite is driven.
+        #
+        # Set ONCE, above the ladder: the mode is a property of the session,
+        # not of a rung, and re-engaging it per rung would be seven more
+        # chances for a SIM request to land on metal.
         originals = apply_run_mode(forced, arm)
         if originals is None:
             print("  [FAIL] could not engage %s on %s — refusing to dispatch"
@@ -574,7 +656,9 @@ def main() -> int:
             mode_label(forced) if forced is not None else
             "%s (as found — pass --mode to be explicit)" % mode_label(mode_now),
             "" if real else "   SIMULATION: nothing physical moves"))
-        print()
+        lim0 = speed_limits.read(arm.robot)
+        print("  limits found:  line_speed %.3f  line_acc %.3f"
+              % (lim0.get("line_speed", -1), lim0.get("line_acc", -1)))
 
         mon = ArrivalMonitor()
         mon.register(arm.robot)
@@ -582,97 +666,231 @@ def main() -> int:
         if also_c0:
             cases.append((0, False))
         hdr = "  ".join("%5s deg" % ("?" if a is None else a) for a in angles)
-        print("%-14s %-10s %s" % ("case", "corner", hdr))
-        print("-" * 74)
-        for blend, connect in cases:
-            # BEFORE the recorder, every time. Putting this after the
-            # analysis meant a rejected case skipped it and poisoned all the
-            # cases that followed — see goto_start's docstring.
-            if not goto_start(arm, poses, mon):
+
+        for ri, rung in enumerate(rungs):
+            speed, line_acc, notes = speed_limits.scale_for(rung, acc=req_acc)
+            print("\n" + "=" * 74)
+            print("  RUNG %d of %d   line_speed %.3f m/s   line_acc %.3f m/s2"
+                  % (ri + 1, len(rungs), speed, line_acc))
+            print("=" * 74)
+            for n in notes:
+                print("  [NOTE] %s" % n)
+
+            # THE PRE-FLIGHT ELBOW GATE — before the limits are raised, so a
+            # refused rung never touches the controller's configuration.
+            worst = preflight_j4(poses, tool, speed)
+            if worst is None:
+                print("  [WARN] the offline elbow screen could not run (no "
+                      "TOOL_FRAME in the path file, an unknown frame, or a "
+                      "failed transform self-check). This rung is UNSCREENED "
+                      "— its joint demand is unknown, not known to be safe.")
+            elif worst[0] > J4_LIMIT_PCT and not (allow_over or off_ladder):
+                # THE HARD STOP IS FOR THE LADDER, and only for the ladder. A
+                # ladder climbs on its own: nobody chose 0.80 for this path,
+                # the list did, so it must not wander past what the elbow can
+                # give. A `--speed` run is the opposite — an operator naming
+                # one number for one run — so it is warned, loudly, not
+                # refused. Both keep the same screen and the same numbers; only
+                # who made the decision differs.
+                print("  [STOP] segment %d needs %.0f %% of J4's limit at this "
+                      "speed. The controller does NOT reliably refuse this: it "
+                      "attempts it, and 20260813T183633 came back \"segment 5: "
+                      "arrival event reports failure\" from exactly this "
+                      "cause.\n"
+                      "         Not running this rung, and not climbing "
+                      "further — every rung above is worse. Remaining: %s\n"
+                      "         Override with --allow-over-limit, or name the "
+                      "speed directly with --speed, in either case with the "
+                      "E-stop in hand."
+                      % (worst[1], worst[0],
+                         ", ".join("%.2f" % v for v in rungs[ri:])))
                 break
-            rec = RunRecorder(arm.robot,
-                              "blend_r%d%s" % (blend, "" if connect else "_c0"),
-                              side, host_ip_for(ip), UDP_PORT)
-            if not rec.start():
-                print("  [WARN] recorder did not start; this case is not "
-                      "introspectable afterwards")
-            t0 = time.perf_counter()
-            ok = run_one(arm, poses, blend, connect, mon)
-            t1 = time.perf_counter()
-            # Metadata in the same shape stage_runner writes, so a blend run
-            # is introspectable with the same tooling as a task run.
-            rec.meta.update({
-                "mode": mode_label(1 if real else 0),
-                "sim": not real,
-                "path_file": os.path.relpath(src),
-                "speeds": {"cleaning_pct": 100, "blend_pct": blend,
-                           "connect": int(connect)},
-                "limits_in_force": speed_limits.read(arm.robot),
-                "line_speed_cap_m_s": speed,
-                "commanded": {
-                    "tool_frame": None, "blend_pct": blend,
-                    "connect": int(connect),
-                    "num_waypoints": len(poses),
-                    "segments": len(poses) - 1,
-                    "waypoint_names": labels,
-                    "poses": poses,
-                    "corner_angles_deg": angles,
-                },
-            })
-            run_dir = rec.stop()
-            if not ok:
-                continue
-            # t_mono is zeroed when recording starts, so the motion window is
-            # measured from the recorder's clock, not perf_counter's.
-            tcp = read_tcp(run_dir)
-            followed, rec_m, cmd_m = path_followed(tcp, poses)
-            if not followed:
-                print("%-14s %s" % (
-                    ("r=%d%%" % blend) if connect else "connect=0",
-                    "NO RESULT — the tool traced %.3f m against a commanded "
-                    "%.3f m (%.0f %%). %s" % (
-                        rec_m, cmd_m, 100 * rec_m / max(cmd_m, 1e-9),
-                        "It stopped short — check for the H45 stall."
-                        if rec_m < cmd_m else
-                        "The stream is not this path; corner numbers would be "
-                        "fiction.")))
-                continue
-            res = corner_speeds(tcp, poses, 0.0, t1 - t0)
-            label = ("r=%d%%" % blend) if connect else "connect=0"
-            # A corner measured from too few samples is marked "?" — its
-            # number would be unsupported, not merely imprecise.
-            print("%-14s %-10s %s" % (label, "retained", "  ".join(
-                "     -   " if r is None else
-                ("%5.0f%%%s " % (100 * r[2],
-                                 "?" if r[3] < MIN_CORNER_SAMPLES else " "))
-                for r in res)))
-            print("%-14s %-10s %s" % ("", "v_min m/s", "  ".join(
-                "     -   " if r is None else "%6.3f   " % r[1] for r in res)))
-            # A declined corner is declined for one of TWO reasons and they
-            # want opposite fixes, so say which. Reporting both as "too few
-            # samples" cost a session: every corner of the 2026-08-13 runs
-            # had 11-44 samples and was declined purely because the approach
-            # never held a plateau.
-            few = [i + 1 for i, r in enumerate(res)
-                   if r is not None and r[3] < MIN_CORNER_SAMPLES
-                   and r[4] < MIN_CORNER_SAMPLES]
-            noflat = [i + 1 for i, r in enumerate(res)
-                      if r is not None and r[3] < MIN_CORNER_SAMPLES
-                      and r[4] >= MIN_CORNER_SAMPLES]
-            if few:
-                print("%-14s %-10s corners %s: only %d-%d samples in the dip "
-                      "(need %d) — lower the speed or widen the blend"
-                      % ("", "", few,
-                         min(res[i - 1][4] for i in few),
-                         max(res[i - 1][4] for i in few), MIN_CORNER_SAMPLES))
-            if noflat:
-                print("%-14s %-10s corners %s: NO CRUISE PLATEAU on the "
-                      "approach (speed varies %d-%d %% across the middle of "
-                      "the segment) — the segment never settles, so there is "
-                      "no cruise to retain. Lengthen it or lower the speed."
-                      % ("", "", noflat,
-                         int(100 * min(res[i - 1][5] for i in noflat)),
-                         int(100 * max(res[i - 1][5] for i in noflat))))
+            elif worst[0] > J4_LIMIT_PCT:
+                print("  " + "!" * 70)
+                print("  [WARN] OVER THE ELBOW LIMIT — segment %d needs %.0f %% "
+                      "of J4's %.0f deg/s." % (worst[1], worst[0], 225.0))
+                print("         Running anyway because you named this speed "
+                      "explicitly (%s)."
+                      % ("--speed" if off_ladder else "--allow-over-limit"))
+                print("         The arm does NOT reliably stop itself: at "
+                      "line_speed 0.80 it reversed four joints in 80 ms at "
+                      "16.7 A and reported nothing on any channel.")
+                print("         E-STOP IN HAND. Run SIM first.")
+                print("  " + "!" * 70)
+            else:
+                print("  elbow: worst is segment %d at %.0f %% of the J4 limit "
+                      "(exact — J4 is redundancy-invariant; the other six "
+                      "joints need a saved plan and are NOT screened)"
+                      % (worst[1], worst[0]))
+
+            if (abs(speed_limits.read(arm.robot).get("line_speed", -1) - speed)
+                    > 1e-6
+                    or abs(speed_limits.read(arm.robot).get("line_acc", -1)
+                           - line_acc) > 1e-6):
+                # Set BOTH together. Raising only the speed is rejected with a
+                # bare ret=1 when acc < 3x speed, and the run then silently
+                # proceeds at whatever was already configured.
+                prev = speed_limits.apply(
+                    arm.robot, allow_raise=True,
+                    line_speed=speed, line_acc=line_acc)
+                # Capture only the FIRST rung's previous values — that is what
+                # the arm had before this program touched it, and what the
+                # restore at exit must return it to. Capturing per rung would
+                # leave the arm at rung N-1's settings.
+                if limits_before is None:
+                    limits_before = prev
+                print("  limits set:    line_speed %.3f  line_acc %.3f  "
+                      "(originals restored at exit)" % (speed, line_acc))
+            ramp = speed ** 2 / (2 * max(line_acc, 1e-6))
+            print("  ramp %.0f mm each way against a %.0f mm mean segment "
+                  "(%.1fx)"
+                  % (1000 * ramp, seg_mm, seg_mm / max(1000 * ramp, 1e-9)))
+            spacing_mm = 1000.0 * speed / 100.0        # 100 Hz UDP push
+            print("  sample spacing %.2f mm at %.3f m/s — a corner needs >= %d "
+                  "samples in its dip for the validated +-5 pt accuracy, so a "
+                  "blend of at least ~%.0f mm"
+                  % (spacing_mm, speed, MIN_CORNER_SAMPLES,
+                     MIN_CORNER_SAMPLES * spacing_mm / 2))
+            if 2 * ramp > 0.5 * (seg_mm / 1000.0):
+                print("  [WARN] segments barely reach cruise — there is no "
+                      "plateau to lose at a corner. Lengthen them in the path "
+                      "file or lower the speed.")
+            wide = [b for b in path["blends"] if b >= 40]
+            if wide:
+                print("  [NOTE] blend %s %% is >= 40 %% of a segment: the dips "
+                      "from a segment's two ends MEET, so the approach never "
+                      "returns to cruise and retention is measured against a "
+                      "depressed reference. Those columns read ~12 points HIGH "
+                      "(measured) — compare them with r=0, not with 100 %%."
+                      % wide)
+            print()
+            print("%-14s %-10s %s" % ("case", "corner", hdr))
+            print("-" * 74)
+
+            rung_ok = True
+            for blend, connect in cases:
+                # BEFORE the recorder, every time. Putting this after the
+                # analysis meant a rejected case skipped it and poisoned all
+                # the cases that followed — see goto_start's docstring.
+                if not goto_start(arm, poses, mon):
+                    rung_ok = False
+                    break
+                # The run directory carries the RUNG in its name. Without it a
+                # seven-rung sweep writes seven `blend_r25_left` directories
+                # distinguishable only by timestamp, and the 2026-08-13 session
+                # showed how easily the wrong one gets read.
+                rec = RunRecorder(arm.robot,
+                                  "blend_r%d%s_v%03d"
+                                  % (blend, "" if connect else "_c0",
+                                     round(speed * 1000)),
+                                  side, host_ip_for(ip), UDP_PORT)
+                if not rec.start():
+                    print("  [WARN] recorder did not start; this case is not "
+                          "introspectable afterwards")
+                t0 = time.perf_counter()
+                ok = run_one(arm, poses, blend, connect, mon)
+                t1 = time.perf_counter()
+                # Metadata in the same shape stage_runner writes, so a blend
+                # run is introspectable with the same tooling as a task run.
+                rec.meta.update({
+                    "mode": mode_label(1 if real else 0),
+                    "sim": not real,
+                    "path_file": os.path.relpath(src),
+                    "speeds": {"cleaning_pct": 100, "blend_pct": blend,
+                               "connect": int(connect)},
+                    "limits_in_force": speed_limits.read(arm.robot),
+                    "line_speed_cap_m_s": speed,
+                    "ladder": {"rung": ri + 1, "of": len(rungs),
+                               "line_speed": speed, "line_acc": line_acc,
+                               "all_rungs": rungs,
+                               "predicted_j4_pct": None if worst is None
+                               else round(worst[0], 1)},
+                    "commanded": {
+                        "tool_frame": tool, "blend_pct": blend,
+                        "connect": int(connect),
+                        "num_waypoints": len(poses),
+                        "segments": len(poses) - 1,
+                        "waypoint_names": labels,
+                        "poses": poses,
+                        "corner_angles_deg": angles,
+                    },
+                })
+                run_dir = rec.stop()
+                if not ok:
+                    rung_ok = False
+                    continue
+                # t_mono is zeroed when recording starts, so the motion window
+                # is measured from the recorder's clock, not perf_counter's.
+                tcp = read_tcp(run_dir)
+                followed, rec_m, cmd_m = path_followed(tcp, poses)
+                if not followed:
+                    print("%-14s %s" % (
+                        ("r=%d%%" % blend) if connect else "connect=0",
+                        "NO RESULT — the tool traced %.3f m against a "
+                        "commanded %.3f m (%.0f %%). %s" % (
+                            rec_m, cmd_m, 100 * rec_m / max(cmd_m, 1e-9),
+                            "It stopped short — check for the H45 stall."
+                            if rec_m < cmd_m else
+                            "The stream is not this path; corner numbers "
+                            "would be fiction.")))
+                    # A short trace is a STALL and must stop the climb; a long
+                    # one is a bookkeeping fault in this harness and does not
+                    # say anything about the arm's ability to take the next
+                    # rung. Treating them alike would either hide a stall or
+                    # abandon a sweep for no reason.
+                    if rec_m < cmd_m:
+                        rung_ok = False
+                    continue
+                res = corner_speeds(tcp, poses, 0.0, t1 - t0)
+                label = ("r=%d%%" % blend) if connect else "connect=0"
+                # A corner measured from too few samples is marked "?" — its
+                # number would be unsupported, not merely imprecise.
+                print("%-14s %-10s %s" % (label, "retained", "  ".join(
+                    "     -   " if r is None else
+                    ("%5.0f%%%s " % (100 * r[2],
+                                     "?" if r[3] < MIN_CORNER_SAMPLES else " "))
+                    for r in res)))
+                print("%-14s %-10s %s" % ("", "v_min m/s", "  ".join(
+                    "     -   " if r is None else "%6.3f   " % r[1]
+                    for r in res)))
+                # A declined corner is declined for one of TWO reasons and they
+                # want opposite fixes, so say which. Reporting both as "too few
+                # samples" cost a session: every corner of the 2026-08-13 runs
+                # had 11-44 samples and was declined purely because the
+                # approach never held a plateau.
+                few = [i + 1 for i, r in enumerate(res)
+                       if r is not None and r[3] < MIN_CORNER_SAMPLES
+                       and r[4] < MIN_CORNER_SAMPLES]
+                noflat = [i + 1 for i, r in enumerate(res)
+                          if r is not None and r[3] < MIN_CORNER_SAMPLES
+                          and r[4] >= MIN_CORNER_SAMPLES]
+                if few:
+                    print("%-14s %-10s corners %s: only %d-%d samples in the "
+                          "dip (need %d) — lower the speed or widen the blend"
+                          % ("", "", few,
+                             min(res[i - 1][4] for i in few),
+                             max(res[i - 1][4] for i in few),
+                             MIN_CORNER_SAMPLES))
+                if noflat:
+                    print("%-14s %-10s corners %s: NO CRUISE PLATEAU on the "
+                          "approach (speed varies %d-%d %% across the middle "
+                          "of the segment) — the segment never settles, so "
+                          "there is no cruise to retain. Lengthen it or lower "
+                          "the speed."
+                          % ("", "", noflat,
+                             int(100 * min(res[i - 1][5] for i in noflat)),
+                             int(100 * max(res[i - 1][5] for i in noflat))))
+
+            if not rung_ok:
+                # THE CLIMB STOPS HERE. Every rung above this one asks more of
+                # the arm than the one that just failed, so "try the next one"
+                # is never the right response to a stall or a failure event.
+                print("\n  [STOP] rung %.3f m/s did not complete. Not climbing "
+                      "further — rungs %s were NOT run."
+                      % (speed, ", ".join("%.2f" % v for v in rungs[ri + 1:])
+                         or "(none remaining)"))
+                break
+
         print("\n  retained = corner minimum / cruise on the approach.")
         print("  A working blend holds most of its cruise; ~0 % is a full stop.")
         print("  DECISIVE: compare r=0 with the largest r. If they match, the")

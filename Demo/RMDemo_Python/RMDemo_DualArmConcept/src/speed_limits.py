@@ -129,7 +129,16 @@ def scale_for(line_speed, ratio=ACC_SPEED_RATIO, acc=None):
         raise SystemExit(
             "line_speed %.3f exceeds the vendor maximum %.3f m/s"
             % (line_speed, MAX_LINE_SPEED))
-    need = ratio * line_speed
+    # A HAIR ABOVE the exact ratio, not exactly on it. Two reasons. In binary
+    # floating point 3 * 0.70 = 2.0999999999999996, which divides back to
+    # 2.9999999999999996 and reads as "below 3" to any strict comparison —
+    # ours did. And the controller applies the same rule with its own
+    # arithmetic, which we cannot inspect; a value sitting exactly on the
+    # boundary can come back as a bare ret=1, after which the run proceeds at
+    # whatever was already configured and looks like "the speed made no
+    # difference". The margin is 1 part in 10^9 — invisible at the 3 decimals
+    # everything prints, and it puts the pair unambiguously inside the rule.
+    need = ratio * line_speed * (1 + 1e-9)
     if acc is None:
         # Keep the shipped 6.4x headroom where it still satisfies the rule,
         # so a modest speed rise does not silently raise acceleration too —
@@ -329,7 +338,14 @@ def apply(robot, allow_raise: bool = False, **values) -> dict:
              "angular")):
         v_s, v_a = merged.get(spd), merged.get(acc)
         if isinstance(v_s, float) and isinstance(v_a, float) and v_s > 0:
-            if v_a / v_s < ratio:
+            # Compare with a tolerance, because an EXACTLY-3x pair does not
+            # always divide back to 3 in binary floating point: 3 * 0.70 is
+            # 2.0999999999999996, and 2.1 / 0.7 is 2.9999999999999996. Without
+            # this, `scale_for` hands `apply` a pair that `apply` then rejects
+            # as invalid — the 0.70 rung of a speed ladder died exactly here.
+            # `scale_for` already used the same tolerance on its own check;
+            # this makes the two agree.
+            if v_a / v_s < ratio * (1 - 1e-9):
                 raise ValueError(
                     f"{what}: acceleration/speed = {v_a:.3f}/{v_s:.3f} = "
                     f"{v_a / v_s:.2f}, below the documented minimum of "
