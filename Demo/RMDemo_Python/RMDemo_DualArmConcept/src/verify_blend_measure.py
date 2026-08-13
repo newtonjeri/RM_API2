@@ -86,6 +86,30 @@ def build(poses):
 POS_JITTER = [0.0, .30, -.30, .10, .45, -.45, .20, -.10, .35, -.35,
               .05, .40, -.40, .15, -.15, .25, -.25, .50, -.50, .10]
 
+# PERPENDICULAR wobble, as a fraction of one sample step. Along-path jitter
+# alone reproduces the ratio statistics but NOT the thing that broke the
+# corner locator: the recorded path came to 107-110 % of the commanded one on
+# hardware while a noiseless SIM stream reads 97-100 %, because arc length is
+# a sum of noisy displacements and only ever runs long. Measured on
+# 20260813T205154: 0.46 mm median deviation from the commanded line and 19 %
+# of intervals stepping backwards.
+#
+# Without this the self-test walks a geometrically perfect line, every vertex
+# sits exactly where cumulative arc says it does, and an arc-based locator
+# passes — which is precisely what happened. It vouched for a locator that
+# was placing vertices 2-5 up to 34 mm outside their own windows.
+#
+# Also a FIXED sequence, and deliberately alternating: high-frequency
+# excursions are what inflate a path, a slow drift does not.
+# Amplitudes are CALIBRATED to the measured inflation, not picked: a
+# perpendicular excursion of +-a on a step of length s makes the recorded
+# interval sqrt(s^2 + (2a)^2), so 108 % of commanded needs a ~ 0.2 s. At
+# +-0.55 s the synthetic stream inflated to 147 %, well past anything the
+# hardware does, which would have made the self-test harder than reality
+# rather than equal to it.
+PERP_JITTER = [0.0, .22, -.20, .24, -.22, .18, -.24, .20, -.18, .22,
+               -.16, .24, -.22, .18, -.20, .22, -.24, .16, -.18, .20]
+
 
 def synth(poses, seg, vert, total, retain, cruise=0.25, hz=100.0,
           dip_frac=0.10, frame_rot=False, jitter=0.0):
@@ -122,6 +146,17 @@ def synth(poses, seg, vert, total, retain, cruise=0.25, hz=100.0,
         f = rem / seg[i]
         p = [poses[i][j] + (poses[i + 1][j] - poses[i][j]) * f
              for j in range(3)]
+        if jitter:
+            # Push the sample off the commanded line, perpendicular to it, so
+            # the summed arc runs long exactly as the hardware's does. Any
+            # direction not parallel to the segment will do; the segment's own
+            # in-plane normal is stable and needs no special case.
+            ab = [poses[i + 1][j] - poses[i][j] for j in range(3)]
+            nv = (-ab[1], ab[0], 0.0)
+            ln = math.sqrt(sum(x * x for x in nv))
+            if ln > 1e-9:
+                a = jitter * PERP_JITTER[n % len(PERP_JITTER)] * step
+                p = [p[j] + a * nv[j] / ln for j in range(3)]
         if frame_rot:                     # World -> base: (x,y,z)->(z,y,-x)
             p = [p[2], p[1], -p[0]]
         rows.append((t, p[0], p[1], p[2]))

@@ -251,6 +251,25 @@ def read_tcp(run_dir):
     return out
 
 
+def read_joint_peaks(run_dir):
+    """Peak |speed| per joint from a recorded stream, deg/s. [] if absent.
+
+    SIMULATION populates positions but leaves the speed channel at zero, so
+    an all-zero result means "not measured", never "nothing moved". The
+    caller must not read it as a clean bill of health.
+    """
+    import csv
+    peaks = [0.0] * 7
+    with (pathlib.Path(run_dir) / "stream.csv").open() as fh:
+        for r in csv.DictReader(fh):
+            try:
+                for j in range(7):
+                    peaks[j] = max(peaks[j], abs(float(r["speed%d" % (j + 1)])))
+            except (KeyError, ValueError, TypeError):
+                continue
+    return peaks if any(peaks) else []
+
+
 def path_followed(rows, poses, tol=0.15):
     """(ok, recorded_m, commanded_m) — did the tool actually trace the path?
 
@@ -274,6 +293,25 @@ def path_followed(rows, poses, tol=0.15):
     cmd = sum(math.dist(poses[i][:3], poses[i + 1][:3])
               for i in range(len(poses) - 1))
     if cmd < 1e-9:
+        return False, rec, cmd
+    # THE END POSE IS CHECKED SEPARATELY, because arc length alone missed a
+    # real abort. Run 20260813T205319 stopped 44.6 mm short of its final
+    # waypoint after the controller refused the trajectory — and still
+    # measured 101 % of commanded arc, because summing noisy displacements
+    # inflates the recorded path by 7-10 % and that inflation cancelled the
+    # shortfall almost exactly. A tool that ends 45 mm from where it was sent
+    # did not follow the path, whatever the arc says.
+    #
+    # Only meaningful when the stream is in the PATH's frame, which is not
+    # guaranteed — a controller reporting in the base frame ends nowhere near
+    # the path's last waypoint while having followed it perfectly. Arc length
+    # is rotation-invariant and this is not, so the frame is established from
+    # the START sample first: if the run did not begin at the path's first
+    # waypoint either, the two are in different frames and only the
+    # arc-length test applies.
+    same_frame = math.dist(rows[0][1:4], poses[0][:3]) <= 0.010
+    end_off = math.dist(rows[-1][1:4], poses[-1][:3])
+    if same_frame and end_off > 0.010:
         return False, rec, cmd
     return abs(rec - cmd) / cmd <= tol, rec, cmd
 
@@ -337,10 +375,57 @@ def corner_speeds(rows, poses, t_start, t_end):
                    else 0.0)
     seg = [math.dist(poses[i][:3], poses[i + 1][:3])
            for i in range(len(poses) - 1)]
-    vert, acc = [], 0.0
-    for s in seg[:-1]:
-        acc += s
-        vert.append(acc)
+    # EACH VERTEX IS FOUND BY CLOSEST APPROACH IN SPACE, not by arc length.
+    #
+    # Arc length was the original choice, to avoid using time — the arm's
+    # speed is what is being measured, so locating a corner by time would
+    # assume the answer. But cumulative arc is a SUM OF NOISY DISPLACEMENTS
+    # and it only ever runs long: on hardware the recorded arc came to
+    # 107-110 % of the commanded path (0.46 mm median perpendicular deviation
+    # from the commanded line, and 19 % of intervals stepping backwards),
+    # while noiseless SIM streams read 97-100 %.
+    #
+    # An 8 % overestimate is not a small error here, because it ACCUMULATES:
+    # measured on 20260813T205154, the arc locator placed the vertices 9, 22,
+    # 28, 34 and 34 mm early. The corner window is +-30 % of a 65 mm segment
+    # = +-19.5 mm, so vertices 2-5 fell entirely OUTSIDE their own windows and
+    # were measured mid-segment, where the arm is cruising. That is where the
+    # 222 %, 229 % and 426 % retentions came from, and it made the FIRST
+    # corner — the least mislocated one — look uniquely bad.
+    #
+    # A waypoint is a known point in space, so closest approach is exact and
+    # cannot drift: it recovered every vertex to within 0.1-4.8 mm, the
+    # residual being the blend genuinely cutting the corner. It assumes
+    # nothing about speed either.
+    cmd_total = sum(seg)
+    # Window widths are still measured in recorded arc, so they are stretched
+    # by the same factor to cover the intended TRUE distance. Over a 40 mm
+    # window this is a ~3 mm correction — small, but free.
+    scale = (cum[-1] / cmd_total) if cmd_total > 1e-9 else 1.0
+    scale = min(max(scale, 1.0), 1.5)      # never shrink; never trust a wild one
+
+    idx = [min(range(len(xs)), key=lambda i: math.dist(xs[i][1:4],
+                                                       poses[k + 1][:3]))
+           for k in range(len(seg) - 1)]
+    # CLOSEST APPROACH NEEDS THE STREAM TO BE IN THE PATH'S FRAME, and that is
+    # not guaranteed — arc length was rotation-invariant and this is not. On
+    # hardware the two agree (all 42 runs of 2026-08-13 started within 3.2 mm
+    # of their commanded start pose), but a controller reporting in the base
+    # frame, or an emulator whose IK diverges, would put every "closest"
+    # sample somewhere meaningless while still returning an index.
+    #
+    # So it is CHECKED, not assumed: if the tool never comes near its own
+    # waypoints, fall back to arc length with the inflation divided out. That
+    # keeps the drift proportional instead of accumulating, which is most of
+    # the fix, and it costs nothing when closest approach is available.
+    miss = sorted(math.dist(xs[idx[k]][1:4], poses[k + 1][:3])
+                  for k in range(len(idx)))
+    if miss and miss[len(miss) // 2] > 0.25 * (cmd_total / len(seg)):
+        acc = 0.0
+        idx = []
+        for s in seg[:-1]:
+            acc += s * scale
+            idx.append(min(range(len(cum)), key=lambda i: abs(cum[i] - acc)))
     # THE CHORD-AT-A-CORNER ARTIFACT, and why one sample per corner is
     # dropped. Speed here is |dp|/dt between consecutive samples — a CHORD.
     # Where an interval straddles a vertex the chord cuts the corner and is
@@ -366,14 +451,12 @@ def corner_speeds(rows, poses, t_start, t_end):
     # `TCP_LINEAR_VELOCITY` in the path file to buy that resolution back —
     # halving the speed doubles the samples in the dip.
     straddle = set()
-    for v in vert:
-        for i in range(1, len(cum)):
-            if cum[i - 1] <= v <= cum[i]:
-                straddle.update(range(i - 1 - half, i + 2 + half))
-                break
+    for iv in idx:
+        straddle.update(range(iv - 1 - half, iv + 2 + half))
 
     out = []
-    for k, v in enumerate(vert):
+    for k, iv in enumerate(idx):
+        v = cum[iv]                        # the vertex, in RECORDED arc
         # +-30 % of the segment. `near` feeds a MINIMUM, so widening it can
         # only add cruise samples that cannot lower the min — it costs
         # nothing and buys resolution. At +-15 % a 65 mm segment gave ~10
@@ -381,11 +464,12 @@ def corner_speeds(rows, poses, t_start, t_end):
         # MIN_CORNER_SAMPLES: a perfectly flat run was being declined for
         # want of samples. The next vertex is a full segment away, so 30 %
         # cannot reach it.
-        win = 0.30 * seg[k]
+        win = 0.30 * seg[k] * scale
         near = [spd[i] for i in range(len(cum))
                 if abs(cum[i] - v) <= win and i not in straddle]
         mid = [spd[i] for i in range(len(cum))
-               if v - 0.75 * seg[k] <= cum[i] <= v - 0.25 * seg[k]
+               if v - 0.75 * seg[k] * scale <= cum[i]
+               <= v - 0.25 * seg[k] * scale
                and i not in straddle]
         if not near or not mid:
             out.append(None)
@@ -454,19 +538,40 @@ def goto_start(arm, poses, mon):
     says the controller finished planning its move; the readback says the
     tool is where the next measurement assumes it is.
     """
-    mon.expect(arm.handle_id, DEV_JOINT)
-    ret = arm.robot.rm_movel(poses[0], 30, 0, 0, 0)
-    arrived, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
-    if ret != 0 or not arrived or not ok:
-        print("  [FAIL] move to the start pose: ret=%s arrived=%s ok=%s"
-              % (ret, arrived, ok))
-        return False
-    sret, st = arm.robot.rm_get_current_arm_state()
-    if sret != 0 or not isinstance(st, dict) or not st.get("pose"):
-        print("  [FAIL] cannot read back the pose to confirm the start "
-              "position (ret=%s)" % sret)
-        return False
-    off = math.dist(st["pose"][:3], poses[0][:3])
+    off, st = None, None
+    # TWO ATTEMPTS, each allowed to SETTLE. The arrival event fires when the
+    # controller has finished its trajectory, which is not the same instant
+    # the tool has stopped moving — reading the pose immediately after it
+    # catches the arm mid-settle. On 2026-08-13 this cost five of seven rungs
+    # of a `test_motion_001` ladder to a single 9.8 mm reading, on a return
+    # the arm had in fact completed. Waiting for the pose to stop changing
+    # removes the race; a second attempt covers a move that genuinely fell
+    # short, which is worth one retry before abandoning the sweep.
+    for attempt in (1, 2):
+        mon.expect(arm.handle_id, DEV_JOINT)
+        ret = arm.robot.rm_movel(poses[0], 30, 0, 0, 0)
+        arrived, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
+        if ret != 0 or not arrived or not ok:
+            print("  [FAIL] move to the start pose: ret=%s arrived=%s ok=%s"
+                  % (ret, arrived, ok))
+            return False
+        prev = None
+        for _ in range(20):                       # up to ~2 s of settling
+            sret, st = arm.robot.rm_get_current_arm_state()
+            if sret != 0 or not isinstance(st, dict) or not st.get("pose"):
+                print("  [FAIL] cannot read back the pose to confirm the "
+                      "start position (ret=%s)" % sret)
+                return False
+            if prev is not None and math.dist(st["pose"][:3], prev) < 0.0002:
+                break                             # stopped moving
+            prev = list(st["pose"][:3])
+            time.sleep(0.1)
+        off = math.dist(st["pose"][:3], poses[0][:3])
+        if off <= 0.005:
+            return True
+        if attempt == 1:
+            print("  [INFO] start pose %.1f mm out after settling — "
+                  "re-commanding it once before giving up." % (1000 * off))
     if off > 0.005:
         # Print BOTH poses, because the two ways this fails need different
         # responses and the number alone does not separate them. A few mm is
@@ -667,6 +772,7 @@ def main() -> int:
             cases.append((0, False))
         hdr = "  ".join("%5s deg" % ("?" if a is None else a) for a in angles)
 
+        prev_meas = None        # (line_speed, worst joint fraction, joint no)
         for ri, rung in enumerate(rungs):
             speed, line_acc, notes = speed_limits.scale_for(rung, acc=req_acc)
             print("\n" + "=" * 74)
@@ -675,6 +781,39 @@ def main() -> int:
             print("=" * 74)
             for n in notes:
                 print("  [NOTE] %s" % n)
+
+            # THE MEASURED GATE, which outranks the offline one. Joint rate
+            # scales LINEARLY with commanded speed — measured on
+            # test_motion_001, J4 peaked at 134 deg/s at 0.25 m/s and
+            # 191 deg/s at 0.35 (ratio 1.43 against a speed ratio of 1.40) —
+            # so the rung just completed predicts the next one directly, from
+            # this arm on this path, with no model in the way.
+            #
+            # It is here because the OFFLINE screen was badly optimistic on a
+            # rotating path: it called 0.25 m/s 35 % of J4's limit where the
+            # arm measured 59 %, and 0.35 m/s 49 % where the arm measured
+            # 85 % — a factor of 1.7. Left to the offline number alone this
+            # ladder would have climbed to 0.80 m/s, which the measurement
+            # puts at 194 % of J4. The 0.45 rung failing in SIM is the same
+            # arithmetic landing at 109 %.
+            if prev_meas is not None:
+                pv, frac, jn = prev_meas
+                proj = frac * speed / pv
+                if proj > 1.0 and not allow_over:
+                    print("  [STOP] the rung just completed measured J%d at "
+                          "%.0f %% of its limit at %.2f m/s. Joint rate scales "
+                          "linearly with speed, so THIS rung projects to "
+                          "%.0f %% — measured on this arm, on this path, not "
+                          "modelled.\n"
+                          "         Not running it. Remaining: %s\n"
+                          "         --allow-over-limit overrides, E-stop in "
+                          "hand."
+                          % (jn, 100 * frac, pv, 100 * proj,
+                             ", ".join("%.2f" % v for v in rungs[ri:])))
+                    break
+                print("  measured last rung: J%d at %.0f %% of its limit at "
+                      "%.2f m/s -> this rung projects to %.0f %%"
+                      % (jn, 100 * frac, pv, 100 * proj))
 
             # THE PRE-FLIGHT ELBOW GATE — before the limits are raised, so a
             # refused rung never touches the controller's configuration.
@@ -768,6 +907,9 @@ def main() -> int:
             print("-" * 74)
 
             rung_ok = True
+            rung_frac = None                  # worst measured joint fraction
+            jlim = (speed_limits.read(arm.robot).get("joint_speed")
+                    or [180.0, 180.0] + [225.0] * 5)
             for blend, connect in cases:
                 # BEFORE the recorder, every time. Putting this after the
                 # analysis meant a rejected case skipped it and poisoned all
@@ -816,6 +958,20 @@ def main() -> int:
                     },
                 })
                 run_dir = rec.stop()
+                # WHAT THE JOINTS ACTUALLY DID, from the same recording. This
+                # is the input to the gate on the next rung, so it is taken
+                # from every case whether or not the case produced usable
+                # corner numbers — a failed case is exactly the one whose
+                # joint rates matter most.
+                pk = read_joint_peaks(run_dir)
+                if pk:
+                    f, jn = max((pk[j] / jlim[j], j + 1) for j in range(7))
+                    if rung_frac is None or f > rung_frac[0]:
+                        rung_frac = (f, jn)
+                    if f > 1.0:
+                        print("  [WARN] J%d reached %.0f %% of its limit "
+                              "(%.0f deg/s) during this case."
+                              % (jn, 100 * f, pk[jn - 1]))
                 if not ok:
                     rung_ok = False
                     continue
@@ -880,6 +1036,16 @@ def main() -> int:
                           % ("", "", noflat,
                              int(100 * min(res[i - 1][5] for i in noflat)),
                              int(100 * max(res[i - 1][5] for i in noflat))))
+
+            if rung_frac is not None:
+                prev_meas = (speed, rung_frac[0], rung_frac[1])
+                print("  measured this rung: worst J%d at %.0f %% of its limit"
+                      % (rung_frac[1], 100 * rung_frac[0]))
+            elif real:
+                print("  [WARN] no joint-speed telemetry in this rung's "
+                      "recordings, so the next rung cannot be gated on "
+                      "measurement — only on the offline screen, which has "
+                      "run 1.7x optimistic on a rotating path.")
 
             if not rung_ok:
                 # THE CLIMB STOPS HERE. Every rung above this one asks more of
