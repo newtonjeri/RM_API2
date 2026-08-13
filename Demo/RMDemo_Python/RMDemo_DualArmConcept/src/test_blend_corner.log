@@ -104,3 +104,273 @@ current c api version:  1.1.6
   Started: 2026-08-13 13:38:11
 ========================================================================
 usage: --mode SIM|REAL  (got 'FAST')
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 18:31:12
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.200 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  limits found:  line_speed 0.450  line_acc 1.900
+  limits set:    line_speed 0.200  line_acc 1.600  (restored at exit)
+  ramp 13 mm each way against a 65 mm mean segment (5.2x)
+  sample spacing 2.00 mm at 0.200 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~8 mm
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260813T183112_blend_r0_left  (100 Hz, ret=0)
+  [INFO] smoothness: 8 decelerations below half cruise, 1.33 per segment, deepest 0 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 365 samples (92.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183112_blend_r0_left
+r=0%           retained      46%?     114%?     109%?     108%?      64%? 
+               v_min m/s   0.100      0.095      0.092      0.100      0.054   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+  [INFO] recording -> 20260813T183121_blend_r25_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 18% of the stage spent below it
+  [INFO] the arm reached 150 mm/s typical against a commanded cap of 200 mm/s (75%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 320 samples (94.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183121_blend_r25_left
+r=25%          retained       1%?      45%?      21%?      37%?      23%? 
+               v_min m/s   0.002      0.090      0.041      0.074      0.046   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+  [INFO] recording -> 20260813T183129_blend_r50_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 18% of the stage spent below it
+  [INFO] p95 at 108% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 278 samples (95.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183129_blend_r50_left
+r=50%          retained       2%?      60%?      27%?      40%?      36%? 
+               v_min m/s   0.004      0.120      0.054      0.080      0.072   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 18:34:03
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.200 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  limits found:  line_speed 0.450  line_acc 1.900
+  limits set:    line_speed 0.200  line_acc 1.600  (restored at exit)
+  ramp 13 mm each way against a 65 mm mean segment (5.2x)
+  sample spacing 2.00 mm at 0.200 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~8 mm
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260813T183403_blend_r0_left  (100 Hz, ret=0)
+  [INFO] smoothness: 8 decelerations below half cruise, 1.33 per segment, deepest 3 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 159 mm/s typical against a commanded cap of 200 mm/s (79%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 109% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 392 samples (93.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183403_blend_r0_left
+r=0%           NO RESULT — the tool traced 0.455 m against a commanded 0.390 m (117 %). The stream is not this path; corner numbers would be fiction.
+  [INFO] recording -> 20260813T183408_blend_r25_left  (100 Hz, ret=0)
+  [INFO] smoothness: 8 decelerations below half cruise, 1.33 per segment, deepest 3 mm/s, 15% of the stage spent below it
+  [INFO] p95 at 130% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 429 samples (96.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183408_blend_r25_left
+r=25%          NO RESULT — the tool traced 0.677 m against a commanded 0.390 m (174 %). The stream is not this path; corner numbers would be fiction.
+  [INFO] recording -> 20260813T183412_blend_r50_left  (100 Hz, ret=0)
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 2 mm/s, 17% of the stage spent below it
+  [INFO] p95 at 123% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 401 samples (96.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183412_blend_r50_left
+r=50%          NO RESULT — the tool traced 0.666 m against a commanded 0.390 m (171 %). The stream is not this path; corner numbers would be fiction.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 18:35:20
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.450 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  limits found:  line_speed 0.450  line_acc 1.900
+  limits set:    line_speed 0.450  line_acc 1.600  (restored at exit)
+  ramp 63 mm each way against a 65 mm mean segment (1.0x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260813T183521_blend_r0_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 0 mm/s, 28% of the stage spent below it
+  [INFO] the arm reached 189 mm/s typical against a commanded cap of 450 mm/s (42%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 103% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 406 samples (92.6 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183521_blend_r0_left
+r=0%           NO RESULT — the tool traced 0.607 m against a commanded 0.390 m (156 %). The stream is not this path; corner numbers would be fiction.
+  [INFO] recording -> 20260813T183525_blend_r25_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 27% of the stage spent below it
+  [INFO] the arm reached 279 mm/s typical against a commanded cap of 450 mm/s (62%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 286 samples (95.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183525_blend_r25_left
+r=25%          NO RESULT — the tool traced 0.603 m against a commanded 0.390 m (155 %). The stream is not this path; corner numbers would be fiction.
+  [INFO] recording -> 20260813T183528_blend_r50_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 44% of the stage spent below it
+  [INFO] the arm reached 327 mm/s typical against a commanded cap of 450 mm/s (73%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 103% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 283 samples (95.0 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183528_blend_r50_left
+r=50%          NO RESULT — the tool traced 0.601 m against a commanded 0.390 m (154 %). The stream is not this path; corner numbers would be fiction.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 18:36:32
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.450 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  limits found:  line_speed 0.450  line_acc 1.900
+  limits set:    line_speed 0.450  line_acc 1.600  (restored at exit)
+  ramp 63 mm each way against a 65 mm mean segment (1.0x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260813T183633_blend_r0_left  (100 Hz, ret=0)
+  [FAIL] segment 5: arrival event reports failure
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 53 mm/s, 18% of the stage spent below it
+  [INFO] the arm reached 297 mm/s typical against a commanded cap of 450 mm/s (66%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 105% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 132 samples (75.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183633_blend_r0_left
+  [INFO] recording -> 20260813T183635_blend_r25_left  (100 Hz, ret=0)
+  [INFO] smoothness: 2 decelerations below half cruise, 0.33 per segment, deepest 4 mm/s, 38% of the stage spent below it
+  [INFO] the arm reached 295 mm/s typical against a commanded cap of 450 mm/s (66%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 83% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 201 samples (92.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183635_blend_r25_left
+r=25%          retained      35%?      10%?      67%?      29%?      68%? 
+               v_min m/s   0.057      0.045      0.171      0.101      0.246   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+  [INFO] recording -> 20260813T183639_blend_r50_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 1 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 266 mm/s typical against a commanded cap of 450 mm/s (59%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 114% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 230 samples (93.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183639_blend_r50_left
+r=50%          retained       1%?      52%?       0%?      88%?      40%? 
+               v_min m/s   0.002      0.134      0.000      0.254      0.229   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-13 18:38:18
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left  speed=0.450 m/s
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  limits found:  line_speed 0.450  line_acc 1.900
+  limits set:    line_speed 0.450  line_acc 1.600  (restored at exit)
+  ramp 63 mm each way against a 65 mm mean segment (1.0x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260813T183818_blend_r0_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 0 mm/s, 30% of the stage spent below it
+  [INFO] the arm reached 164 mm/s typical against a commanded cap of 450 mm/s (36%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 57% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 347 samples (90.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183818_blend_r0_left
+r=0%           retained       0%?       2%?       1%?       0%?       0%? 
+               v_min m/s   0.001      0.004      0.003      0.000      0.000   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+  [INFO] recording -> 20260813T183825_blend_r25_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 33% of the stage spent below it
+  [INFO] the arm reached 250 mm/s typical against a commanded cap of 450 mm/s (56%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 75% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 237 samples (93.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183825_blend_r25_left
+r=25%          retained       2%?      70%?      29%?      54%?      78%? 
+               v_min m/s   0.005      0.204      0.091      0.169      0.257   
+                          corners [1, 2, 3, 4, 5] measured from < 8 samples — treat as indicative only
+  [INFO] recording -> 20260813T183829_blend_r50_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 34% of the stage spent below it
+  [INFO] the arm reached 259 mm/s typical against a commanded cap of 450 mm/s (57%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 222 samples (90.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260813T183829_blend_r50_left
+r=50%          retained       1%?      82%?      28%?      63%?        -   
+               v_min m/s   0.001      0.217      0.121      0.269          -   
+                          corners [1, 2, 3, 4] measured from < 8 samples — treat as indicative only
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
