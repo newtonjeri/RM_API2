@@ -35,6 +35,15 @@ Usage:
 
 Chain diagnostics (added 2026-08-10 after the run aborted with system
 0x100D on the first segment — see PHASE_PLAN F26):
+    --speed M_S        set the Cartesian line_speed for this run, in m/s.
+                       line_acc follows from the vendor 3x rule unless
+                       --line-acc names it. ABOVE 0.45 IS ALLOWED — 0.45 is
+                       only the highest the cleaning tasks have been run at,
+                       not a limit; the ceiling is the vendor's 1.8 m/s.
+                       Measured margin: toplid_left at 0.45 reached 96 % of
+                       J4's rate limit and completed; at 0.80 it reached
+                       106 % with 330 ms above 98 % and did NOT finish.
+    --line-acc M_S2    line acceleration, with --speed. Needs --speed.
     --blend PCT        override the movel blend radius. The cleaning path
                        reverses direction at 23 of 42 corners, five of them
                        EXACTLY 180 deg, where a blend arc is undefined.
@@ -472,12 +481,39 @@ def main() -> int:
         _results[k] = 0
     handle_cli(__doc__, extra_flags=("--dry", "--no-record"),
                value_flags=("--task", "--fixture", "--hover",
-                            "--udp-cycle", "--blend", "--max-segments"))
+                            "--udp-cycle", "--blend", "--max-segments",
+                            "--speed", "--line-acc"))
     task = _arg("--task", "hinge_area_right")
     fixture = _arg("--fixture", "commode_c")
     hover_mm = float(_arg("--hover", "0"))
     blend_arg = _arg("--blend", None)
     blend_pct = int(blend_arg) if blend_arg is not None else None
+
+    # --speed: set the Cartesian line_speed for this run, deriving line_acc
+    # from the vendor's 3x rule. Until now the only way in was the
+    # RM_LINE_SPEED environment variable, which is invisible in the log and
+    # in `run.json` — a run's speed could not be recovered from its own
+    # record. A flag is both discoverable and captured.
+    #
+    # ABOVE 0.45 IS ALLOWED AND IS THE POINT. 0.45 is not a limit anywhere in
+    # the code, it is just the highest speed the cleaning tasks have been run
+    # at; the only hard ceiling is the vendor's 1.8 m/s, enforced by
+    # `scale_for`. What DOES change above 0.45 is the risk: on toplid_left,
+    # 0.45 measured 96 % of J4's rate limit and completed, while 0.80
+    # measured 106 % with 330 ms above 98 % and did not finish. Between
+    # those two numbers is the whole margin.
+    speed_arg = _arg("--speed", None)
+    acc_arg = _arg("--line-acc", None)
+    line_speed = line_acc = None
+    speed_notes = []
+    if speed_arg is not None:
+        line_speed, line_acc, speed_notes = speed_limits.scale_for(
+            float(speed_arg),
+            acc=float(acc_arg) if acc_arg is not None else None)
+    elif acc_arg is not None:
+        print("  [FAIL] --line-acc needs --speed: acceleration and speed are "
+              "set together or the controller rejects the pair with ret=1")
+        return 1
     seg_arg = _arg("--max-segments", None)
     max_segments = int(seg_arg) if seg_arg is not None else None
     dry = "--dry" in sys.argv
@@ -494,8 +530,11 @@ def main() -> int:
           f"{cfg.arm_speed_intended_pct}% before the transit/derate policy)")
     print(f"    serialization: {'ENFORCED' if SERIALIZE else 'report-only'}"
           "   (RM_SERIALIZE=0 to relax)")
-    if blend_pct is not None or max_segments is not None:
+    if blend_pct is not None or max_segments is not None or line_speed:
         bits = []
+        if line_speed is not None:
+            bits.append(f"line_speed {line_speed:.3f} m/s, line_acc "
+                        f"{line_acc:.3f} m/s^2")
         if blend_pct is not None:
             bits.append(f"blend r={blend_pct}% (default "
                         f"{cleaning_path.BLEND_PCT_DEFAULT}%)")
@@ -552,6 +591,21 @@ def main() -> int:
         # (etc.) are set — see speed_limits for why the two must move
         # together.
         limits_before = speed_limits.prepare(arm.robot, f"({cfg.side})")
+        # --speed applies AFTER the env-var path so an explicit flag wins over
+        # a stale RM_LINE_SPEED in the shell, and it merges into the SAME
+        # restore dict — `restore` must return the values found before this
+        # program touched anything, not before its second edit. These limits
+        # RATCHET, so a lost restore leaves the next operator a faster arm.
+        if line_speed is not None:
+            for n in speed_notes:
+                print(f"  [NOTE] {n}")
+            prev = speed_limits.apply(arm.robot, allow_raise=True,
+                                      line_speed=line_speed,
+                                      line_acc=line_acc)
+            for k, v in prev.items():
+                limits_before.setdefault(k, v)
+            print(f"  [INFO] --speed: line_speed {line_speed:.3f} m/s  "
+                  f"line_acc {line_acc:.3f} m/s^2 (restored at exit)")
         if "--no-record" not in sys.argv:
             rec = run_recorder.RunRecorder(
                 arm.robot, task, cfg.side, host_ip_for(ip), UDP_PORT,

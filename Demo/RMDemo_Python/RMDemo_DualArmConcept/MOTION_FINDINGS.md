@@ -441,6 +441,95 @@ radius you intend to run, not at r=0.
 
 ---
 
+## 9. What blending actually removes — the 2026-08-14 task runs (72 runs)
+
+*Written 2026-08-14. Method: every run's trace was matched to its own commanded
+waypoint sequence with a monotone (sequence-order-preserving) alignment, then
+each commanded arc position was tested for "was the tool near this point at the
+sequence-correct time". This replaces the point-set test used earlier in the
+day, which was blind on these paths: `toplid`/`hinge_area` revisit waypoints
+(hinge returns to `point1` six times), so distance-to-nearest-segment is small
+everywhere whether or not a stroke was actually executed. Validation: SIM r=0
+runs measure 100 % covered with zero corner cuts, and the known
+first-corner-never-blends behaviour reproduces exactly. Geometry numbers below
+are SIM (position channel exact); REAL runs, matched raw with an
+aliasing-scaled tolerance, agree within 2–3 points throughout. The later run of
+each task pair is the `--reverse` order — treated as its own commanded
+sequence.*
+
+### 9.1 Coverage by radius (v = 0.25, both arms, SIM ≈ REAL)
+
+| r | toplid covered | hinge covered | toplid stroke time |
+|----|----|----|----|
+| 10 | ~89 % | ~92 % | 32.0 s |
+| 25 | ~73 % | ~77–81 % | 30.5 s |
+| 50 | ~52–57 % | ~60–64 % | 23.0 s |
+
+"Covered" = within 2 mm of the commanded line at the right point in the
+sequence. Left and right arms are identical to the millimetre in SIM.
+
+### 9.2 Where the loss is, and the law it follows
+
+Summing the per-corner cuts reproduces each run's total uncovered length to
+within 2–22 % — **the loss is entirely at corners**. Its distribution:
+
+* **82–95 % of all lost coverage sits at reversal corners (turn > 165°).**
+* Corners of 60–165° carry the rest; corners under 60° contribute ~0.
+* At every cutting corner the cut obeys, on SIM and REAL alike:
+
+      cut(entry+exit) ≈ 1.3–1.5 × (r/100) × min(L_in, L_out)
+
+  (SIM medians 1.46–1.52 across r = 10/25/50; corr(L, cut) = 0.81–0.86.
+  Per side ≈ 0.7 × (r/100) × L.) Angle does not enter beyond a threshold:
+  from ~90° up to 179° the normalised cut is flat.
+* **Exact 180.0° retraces are exempt.** The hinge fan spokes (out and back on
+  the same line, L 30–43 mm) show zero cut at every r, in every run, both
+  arms, both directions — while 172–176° near-reversals of similar length cut
+  at the full rate. It is collinearity, not segment length, that protects:
+  a serpentine U-turn has lateral room to arc across and clips both stroke
+  ends early; a true retrace has none and the controller stops and returns.
+* **First corner of a chain never blends** — confirmed on tasks, both
+  directions (18/18 runs, zero cut even at a 175° reversal). Reversing the
+  path moves which corner is exempt. The **last** corner blends normally.
+* **The blend geometry is speed-independent**: per-corner cuts on the
+  synthetic path are identical from 0.10 to 0.35 m/s in SIM. Speed changes
+  feasibility and time, not the shape of the cut.
+
+The mechanism at a near-180° reversal is early turnaround, not corner
+rounding: at r = 25/50 most reversal vertices are never approached within
+30 mm of arc position. The stroke **end region** is what disappears — on
+toplid's ~300–400 mm strokes, r = 50 removes ~250 mm per reversal.
+
+### 9.3 Failures in this data set
+
+* **toplid REAL 0.45 with r = 25/50 aborted** with J4 pegged at 98.2 %, no
+  error on any channel, arm idle after — leaving **1.32–1.38 m of path
+  unexecuted** (the earlier "193–203 mm short" was the straight-line distance
+  from the stop point to the path end, which criss-crossing made meaningless).
+  r = 10 at 0.45 completed. This corrects §8.2's "radius is ~6 points of joint
+  budget": that was true on the non-rotating synthetic path at ≤0.35; on a
+  rotating task at 0.45, r ≥ 25 is the difference between completing and
+  aborting.
+* **Intermittent silent early chain termination at r = 25 on hinge**: 3 of 6
+  hinge r = 25 runs stopped exactly at a waypoint 1–3 segments before the end
+  (~100–310 mm unexecuted) — no error code, normal status tail, and one of
+  the three is a SIM run, so it is planner/chain behaviour, not dynamics. Both
+  arms, both directions affected; never seen at r = 10 or 50. Until
+  understood, production runs should verify the final waypoint was reached.
+
+### 9.4 Practical rule
+
+Choose r per stroke from the allowed end-loss δ:  **r ≈ 133 · δ / L**.
+A 293 mm toplid stroke with 20 mm acceptable end-clip ⇒ r ≈ 9. Since `r` is a
+per-command parameter, mixed radii are legal: r = 0 (or small) on moves ending
+at coverage-critical stroke ends, large r elsewhere. Two path-design outs:
+overshoot each stroke end by 0.7 × (r/100) × L so the clip lands outside the
+area, or use exact-retrace strokes (out-and-back, then side-step), which
+blending provably does not clip — the side-step corners then cut only
+1.5 × (r/100) × step, a few mm.
+
+---
+
 ## Reproducing any of this
 
 ```bash
