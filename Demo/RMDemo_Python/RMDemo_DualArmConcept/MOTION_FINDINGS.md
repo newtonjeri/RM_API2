@@ -176,6 +176,68 @@ So what looks unnatural is not the distribution. It is **three joints
 saturating while the tool repeatedly halts at waypoints** — constant-rate
 motion punctuated by dead stops. Both causes are in §5.
 
+### 4b. The joints ARE out of sync — measured, and the tool offset causes it
+
+*Added 2026-08-14, from Newton's observation that J6 and J4 look unsynchronised
+during X translation.* Tool velocity decomposed per joint through a world-frame
+tool Jacobian, validated to a **12 % residual** against the measured TCP
+velocity. (The obvious operator is wrong twice over: `orientation_cost.jacobian`
+sits at the **flange**, in the **base** frame, and its rows 3–5 are **Euler
+rates, not angular velocity** — so an ω×r tool correction makes it worse, not
+better. Difference the tool position directly.)
+
+Share of the work done on the world X axis, and how often each pair pushes the
+same way:
+
+| | toplid @0.45 | test_motion_001 @0.25 | @0.35 |
+|---|---|---|---|
+| X-dominant share of motion | 91 % | 87 % | 82 % |
+| **J4** | **54.6 %** | **51.7 %** | **51.9 %** |
+| **J6** | **23.0 %** | **27.3 %** | **26.5 %** |
+| J2 | 19.5 % | 16.2 % | 16.6 % |
+| everything else | 2.9 % | 4.8 % | 5.0 % |
+| **3-D cancellation** | **3.33×** | **4.40×** | **4.74×** |
+| J4 & J6 same direction | 41 % | **29 %** | **26 %** |
+| J2 & J4 same direction | 4 % | 15 % | 12 % |
+
+Three joints do ~97 % of the X translation, the same three on two unrelated
+paths. The joints generate **3.3–4.7× more tool motion than the net result**,
+and J4/J6 oppose each other **59–74 %** of the time. Newton's read was right,
+and it is *worse* on `test_motion_001` than on toplid.
+
+**The cause is the tool offset.** Same recorded joint trajectory, asking what
+different tool offsets would see:
+
+| tool | J4 X share | J6 X share | cancellation |
+|---|---|---|---|
+| flange, no tool | 69.8 % | **14.5 %** | 3.31× |
+| L_glove_1 (155 mm) | 53.3 % | 26.7 % | 4.16× |
+| L_glove_4 (220 mm) | 51.7 % | **27.4 %** | 4.39× |
+
+Holding tool orientation while translating forces J6 to counter-rotate against
+J4; with the tool ~220 mm off the flange that counter-rotation drags the tool
+*backwards* along X. Putting any tool on the end nearly doubles J6's authority
+and lifts cancellation by a third. **Shortening the glove is not a lever** —
+155 mm and 220 mm are within 1 point of each other.
+
+**But cancellation is not what makes the motion look bad.** MoveIt scores
+*worse* on both measures — **3.80× cancellation** and **39 °/s** null-space
+drift against movel's 3.33× and 33 °/s — while being the motion judged better.
+A hypothesis that the waste was uncontrolled null-space drift is also refuted:
+correlation with cancellation is only **+0.17**, and cancellation is still
+3.26× in the quartile where the arm angle drifts slowest. The 3.3× floor is
+**geometrically inherent to dragging a tool along a straight Cartesian line** —
+shoulder and elbow must oppose to keep the wrist on a line. It is why the
+motion reads as mechanical: people clean in arcs, not straight lines.
+
+**Untested prediction.** `test_motion_001` @0.25 has the worst coordination of
+the three (4.40×, J4/J6 opposed 71 %) but the best smoothness numbers
+(near-stops 3.1 % vs toplid's 8.8 %, J-max 59 % vs 96 %). If the look is driven
+by stops and saturation it should nonetheless appear *smoother* than toplid
+@0.45. If it looks equally jerky, the explanation above is wrong and
+coordination matters more than credited. Deciding this needs runs labelled
+against video — see §8.5.
+
 ---
 
 ## 5. What is needed for fast, natural, continuous motion
@@ -266,6 +328,119 @@ that file.
 
 ---
 
+---
+
+## 8. Review of the 2026-08-13 blend runs — re-read 2026-08-14
+
+*Same recordings, re-analysed with the corrected corner locator, the verified
+robot model, and the metrics that did not exist when they were first read.
+Purpose: decide what the next hardware session should measure.*
+
+**The original log for these runs is not usable.** Corners were located by
+cumulative arc, which drifts 9–34 mm against a ±19.5 mm window, so corners 2–5
+were measured mid-segment. Everything below is recomputed.
+
+### 8.1 Blend radius and speed are separable — and that is the useful part
+
+Corners 2–5 only (the first corner never blends — §2), REAL runs:
+
+| commanded | r=0 | r=25 | r=50 |
+|---|---|---|---|
+| 0.10 m/s | 4 mm/s · 4% | 40 mm/s · 42% | 70 mm/s · 72% |
+| 0.20 m/s | 5 mm/s · 3% | 89 mm/s · 46% | 155 mm/s · 77% |
+| 0.25 m/s | 2 mm/s · 1% | 122 mm/s · 55% | 178 mm/s · 71% |
+| 0.35 m/s | 5 mm/s · 2% | 165 mm/s · 67% | *(run aborted)* |
+
+Read down the columns and the structure is clean:
+
+* **`r` sets the FRACTION of cruise you keep** — ~50% at r=25, ~73% at r=50,
+  ~3% at r=0, and that fraction barely moves with speed.
+* **Speed sets the ABSOLUTE corner speed** — at r=25 it goes 40 → 89 → 122 →
+  165 mm/s, essentially linear in the command.
+* **r=0 is a dead stop at every speed**: 2–5 mm/s regardless. Confirming §2 —
+  `connect=1` alone cannot hold speed through a waypoint.
+
+The apparent "retention improves with speed" in the ratio column is mostly the
+H57 artifact: at 0.35 the achieved median is only ~60 % of cap, so the cruise
+reference it is divided by is depressed. The absolute column is the honest one.
+
+### 8.2 They are NOT independent — both spend the same joint-rate budget
+
+| commanded | r=0 | r=25 | r=50 |
+|---|---|---|---|
+| 0.10 | 24% | 25% | 25% |
+| 0.20 | 39% | 42% | 41% |
+| 0.25 | 47% | 48% | 48% |
+| 0.35 | 48% | 53% | **54%** |
+
+*(worst joint, % of its rate limit)*
+
+Raising **speed** is expensive: 0.10 → 0.35 costs ~29 points of joint budget.
+Raising **blend radius** is cheap: r=0 → r=50 costs ~6 points at 0.35 and
+nothing measurable below that.
+
+Which settles the trade directly:
+
+> **r=50 at 0.25 m/s gives 178 mm/s through a corner for 48 % of the joint
+> limit. r=25 at 0.35 m/s gives 165 mm/s for 53 %.** More corner speed, less
+> joint demand. **Spend the budget on blend radius before speed.**
+
+That is the opposite of how the tasks are configured today — `stage_runner`
+dispatches **r=10**, the smallest radius, and buys speed instead.
+
+### 8.3 SIM cannot screen blend behaviour
+
+Corners 2–5, all speeds pooled:
+
+| | SIM | REAL |
+|---|---|---|
+| r=0 | 14% | **3%** |
+| r=25 | 63% | 49% |
+| r=50 | 88% | 73% |
+
+SIM shows a corner holding 14 % of cruise where the metal stops dead. It
+over-states every radius, and worst at the one that matters as the control.
+**Run SIM for reachability and dispatch validity; do not read a blend number
+off it.**
+
+### 8.4 What the next session should measure
+
+Everything above is one path — `blend_corner_001`, 65 mm segments, **constant
+orientation by design**. The J4/J6 opposition in §4b is driven by *holding
+orientation while translating*, so this path exhibits the coupling in its
+purest form and a rotating cleaning stroke will not behave identically.
+**The blend numbers above must be re-established on the real tasks.**
+
+| what | why |
+|---|---|
+| **r = 10, 25, 50 on `toplid` and `hinge_area`** | r=10 is what ships and has never been measured; 8.1 was measured on a path neither task resembles |
+| **at 2 speeds each (0.25 and 0.45)** | 8.1 says r and speed separate — this tests that on a rotating path |
+| **REAL only for blend numbers** | 8.3 |
+| **a lead-in segment** | the first corner never blends; a throwaway corner makes every measured corner a real one |
+
+Drop from the sweep: `r=0` beyond a single control run per task (its answer is
+known and identical everywhere), and the 0.10 rung (below any operating speed).
+
+**Pre-flight gates already available, to run before dispatching any of it:**
+`orientation_cost.py --segments` for per-segment elbow demand, and
+`preflight_j4` inside the ladder, which refuses a rung over 100 % of J4's
+limit. §8.2 says raising r costs ~6 points of joint budget, so screen at the
+radius you intend to run, not at r=0.
+
+### 8.5 Open, and not answerable from this data
+
+* **Which video is which run.** The subjective "some look better than others"
+  cannot be attached to a measurement until runs are labelled. The next session
+  should record which run each clip belongs to — that is the only way to settle
+  whether the bad look tracks near-stops and saturation (§5) or joint
+  coordination (§4b).
+* **Whether 8.1's separability holds on a rotating path.** On `blend_corner_001`
+  the angular cap can never bind, because orientation is constant. On a cleaning
+  stroke it throttles 12 of 36 segments, and a throttled segment's corner may
+  behave differently.
+
+---
+
 ## Reproducing any of this
 
 ```bash
@@ -278,3 +453,5 @@ python3 analyse_run.py ../runs/*toplid*left --quiet --json out.json
 Restrict to the cleaning stroke with the `stages` block in `run.json`, and
 drop SIM runs before quoting any joint-load figure. Those two steps are what
 turned §1 from wrong into right.
+
+---

@@ -405,3 +405,297 @@ Algorithm library: 1.6.0-701ee1e6
   tool+mount reproduces a recorded commanded pose      ok   29.2 um
 
 ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 14:41:41
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 14:54:06
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 14:55:39
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 14:57:38
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 16:05:08
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)
+
+========================================================================
+  Script : verify_robot_model.py
+  Log    : verify_robot_model.log
+  Started: 2026-08-14 16:31:55
+========================================================================
+Algorithm library: 1.6.0-701ee1e6
+
+1. SDK vs vendor
+  DH d matches the published MDH d column              ok   [0.2405, 0.0, 0.256, 0.0, 0.21, 0.0, 0.1612]
+  DH alpha matches                                     ok
+  DH a is all zero (pure S-R-S, no link offsets)       ok
+  DH offset is all zero (joint angle == model angle)   ok
+  joint ranges match the vendor page                   ok
+  joint ranges are symmetric about zero                ok
+  joint max speeds match (180/180/225x5)               ok
+
+2. The DH table reproduces the SDK's forward kinematics
+  standard-DH FK == rm_algo_forward_kinematics (200 poses) ok   worst 0.000083 mm
+
+3. Derived figures against published specifications
+  reach from DH == published 6FB working radius        ok   627.2 vs 627 mm
+  URDF link masses sum to the published self-weight    ok   7.813 vs 7.8 kg
+  URDF joint origins == the DH d column                ok
+
+4. Which variant are our arms? (from a recording)
+  DH restored after the variant sweep                  ok
+  right arm, best fit on 20260811T222451_toplid_right_right:
+     RM75-6FB with tool R_glove_2 -> median 0.01 mm
+  our right arm is RM75-6FB (d7 = 0.1612)              ok   0.01 mm
+  DH restored after the variant sweep                  ok
+  left arm, best fit on 20260811T220617_toplid_left_left:
+     RM75-6FB with tool L_glove_2 -> median 0.01 mm
+  our left arm is RM75-6FB (d7 = 0.1612)               ok   0.01 mm
+
+4b. Singularities
+  analytic thresholds are the documented 10 deg / 10 deg / 0.05 m ok
+  all 4 documented singular configurations are flagged ok   4/4
+  a benign pose is NOT flagged                         ok
+  the 6-DOF analytic call rejects 7 joints (as documented) ok
+  per-radian sigma_min agrees with the SDK verdict     ok   8/8
+
+4c. butterfli.urdf right arm (ROBOT_MODEL.md section 6)
+  its joint6->flange is 2.8 mm LONG vs the measured d7 ok   0.1640 vs 0.1612 m (+2.8 mm)
+
+5. Tool and mount transform
+  tool+mount reproduces a recorded commanded pose      ok   29.2 um
+
+ROBOT_MODEL.md VERIFIED  (0 failures)

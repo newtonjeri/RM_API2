@@ -118,13 +118,38 @@ import time
 from dual_arm_common import (
     handle_cli, ArrivalMonitor, connect_both, teardown, host_ip_for,
     apply_run_mode, restore_run_modes, mode_label, parse_mode_arg,
-    DEV_JOINT, LEFT_IP, RIGHT_IP, UDP_PORT,
+    DEV_JOINT, LEFT_IP, RIGHT_IP, UDP_PORT, state_deg,
 )
 from run_recorder import RunRecorder
+import orientation_cost
 import speed_limits
 
 DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), "paths", "blend_corner_001.py")
+
+
+def load_task_path(spec):
+    """Waypoints of a real cleaning task, as `task:<name>`.
+
+    The blend sweep was measured on `blend_corner_001` — 65 mm segments and a
+    CONSTANT orientation, which is what makes a speed dip mean "corner". A
+    cleaning task is neither: `toplid_left` runs 28-407 mm segments and
+    rotates on most of them, so the angular cap throttles segments that the
+    blend path never could. Whether blend radius behaves the same there is
+    exactly the open question, and it cannot be answered on the synthetic
+    path.
+
+    RESOLUTION IS NOT GUARANTEED HERE and the caller is told so. A blend of
+    r % on a segment of length L gives a dip about 2*(r/100)*L wide, and the
+    analysis discards SPEED_WINDOW+2 samples around each vertex. On
+    `hinge_area_left` (median segment 100 mm) that leaves NOTHING at r=10:
+    zero measurable corners at either 0.25 or 0.45 m/s. The run is still
+    worth doing — duration, near-stop fraction, joint dwell and the
+    blend-transition count all come from the controller and need no dip
+    resolution — but per-corner retention will be blank, by geometry.
+    """
+    poses, labels, tool = orientation_cost.load_task(spec[5:])
+    return poses, labels, tool
 
 
 def load_path(src):
@@ -215,14 +240,33 @@ def preflight_j4(poses, tool, speed):
         if err is not None and err > 0.001:
             return None                  # transform unverified: refuse to opine
         worst = None
-        for r in oc.segment_report(poses, tool, speed):
+        rows_ = oc.segment_report(poses, tool, speed)
+        if rows_ and all(r["j4"] is None for r in rows_):
+            # Every segment failed IK. Offline that means the emulator is
+            # installed and intercepting the algorithm library — its IK
+            # diverges on these poses. On hardware this branch does not fire;
+            # the same call returns a number. Say which, so an UNSCREENED
+            # warning offline is not mistaken for one on metal.
+            print("  [INFO] elbow screen: IK failed on ALL %d segments — this "
+                  "is the emulator intercepting the algorithm library, not a "
+                  "property of the path. Re-run without the emulator to "
+                  "screen it." % len(rows_))
+            return None
+        for r in rows_:
             if r["j4"] is None:
                 continue
             pct = 100.0 * r["j4"] / oc.JOINT_LIMIT[3]
             if worst is None or pct > worst[0]:
                 worst = (pct, r["i"])
         return worst
-    except Exception:
+    except Exception as exc:                                # noqa: BLE001
+        # Say WHY. "Unscreened" is a safety state, and the operator has to
+        # know whether it means "the emulator intercepts the algorithm
+        # library" (harmless, offline only) or "the model cannot evaluate
+        # this path" (do not dispatch). Silently returning None conflated
+        # them.
+        print("  [INFO] elbow screen unavailable: %s: %s"
+              % (type(exc).__name__, exc))
         return None
 
 
@@ -516,6 +560,85 @@ def corner_speeds(rows, poses, t_start, t_end):
 MIN_CORNER_SAMPLES = 8      # >= 8 kept the validated error under ~5 points
 
 
+PRESTART_LIFT_M = 0.050     # world +Z, above the first waypoint
+TRANSIT_V = 50              # % — transits are not the motion under test
+
+
+def goto_start_sequence(arm, side, poses, mon, verbose=False):
+    """ready -> prestart -> start. The entry every test case begins with.
+
+    Newton, 2026-08-14: every test task enters the same way, so that what is
+    measured is the path and not how the arm happened to arrive at it.
+
+        1. MOVEJ to the named REST joint pose  (dual_arm_common.STATES_RAD)
+        2. MOVEJ_P to PRESTART — waypoint 0 lifted 50 mm along WORLD +Z,
+           orientation unchanged
+        3. MOVEL down the 50 mm APPROACH to waypoint 0
+
+    Steps 1-3 all run at %d %% speed: they are transit, not the motion under
+    test, and including them at the rung's speed would put their joint rates
+    into a measurement that is supposed to be about the path.
+
+    ONLY STEP 3 IS A STRAIGHT LINE. Steps 1 and 2 are joint-space moves —
+    `rm_movej_p` takes a Cartesian target and reaches it by interpolating in
+    JOINT space, so the tool does not travel a commanded straight line and
+    cannot be dragged through anything on the way. The only Cartesian transit
+    is the last 50 mm, straight down onto the first waypoint, which is short
+    enough to see and clear before it runs.
+
+    WHY WORLD +Z. The task configs' own `pre_start_pose` is world-vertical
+    for toplid (+35.0 mm of a 35.2 mm offset) and mostly vertical for hinge
+    (+23.0 of 30.5). Their alignment with the TOOL's local +Z disagrees in
+    SIGN between the two tasks (-0.991 vs +0.198), so local +Z is not a
+    convention this data supports; world +Z is. Fixed at 50 mm so the
+    approach is identical on every task and every arm.
+
+    WHY THE FULL SEQUENCE EVERY CASE, not once per run: each blend radius
+    must start from the same arm CONFIGURATION, not merely the same tool
+    pose. The controller re-resolves the 7-DOF redundancy as it goes (arm
+    angle swings 80-153 deg within a stroke), so arriving at waypoint 0 from
+    a different direction can leave a different elbow, and that changes the
+    joint rates being measured. Going through `ready` each time makes the
+    entry identical. It costs a few seconds per case.
+    """ % TRANSIT_V
+    pre = list(poses[0])
+    pre[2] += PRESTART_LIFT_M
+    steps = (
+        ("rest", arm.robot.rm_movej, state_deg(side, "rest")),
+        ("prestart", arm.robot.rm_movej_p, pre),
+        ("approach", arm.robot.rm_movel, list(poses[0])),
+    )
+    for label, call, target in steps:
+        mon.expect(arm.handle_id, DEV_JOINT)
+        r = call(target, TRANSIT_V, 0, 0, 0)
+        got, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
+        if r != 0 or not got or not ok:
+            print("  [FAIL] %s move (%s): ret=%s arrived=%s ok=%s"
+                  % (label, call.__name__, r, got, ok))
+            return False
+    if verbose:
+        print("  entry: movej rest -> movej_p prestart (+%.0f mm world Z) -> "
+              "movel %.0f mm approach, all at %d %%"
+              % (1000 * PRESTART_LIFT_M, 1000 * PRESTART_LIFT_M, TRANSIT_V))
+    return True
+
+
+def park_at_rest(arm, side, mon):
+    """Leave the arm at the named REST pose. Called once, at the end.
+
+    The same pose the entry sequence starts from, so a sweep begins and ends
+    in the identical configuration and the next invocation's opening movej is
+    a no-op rather than a surprise.
+    """
+    ready = state_deg(side, "rest")
+    mon.expect(arm.handle_id, DEV_JOINT)
+    r = arm.robot.rm_movej(ready, TRANSIT_V, 0, 0, 0)
+    got, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
+    print("  parked at REST" if (r == 0 and got and ok) else
+          "  [WARN] could not park at REST (ret=%s arrived=%s ok=%s)"
+          % (r, got, ok))
+
+
 def goto_start(arm, poses, mon):
     """Put the tool on `poses[0]` and PROVE it got there. True on success.
 
@@ -634,7 +757,18 @@ def main() -> int:
         src = sys.argv[sys.argv.index("--path") + 1]
     also_c0 = "--connect0" in sys.argv
 
-    path = load_path(src)
+    if src.startswith("task:"):
+        # A task carries no BLEND_SWEEP / SPEED_LADDER of its own, so the
+        # sweep is supplied on the command line. Defaults chosen from the
+        # 2026-08-13 review: r=0 is a known dead stop everywhere and is not
+        # worth a rung on every task, and 0.10 m/s is below any operating
+        # speed. See MOTION_FINDINGS.md 8.4.
+        tp, tl, ttool = load_task_path(src)
+        path = {"poses": tp, "labels": tl, "blends": [10, 25, 50],
+                "angles": [], "speed": 0.25, "ladder": [0.25, 0.45],
+                "tool": ttool, "seg_speeds": {}}
+    else:
+        path = load_path(src)
     poses, labels = path["poses"], path["labels"]
     angles_file = path["angles"]
     if "--reverse" in sys.argv:
@@ -669,9 +803,11 @@ def main() -> int:
         ladder_src = "--speed (off-ladder, single run)"
     else:
         rungs = sorted(set(path["ladder"]))
-        ladder_src = ("SPEED_LADDER in %s" % os.path.basename(src)
-                      if len(rungs) > 1 else
-                      "TCP_LINEAR_VELOCITY in %s" % os.path.basename(src))
+        ladder_src = ("defaults for a task sweep (MOTION_FINDINGS 8.4)"
+                      if src.startswith("task:") else
+                      ("SPEED_LADDER in %s" % os.path.basename(src)
+                       if len(rungs) > 1 else
+                       "TCP_LINEAR_VELOCITY in %s" % os.path.basename(src)))
     tool = path["tool"]
     allow_over = "--allow-over-limit" in sys.argv
 
@@ -738,6 +874,7 @@ def main() -> int:
         return 0
     limits_before = None
     originals = {}
+    original_tool = None
     try:
         # THE MODE IS WHATEVER YOU ASKED FOR, and nothing else. `--mode SIM`
         # runs in simulation, `--mode REAL` runs on metal; this script never
@@ -765,12 +902,70 @@ def main() -> int:
         print("  limits found:  line_speed %.3f  line_acc %.3f"
               % (lim0.get("line_speed", -1), lim0.get("line_acc", -1)))
 
+        # SELECT THE PATH'S TOOL FRAME ON THE CONTROLLER, and restore it.
+        #
+        # `rm_movel` resolves its target through whatever tool the controller
+        # currently has selected — NOT through the frame the path was authored
+        # for. `blend_corner_001` never exposed this because it is written for
+        # L_glove_4 and the controller was already on L_glove_4. A cleaning
+        # task is not: `toplid_*` uses L_glove_2, which sits 40 mm shorter
+        # along the tool axis, so every waypoint would be driven 40 mm out of
+        # place with nothing reporting it. `stage_runner` has always done
+        # this; this test did not, and would have run the wrong geometry.
+        original_tool = None
+        if tool:
+            try:
+                fret, cur = arm.robot.rm_get_current_tool_frame()
+                original_tool = ((cur.get("name") or cur.get("frame_name"))
+                                 if fret == 0 else None)
+            except Exception:                               # noqa: BLE001
+                original_tool = None
+            if original_tool == tool:
+                print("  tool frame:    %s (already selected)" % tool)
+            else:
+                tret = arm.robot.rm_change_tool_frame(tool)
+                if tret != 0:
+                    print("  [FAIL] cannot select tool frame %r (ret=%s). It "
+                          "must exist on the controller — write it with "
+                          "test_frame_alignment.py --mode REAL "
+                          "--create-frames. Refusing to dispatch through the "
+                          "wrong tool." % (tool, tret))
+                    return 1
+                print("  tool frame:    %s selected (was %s, restored at exit)"
+                      % (tool, original_tool))
+        else:
+            print("  [WARN] the path declares no tool frame; dispatching "
+                  "through whatever the controller currently has selected.")
+
+        # THE ENTRY, stated before anything dispatches. Every case runs
+        # ready -> prestart -> approach, so the transit is FIXED at 50 mm
+        # regardless of where the arm happens to be; the long unplanned
+        # straight line this test used to make is gone. What is still worth
+        # seeing is where waypoint 0 is and how far `ready` is from it,
+        # because that movej is the one large motion left.
+        print("  entry:         movej REST -> movej_p prestart +%.0f mm world "
+              "Z -> movel %.0f mm approach, all at %d %%"
+              % (1000 * PRESTART_LIFT_M, 1000 * PRESTART_LIFT_M, TRANSIT_V))
+        print("  waypoint 0:    (%.0f, %.0f, %.0f) mm"
+              % (1000 * poses[0][0], 1000 * poses[0][1], 1000 * poses[0][2]))
+        print("  parks at REST when the sweep finishes.")
+
         mon = ArrivalMonitor()
         mon.register(arm.robot)
         cases = [(b, True) for b in path["blends"]]
         if also_c0:
             cases.append((0, False))
-        hdr = "  ".join("%5s deg" % ("?" if a is None else a) for a in angles)
+        # A real cleaning task has 26-42 corners and one column each is a
+        # wall of "? deg" nobody can read. Past this many, report the
+        # DISTRIBUTION instead — which is what a task sweep is asking about
+        # anyway ("what does r=25 buy me across this stroke?"), where the
+        # synthetic path asks about named individual corners.
+        WIDE = 10
+        wide = len(angles) > WIDE
+        hdr = ("%d corners — distribution reported, not per-corner"
+               % len(angles) if wide else
+               "  ".join("%5s deg" % ("?" if a is None else a)
+                         for a in angles))
 
         prev_meas = None        # (line_speed, worst joint fraction, joint no)
         for ri, rung in enumerate(rungs):
@@ -894,6 +1089,28 @@ def main() -> int:
                 print("  [WARN] segments barely reach cruise — there is no "
                       "plateau to lose at a corner. Lengthen them in the path "
                       "file or lower the speed.")
+            # HOW MANY CORNERS THIS RUNG CAN ACTUALLY MEASURE, per radius,
+            # stated BEFORE the arm moves. A blend of r % on a segment of
+            # length L gives a dip about 2*(r/100)*L wide and the analysis
+            # discards SPEED_WINDOW+2 samples around each vertex; on short
+            # segments nothing survives. `hinge_area_left` at r=10 resolves
+            # ZERO of its 42 corners at either 0.25 or 0.45 m/s. Better to
+            # know that here than to read a table of dashes afterwards.
+            segs = [math.dist(poses[i][:3], poses[i + 1][:3])
+                    for i in range(len(poses) - 1)]
+            for b in path["blends"]:
+                if b <= 0:
+                    continue
+                n_ok = sum(1 for k in range(len(segs) - 1)
+                           if 2 * (b / 100.0) * min(segs[k], segs[k + 1])
+                           / (speed / 100.0) - (SPEED_WINDOW + 2)
+                           >= MIN_CORNER_SAMPLES)
+                tag = ("" if n_ok == len(segs) - 1 else
+                       ("   <-- NONE measurable; run it for duration, "
+                        "near-stops and joint load, not retention"
+                        if n_ok == 0 else "   <-- partial"))
+                print("  resolution: r=%-3d %d of %d corners measurable%s"
+                      % (b, n_ok, len(segs) - 1, tag))
             wide = [b for b in path["blends"] if b >= 40]
             if wide:
                 print("  [NOTE] blend %s %% is >= 40 %% of a segment: the dips "
@@ -914,6 +1131,16 @@ def main() -> int:
                 # BEFORE the recorder, every time. Putting this after the
                 # analysis meant a rejected case skipped it and poisoned all
                 # the cases that followed — see goto_start's docstring.
+                #
+                # ready -> prestart -> 50 mm approach, all at TRANSIT_V, then
+                # the pose readback that `goto_start` performs. The sequence
+                # makes the ENTRY identical for every case; the readback
+                # proves it landed.
+                if not goto_start_sequence(arm, side, poses, mon,
+                                           verbose=(ri == 0 and
+                                                    blend == cases[0][0])):
+                    rung_ok = False
+                    break
                 if not goto_start(arm, poses, mon):
                     rung_ok = False
                     break
@@ -1001,14 +1228,34 @@ def main() -> int:
                 label = ("r=%d%%" % blend) if connect else "connect=0"
                 # A corner measured from too few samples is marked "?" — its
                 # number would be unsupported, not merely imprecise.
-                print("%-14s %-10s %s" % (label, "retained", "  ".join(
-                    "     -   " if r is None else
-                    ("%5.0f%%%s " % (100 * r[2],
-                                     "?" if r[3] < MIN_CORNER_SAMPLES else " "))
-                    for r in res)))
-                print("%-14s %-10s %s" % ("", "v_min m/s", "  ".join(
-                    "     -   " if r is None else "%6.3f   " % r[1]
-                    for r in res)))
+                if wide:
+                    good = sorted(100 * r[2] for r in res
+                                  if r is not None
+                                  and r[3] >= MIN_CORNER_SAMPLES)
+                    vm = sorted(1000 * r[1] for r in res
+                                if r is not None
+                                and r[3] >= MIN_CORNER_SAMPLES)
+                    if good:
+                        print("%-14s %-10s n=%d of %d  retained p25 %.0f%%  "
+                              "median %.0f%%  p75 %.0f%%   v_min median "
+                              "%.0f mm/s"
+                              % (label, "retained", len(good), len(res),
+                                 good[len(good) // 4], good[len(good) // 2],
+                                 good[3 * len(good) // 4], vm[len(vm) // 2]))
+                    else:
+                        print("%-14s %-10s no corner had enough samples — "
+                              "read duration, near-stops and joint load "
+                              "instead" % (label, "retained"))
+                else:
+                    print("%-14s %-10s %s" % (label, "retained", "  ".join(
+                        "     -   " if r is None else
+                        ("%5.0f%%%s " % (100 * r[2],
+                                         "?" if r[3] < MIN_CORNER_SAMPLES
+                                         else " "))
+                        for r in res)))
+                    print("%-14s %-10s %s" % ("", "v_min m/s", "  ".join(
+                        "     -   " if r is None else "%6.3f   " % r[1]
+                        for r in res)))
                 # A declined corner is declined for one of TWO reasons and they
                 # want opposite fixes, so say which. Reporting both as "too few
                 # samples" cost a session: every corner of the 2026-08-13 runs
@@ -1061,7 +1308,14 @@ def main() -> int:
         print("  A working blend holds most of its cruise; ~0 % is a full stop.")
         print("  DECISIVE: compare r=0 with the largest r. If they match, the")
         print("  blend radius is not being applied at all.")
+        park_at_rest(arm, side, mon)
     finally:
+        # Restore the tool frame BEFORE anything else touches the arm: it is
+        # global controller state shared with the Web GUI and every other
+        # program, exactly like the speed limits.
+        if original_tool and tool and original_tool != tool:
+            rr = arm.robot.rm_change_tool_frame(original_tool)
+            print("  tool frame restored to %s (ret=%s)" % (original_tool, rr))
         restore_run_modes(originals)
         if limits_before:
             speed_limits.restore(arm.robot, limits_before)

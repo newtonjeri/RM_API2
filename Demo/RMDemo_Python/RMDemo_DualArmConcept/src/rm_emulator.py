@@ -543,6 +543,26 @@ class EmuController:
                 # made the emulator disagree with the arm about units —
                 # the same class of fidelity gap as F25.
                 "com": [-0.012, 0.044, 0.128]}
+        # THE GLOVE FRAMES, because the hardware has them and every cleaning
+        # task selects one. Without them `rm_change_tool_frame("L_glove_2")`
+        # returns 1 here and 0 on the arm, so the emulator refuses a run the
+        # hardware would accept — and any test that guards on the tool frame
+        # becomes unrunnable offline. Same principle as the comment above:
+        # an emulator that cannot hold the state cannot exercise the code
+        # that depends on it. Offsets come from `orientation_cost.TOOL_OFFSETS`,
+        # which is the frame table verified against recorded poses to 29 um.
+        try:
+            from orientation_cost import TOOL_OFFSETS
+            pre = "L_" if side == "left" else "R_"
+            for nm, off in TOOL_OFFSETS.items():
+                if not nm.startswith(pre):
+                    continue
+                self.tool_frames[nm] = {
+                    "pose": [off[0], off[1], off[2], 0.0, 0.0, 0.0],
+                    "payload": 0.706 if side == "left" else 0.711,
+                    "com": [0.0, 0.0, 0.0]}
+        except Exception:                                   # noqa: BLE001
+            pass                    # never let frame seeding break the emulator
         self.active_tool = "Hand" if side == "left" else "Arm_Tip"
         # F10: read from both arms 2026-08-07.
         self.limits = {"line_speed": 0.250, "line_acc": 1.600,
