@@ -174,7 +174,8 @@ def load_path(src):
             nm = getattr(t, "id", "")
             if nm in ("POSES_MM", "SEQUENCE", "BLEND_SWEEP", "CORNER_ANGLES",
                       "TCP_LINEAR_VELOCITY", "SEGMENT_SPEEDS", "BLEND",
-                      "SPEED_LADDER", "TOOL_FRAME"):
+                      "SPEED_LADDER", "TOOL_FRAME",
+                      "R_LIST", "V_LIST", "CHAIN_APPROACH"):
                 try:
                     got[nm] = ast.literal_eval(node.value)
                 except ValueError:
@@ -208,6 +209,17 @@ def load_path(src):
         "ladder": [float(v) for v in got.get("SPEED_LADDER", [speed])],
         "tool": got.get("TOOL_FRAME"),
         "seg_speeds": got.get("SEGMENT_SPEEDS", {}),
+        # CHAIN SEMANTICS (chain_semantics_00*): one value PER MOVE, in
+        # dispatch order, length == len(poses)-1. R_LIST is the blend radius
+        # each move is sent with (the last move still closes with r=0/c=0);
+        # V_LIST is the v% each move is sent with (of the line_speed
+        # baseline — movel speed semantics). CHAIN_APPROACH stops the entry
+        # at PRESTART and dispatches the 50 mm approach as the chain's first
+        # move, so the first-corner exemption lands on it. None/False on
+        # every path that predates the feature — behaviour unchanged.
+        "r_list": got.get("R_LIST"),
+        "v_list": got.get("V_LIST"),
+        "chain_approach": bool(got.get("CHAIN_APPROACH", False)),
     }
 
 
@@ -564,8 +576,15 @@ PRESTART_LIFT_M = 0.050     # world +Z, above the first waypoint
 TRANSIT_V = 50              # % — transits are not the motion under test
 
 
-def goto_start_sequence(arm, side, poses, mon, verbose=False):
+def goto_start_sequence(arm, side, poses, mon, verbose=False,
+                        stop_at_prestart=False):
     """ready -> prestart -> start. The entry every test case begins with.
+
+    `stop_at_prestart=True` (CHAIN_APPROACH paths) ends the entry at step 2
+    and VERIFIES the prestart pose by settled readback — the 50 mm approach
+    is then dispatched by `run_one` as the chain's first move, inside the
+    recording, so the first-corner exemption lands on it instead of on the
+    path.
 
     Newton, 2026-08-14: every test task enters the same way, so that what is
     measured is the path and not how the arm happened to arrive at it.
@@ -603,11 +622,12 @@ def goto_start_sequence(arm, side, poses, mon, verbose=False):
     """ % TRANSIT_V
     pre = list(poses[0])
     pre[2] += PRESTART_LIFT_M
-    steps = (
+    steps = [
         ("rest", arm.robot.rm_movej, state_deg(side, "rest")),
         ("prestart", arm.robot.rm_movej_p, pre),
-        ("approach", arm.robot.rm_movel, list(poses[0])),
-    )
+    ]
+    if not stop_at_prestart:
+        steps.append(("approach", arm.robot.rm_movel, list(poses[0])))
     for label, call, target in steps:
         mon.expect(arm.handle_id, DEV_JOINT)
         r = call(target, TRANSIT_V, 0, 0, 0)
@@ -616,10 +636,42 @@ def goto_start_sequence(arm, side, poses, mon, verbose=False):
             print("  [FAIL] %s move (%s): ret=%s arrived=%s ok=%s"
                   % (label, call.__name__, r, got, ok))
             return False
+    if stop_at_prestart:
+        # CHAIN_APPROACH mode: the approach is the chain's first move, so
+        # the entry ends HERE — and the recording that follows starts here.
+        # The same settle-then-read verification `goto_start` performs, but
+        # against PRESTART: the arrival event says the movej_p finished
+        # planning, the readback says the tool is where the recorded
+        # polyline will claim it started. Without this the whole chain
+        # measurement hangs off an unverified origin.
+        prev, st = None, None
+        for _ in range(20):                       # up to ~2 s of settling
+            sret, st = arm.robot.rm_get_current_arm_state()
+            if sret != 0 or not isinstance(st, dict) or not st.get("pose"):
+                print("  [FAIL] cannot read back the prestart pose "
+                      "(ret=%s)" % sret)
+                return False
+            if prev is not None and math.dist(st["pose"][:3], prev) < 0.0002:
+                break
+            prev = list(st["pose"][:3])
+            time.sleep(0.1)
+        off = math.dist(st["pose"][:3], pre[:3])
+        if off > 0.008:
+            print("  [FAIL] prestart is %.1f mm from where the chain "
+                  "expects to start — the recorded approach would be a "
+                  "different geometry.\n         commanded %s\n"
+                  "         read back %s"
+                  % (1000 * off,
+                     ["%.1f" % (1000 * v) for v in pre[:3]],
+                     ["%.1f" % (1000 * v) for v in st["pose"][:3]]))
+            return False
     if verbose:
-        print("  entry: movej rest -> movej_p prestart (+%.0f mm world Z) -> "
-              "movel %.0f mm approach, all at %d %%"
-              % (1000 * PRESTART_LIFT_M, 1000 * PRESTART_LIFT_M, TRANSIT_V))
+        print("  entry: movej rest -> movej_p prestart (+%.0f mm world Z)%s"
+              ", all at %d %%"
+              % (1000 * PRESTART_LIFT_M,
+                 " -> STOP (approach joins the chain)" if stop_at_prestart
+                 else " -> movel %.0f mm approach" % (1000 * PRESTART_LIFT_M),
+                 TRANSIT_V))
     return True
 
 
@@ -715,8 +767,39 @@ def goto_start(arm, poses, mon):
     return True
 
 
-def run_one(arm, poses, blend, connect, mon):
-    """Dispatch the polyline. True on success.
+def build_program(n_moves, blend, connect, r_list=None, v_list=None):
+    """The per-move (v%, r%, connect) tuples a case will dispatch, built ONCE.
+
+    `run_one` executes this list verbatim and `run.json` records the SAME
+    list, so what the analysis reads is what the arm was sent by
+    construction — there is no second place the per-move parameters are
+    derived. (2026-08-14: the chain-semantics screens exist to measure
+    whether the controller honors per-move r and v, so the record of what
+    was commanded per move must be exact.)
+
+    Rules preserved from the uniform case:
+      * the LAST move always closes the chain: r=0, connect=0;
+      * `connect=False` (the --connect0 control) makes every move discrete;
+      * a mid-chain r=0 with connect=1 is LEGAL and deliberate — it asks the
+        controller for a latch corner with no blend, which is exactly what
+        chain_semantics_001 tests.
+    """
+    prog = []
+    for i in range(n_moves):
+        last = (i == n_moves - 1)
+        v = int(v_list[i]) if v_list else 100
+        base_r = int(r_list[i]) if r_list else int(blend)
+        c = 0 if (not connect or last) else 1
+        r = 0 if (last or not connect) else base_r
+        prog.append((v, r, c))
+    return prog
+
+
+def run_one(arm, poses, program, mon):
+    """Dispatch the polyline with its per-move program. True on success.
+
+    `program[i]` is the (v%, r%, connect) for the move ENDING at
+    `poses[i+1]` — built by `build_program`, recorded verbatim in run.json.
 
     A chained program produces ONE arrival event, from the closing
     `connect=0` segment; a discrete program produces one per move. Waiting
@@ -724,12 +807,10 @@ def run_one(arm, poses, blend, connect, mon):
     registered only where an event is actually due.
     """
     for i, p in enumerate(poses[1:]):
-        last = (i == len(poses) - 2)
-        c = 0 if not connect else (0 if last else 1)
-        r = 0 if (last or not connect) else blend
+        v, r, c = program[i]
         if c == 0:
             mon.expect(arm.handle_id, DEV_JOINT)
-        ret = arm.robot.rm_movel(p, 100, r, c, 0)
+        ret = arm.robot.rm_movel(p, v, r, c, 0)
         if ret != 0:
             print(f"  [FAIL] segment {i} rm_movel ret={ret}")
             return False
@@ -766,11 +847,42 @@ def main() -> int:
         tp, tl, ttool = load_task_path(src)
         path = {"poses": tp, "labels": tl, "blends": [10, 25, 50],
                 "angles": [], "speed": 0.25, "ladder": [0.25, 0.45],
-                "tool": ttool, "seg_speeds": {}}
+                "tool": ttool, "seg_speeds": {},
+                "r_list": None, "v_list": None, "chain_approach": False}
     else:
         path = load_path(src)
     poses, labels = path["poses"], path["labels"]
     angles_file = path["angles"]
+    r_list = path.get("r_list")
+    v_list = path.get("v_list")
+    chain_approach = path.get("chain_approach", False)
+    n_moves = len(poses) - 1
+    # PER-MOVE LISTS ARE VALIDATED AGAINST THE PATH, HERE, before any arm is
+    # touched. A list one entry short would silently shift every move's
+    # parameters by one — the exact class of error these screens exist to
+    # rule out on the controller side, so the harness must not commit it.
+    for nm, lst, lo, hi in (("R_LIST", r_list, 0, 100),
+                            ("V_LIST", v_list, 1, 100)):
+        if lst is None:
+            continue
+        if len(lst) != n_moves:
+            raise SystemExit("%s has %d entries but the path has %d moves — "
+                             "one per move, in dispatch order."
+                             % (nm, len(lst), n_moves))
+        bad = [x for x in lst if not (lo <= int(x) <= hi)]
+        if bad:
+            raise SystemExit("%s values out of range %d..%d: %s"
+                             % (nm, lo, hi, bad))
+    if (r_list or v_list or chain_approach) and "--reverse" in sys.argv:
+        raise SystemExit("--reverse would traverse the poses backwards while "
+                         "R_LIST/V_LIST stay in forward dispatch order — the "
+                         "parameters would land on different moves than the "
+                         "path file documents. Write a reversed path file "
+                         "instead.")
+    if (r_list or v_list or chain_approach) and also_c0:
+        raise SystemExit("--connect0 breaks the chain, and every "
+                         "chain-semantics question is ABOUT the chain. "
+                         "Nothing this run measured would answer it.")
     if "--reverse" in sys.argv:
         # THE CONTROL FOR "IS IT THE ANGLE, OR IS IT THE FIRST CORNER?"
         # Every corner keeps its angle and its geometry; only the order
@@ -1119,6 +1231,25 @@ def main() -> int:
                       "depressed reference. Those columns read ~12 points HIGH "
                       "(measured) — compare them with r=0, not with 100 %%."
                       % wide)
+            if r_list or v_list or chain_approach:
+                # THE PROGRAM, MOVE BY MOVE, BEFORE ANY MOTION — this is a
+                # chain-semantics screen, so what each move will be sent with
+                # is the entire point. Printed from the same builder the
+                # dispatch uses; if this table is wrong, the run would be
+                # wrong, and it is on screen before the arm moves.
+                pv = build_program(n_moves, cases[0][0], cases[0][1],
+                                   r_list, v_list)
+                pv_lab = list(labels)
+                if chain_approach:
+                    pv = [(TRANSIT_V, int(cases[0][0]), 1)] + pv
+                    pv_lab = ["prestart"] + pv_lab
+                print("  CHAIN PROGRAM (%d moves%s):"
+                      % (len(pv), ", approach chained" if chain_approach
+                         else ""))
+                for mi, (mv, mr, mc) in enumerate(pv):
+                    print("    move %d  %-9s -> %-9s  v=%3d%%  r=%3d  "
+                          "connect=%d" % (mi + 1, pv_lab[mi], pv_lab[mi + 1],
+                                          mv, mr, mc))
             print()
             print("%-14s %-10s %s" % ("case", "corner", hdr))
             print("-" * 74)
@@ -1138,26 +1269,57 @@ def main() -> int:
                 # proves it landed.
                 if not goto_start_sequence(arm, side, poses, mon,
                                            verbose=(ri == 0 and
-                                                    blend == cases[0][0])):
+                                                    blend == cases[0][0]),
+                                           stop_at_prestart=chain_approach):
                     rung_ok = False
                     break
-                if not goto_start(arm, poses, mon):
+                # CHAIN_APPROACH: no `goto_start` — a movel to poses[0] here
+                # would BE the approach, outside the chain and outside the
+                # recording, which is exactly what this mode exists to avoid.
+                # The prestart readback inside goto_start_sequence is the
+                # origin verification instead.
+                if not chain_approach and not goto_start(arm, poses, mon):
                     rung_ok = False
                     break
+                # THE DISPATCH LIST AND ITS PROGRAM, built once, executed
+                # verbatim, recorded verbatim. In CHAIN_APPROACH mode the
+                # polyline starts at PRESTART and move 0 is the 50 mm
+                # approach at TRANSIT_V with the case's blend radius,
+                # connect=1 — the chain's first move, so the first-corner
+                # exemption is consumed by it.
+                d_program = build_program(n_moves, blend, connect,
+                                          r_list, v_list)
+                if chain_approach:
+                    pre0 = list(poses[0])
+                    pre0[2] += PRESTART_LIFT_M
+                    d_poses = [pre0] + [list(p) for p in poses]
+                    d_labels = ["prestart"] + list(labels)
+                    d_program = [(TRANSIT_V, int(blend), 1)] + d_program
+                else:
+                    d_poses = [list(p) for p in poses]
+                    d_labels = list(labels)
                 # The run directory carries the RUNG in its name. Without it a
                 # seven-rung sweep writes seven `blend_r25_left` directories
                 # distinguishable only by timestamp, and the 2026-08-13 session
-                # showed how easily the wrong one gets read.
+                # showed how easily the wrong one gets read. Chain-semantics
+                # cases carry their protocol in the name for the same reason.
+                case_tag = ("blend_r%d%s" % (blend, "" if connect else "_c0"))
+                if r_list:
+                    case_tag = "chain_rmix"
+                if v_list:
+                    case_tag = ("chain_vmix" if not r_list
+                                else case_tag + "_vmix")
+                if chain_approach:
+                    case_tag += "_capp"
                 rec = RunRecorder(arm.robot,
-                                  "blend_r%d%s_v%03d"
-                                  % (blend, "" if connect else "_c0",
-                                     round(speed * 1000)),
+                                  "%s_v%03d" % (case_tag,
+                                                round(speed * 1000)),
                                   side, host_ip_for(ip), UDP_PORT)
                 if not rec.start():
                     print("  [WARN] recorder did not start; this case is not "
                           "introspectable afterwards")
                 t0 = time.perf_counter()
-                ok = run_one(arm, poses, blend, connect, mon)
+                ok = run_one(arm, d_poses, d_program, mon)
                 t1 = time.perf_counter()
                 # Metadata in the same shape stage_runner writes, so a blend
                 # run is introspectable with the same tooling as a task run.
@@ -1177,11 +1339,19 @@ def main() -> int:
                     "commanded": {
                         "tool_frame": tool, "blend_pct": blend,
                         "connect": int(connect),
-                        "num_waypoints": len(poses),
-                        "segments": len(poses) - 1,
-                        "waypoint_names": labels,
-                        "poses": poses,
+                        "num_waypoints": len(d_poses),
+                        "segments": len(d_poses) - 1,
+                        "waypoint_names": d_labels,
+                        "poses": d_poses,
                         "corner_angles_deg": angles,
+                        # THE PROGRAM AS DISPATCHED: (v%, r%, connect) per
+                        # move, the SAME list run_one executed — recorded so
+                        # the analysis verifies the controller against what
+                        # was actually sent, not against a reconstruction.
+                        "program": [list(t) for t in d_program],
+                        "r_list": r_list,
+                        "v_list": v_list,
+                        "chain_approach": bool(chain_approach),
                     },
                 })
                 run_dir = rec.stop()
@@ -1205,10 +1375,11 @@ def main() -> int:
                 # t_mono is zeroed when recording starts, so the motion window
                 # is measured from the recorder's clock, not perf_counter's.
                 tcp = read_tcp(run_dir)
-                followed, rec_m, cmd_m = path_followed(tcp, poses)
+                followed, rec_m, cmd_m = path_followed(tcp, d_poses)
                 if not followed:
                     print("%-14s %s" % (
-                        ("r=%d%%" % blend) if connect else "connect=0",
+                        case_tag if (r_list or v_list or chain_approach)
+                        else (("r=%d%%" % blend) if connect else "connect=0"),
                         "NO RESULT — the tool traced %.3f m against a "
                         "commanded %.3f m (%.0f %%). %s" % (
                             rec_m, cmd_m, 100 * rec_m / max(cmd_m, 1e-9),
@@ -1224,8 +1395,10 @@ def main() -> int:
                     if rec_m < cmd_m:
                         rung_ok = False
                     continue
-                res = corner_speeds(tcp, poses, 0.0, t1 - t0)
-                label = ("r=%d%%" % blend) if connect else "connect=0"
+                res = corner_speeds(tcp, d_poses, 0.0, t1 - t0)
+                label = (case_tag if (r_list or v_list or chain_approach)
+                         else (("r=%d%%" % blend) if connect
+                               else "connect=0"))
                 # A corner measured from too few samples is marked "?" — its
                 # number would be unsupported, not merely imprecise.
                 if wide:

@@ -524,3 +524,77 @@ WROTE
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001.csv
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001_sequence.csv
   /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/test_motion_001.png
+
+========================================================================
+  Script : path_viz.py
+  Log    : path_viz.log
+  Started: 2026-08-15 00:31:39
+========================================================================
+==============================================================================
+PATH — chain_semantics_001
+==============================================================================
+  source        /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/chain_semantics_001.py
+  points        6 unique, from POSES_MM   (units mm: variable name POSES_MM)
+  sequence      6 steps, from SEQUENCE
+  work frame    World
+  tool frame    L_glove_4
+  blend         25
+  default_speed 100
+
+POINTS — positions mm, orientation rad, in the World frame for L_glove_4
+     label               X          Y          Z       RX       RY       RZ  visits  first
+  A  P0            530.000    -60.000   -323.628  -3.1170  -0.4000   0.0770       1      0
+  B  P1            730.000    -60.000   -323.628  -3.1170  -0.4000   0.0770       1      1
+  C  P2            730.000    -15.000   -323.628  -3.1170  -0.4000   0.0770       1      2
+  D  P3            530.000    -15.000   -323.628  -3.1170  -0.4000   0.0770       1      3
+  E  P4            530.000     30.000   -323.628  -3.1170  -0.4000   0.0770       1      4
+  F  P5            730.000     30.000   -323.628  -3.1170  -0.4000   0.0770       1      5
+
+EXTENT (mm)
+  X     530.000 ..    730.000   span  200.000  2 distinct: 530, 730
+  Y     -60.000 ..     30.000   span   90.000  3 distinct: -60, -15, 30
+  Z    -323.628 ..   -323.628   span    0.000  <-- constant
+  the 6 distinct positions form a full 2x3x1 grid
+
+MAP — the traversal, drawn on the two widest axes
+    Y +30.0 mm at the top, -60.0 mm at the bottom
+    +--------------------------------------------------------------------------+
+    |E------------------------------------------------------------------------F|
+    ||                                                                         |
+    ||                                                                         |
+    ||                                                                         |
+    ||                                                                         |
+    ||                                                                         |
+    ||                                                                         |
+    ||                                                                         |
+    |D------------------------------------------------------------------------C|
+    |                                                                         ||
+    |                                                                         ||
+    |                                                                         ||
+    |                                                                         ||
+    |                                                                         ||
+    |                                                                         ||
+    |                                                                         ||
+    |A------------------------------------------------------------------------B|
+    +--------------------------------------------------------------------------+
+    X +530.0 mm at the left, +730.0 mm at the right   |   Z spread 0.0 mm
+    legend: A=P0  B=P1  C=P2  D=P3  E=P4  F=P5
+
+SEGMENTS — geometry per step of the traversal
+  step move              from -> to        speed    len mm  rot deg    euler    cum mm
+     0 MOVEL                - -> P0          100         -        -        -     0.000
+     1 MOVEL               P0 -> P1          100   200.000     0.00     0.00   200.000
+     2 MOVEL               P1 -> P2          100    45.000     0.00     0.00   245.000
+     3 MOVEL               P2 -> P3          100   200.000     0.00     0.00   445.000
+     4 MOVEL               P3 -> P4          100    45.000     0.00     0.00   490.000
+     5 MOVEL               P4 -> P5          100   200.000     0.00     0.00   690.000
+
+TOTALS
+  path length            690.0 mm (0.6900 m) over 5 segments
+  rotation per segment   max 0.00 deg, mean 0.00 deg
+  widest orientation     0.00 deg, between P4 and P5
+
+WROTE
+  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/50a15375-5cc1-47ef-a69b-2759d45fda63/scratchpad/chain_semantics_001.csv
+  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/50a15375-5cc1-47ef-a69b-2759d45fda63/scratchpad/chain_semantics_001_sequence.csv
+  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/50a15375-5cc1-47ef-a69b-2759d45fda63/scratchpad/chain_semantics_001.png

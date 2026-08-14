@@ -80,6 +80,34 @@ except Exception as _exc:        # pragma: no cover - platform without the .so
           "pose feedback will be zeros and rm_movej_p will be rejected")
 
 
+def _set_algo_toolframe(tool):
+    """Point the shared algo library at THIS tool before any FK/IK call.
+
+    THE ALGO LIBRARY'S CONFIGURATION IS PROCESS-GLOBAL. Any module that
+    constructs its own `Algo(...)` — `orientation_cost` does, at import
+    time, and `test_blend_corner.preflight_j4` imports it mid-run —
+    re-initialises that global state and silently un-sets whatever
+    toolframe the emulator last applied. An IK solved after that resolves
+    a FLANGE target while the FK verify applies the ACTIVE tool, and every
+    `rm_movej_p` under a glove frame returns ret 1 (2026-08-14, the
+    chain-semantics dry-runs). So the frame is asserted at every solver
+    entry point, never assumed to persist.
+    """
+    if _ALGO is None or not tool:
+        return
+    try:
+        from Robotic_Arm.rm_ctypes_wrap import (
+            rm_frame_t, rm_pose_t, rm_position_t, rm_euler_t)
+        f = rm_frame_t()
+        f.frame_name = b"emu"
+        f.pose = rm_pose_t()
+        f.pose.position = rm_position_t(*[float(v) for v in tool[:3]])
+        f.pose.euler = rm_euler_t(*[float(v) for v in tool[3:6]])
+        _ALGO.rm_algo_set_toolframe(f)
+    except Exception:
+        pass
+
+
 def _fk_pose(joints_deg, tool=None):
     """FK via RealMan's own solver: [x,y,z, rx,ry,rz] (m / rad).
 
@@ -88,18 +116,7 @@ def _fk_pose(joints_deg, tool=None):
     """
     if _ALGO is None:
         return [0.0] * 6
-    if tool:
-        try:
-            from Robotic_Arm.rm_ctypes_wrap import (
-                rm_frame_t, rm_pose_t, rm_position_t, rm_euler_t)
-            f = rm_frame_t()
-            f.frame_name = b"emu"
-            f.pose = rm_pose_t()
-            f.pose.position = rm_position_t(*[float(v) for v in tool[:3]])
-            f.pose.euler = rm_euler_t(*[float(v) for v in tool[3:6]])
-            _ALGO.rm_algo_set_toolframe(f)
-        except Exception:
-            pass
+    _set_algo_toolframe(tool)
     return list(_ALGO.rm_algo_forward_kinematics(list(joints_deg), 1))[:6]
 
 
@@ -676,6 +693,9 @@ class EmuController:
             ls = float(self.limits.get("line_speed", 0.25))
             la = float(self.limits.get("line_acc", 1.6))
 
+        # Chain targets are poses OF THE ACTIVE TOOL — assert the frame on
+        # the shared solver before planning (see _set_algo_toolframe).
+        _set_algo_toolframe(tool)
         path, dur = self._plan_cartesian(seed, tool, poses, v, ls, la)
         if path is None:
             return 1                      # IK failure / limit — controller ret 1
@@ -943,6 +963,11 @@ class EmuController:
             if self.motion_locked:
                 return 1               # latched joint errors: clear first
             seed = self.current_joints_locked()
+        # The request is a pose OF THE ACTIVE TOOL — assert that frame on
+        # the shared solver before IK, or the target is solved for the
+        # flange while the verify below applies the tool (see
+        # _set_algo_toolframe on why the frame cannot be assumed set).
+        _set_algo_toolframe(self._active_tool_pose())
         ret, target_deg = _ik_seeded(seed, pose6)
         if ret != 0:
             return 1                # IK failure — the controller's ret 1

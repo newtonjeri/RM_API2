@@ -517,6 +517,90 @@ toplid's ~300–400 mm strokes, r = 50 removes ~250 mm per reversal.
   arms, both directions affected; never seen at r = 10 or 50. Until
   understood, production runs should verify the final waypoint was reached.
 
+### 9.3b Continuity measurements (added same day, REAL v = 0.25 unless noted)
+
+* **Exact-180° retrace tips are true stops at every r**: 1–4 mm/s minimum,
+  170–290 ms below 10 % of cruise (hinge spokes, r = 10/25/50). Coverage-safe
+  but not stop-free.
+* **Blended serpentine U-turns are continuous but slow**: minimum speed
+  through the turnaround, median across toplid's ~175° reversals — r = 10:
+  10–21 mm/s; r = 25: 26 mm/s; r = 50: 52 mm/s. Larger r carries *more* speed
+  through the turn. Shallow corners (<60°) at r = 25 never drop below
+  61 mm/s and spend 0 ms under 10 % cruise.
+* **Deterministic ~2 s freeze at toplid's `point13` spur when r ≥ 25**: every
+  r = 25/50 toplid run — SIM and REAL, left and right, forward and reverse
+  (12/12) — stalls 2.0–2.7 s within ~13 mm of `point13` (a 29 mm exact-retrace
+  spur entered from a 54 mm segment). Never at r = 10, and never at the hinge
+  fan spokes (30–43 mm) at any r. It erases most of r = 25's time savings
+  (30.5 s vs r = 10's 32.0 s despite 27 % less path). SIM reproduces it
+  faithfully, so it is screenable before hardware. Same family of chain
+  misbehaviour as the r = 25 hinge early termination (§9.3): short-segment
+  structures + mid-range r.
+
+### 9.3c Speed picture and claim verification (added same day)
+
+* **Orientation-rate does NOT predict J4** — corr(deg/m, J4 peak) ≈ 0 across
+  segments in four REAL runs; hinge's worst J4 segments carry only 3° of
+  rotation (J4 is the translation workhorse, §4b). What is true: toplid's J4
+  ceiling is ONE segment — `point13→point12` (41° over 405 mm). Both 0.45
+  aborts died there at an identical clamped 122.7 % J4; r = 10 survived it at
+  a momentary 108 % because it entered slow. **Blending killed the 0.45 runs
+  by carrying U-turn speed into that segment.** The lever is local: slow,
+  de-rotate, or un-blend that one entry — not "less rotation everywhere".
+* **Corner speed scales with v at r ≤ 25** (hinge corner minima ≈ double from
+  0.25→0.45); **r = 50 breaks down at 0.45** (minima drop, shallow corners dip
+  to 5 mm/s — near-stops). r = 50 is a 0.25-only radius.
+* **Short segments are acceleration-limited, not cap-limited**: with
+  acc = 3v the ramp length is v/6 m each way (75 mm at 0.45), so hinge's
+  ~100 mm segments never reach 0.45 — 71–73 % of hinge's 0.45 run time sits
+  below half cap. Raising v beyond ~3 × segment-length [m/s] buys nothing.
+* **Direction is a free variable**: matched fwd/rev cells differ by ≤3 J4
+  points and ≤2 s (stall pattern). Use it to place the exempt first corner.
+* Fastest completing configs measured: hinge 0.45/r50 19.9 s (coverage 53 %,
+  near-stops); hinge 0.45/r25 26.2 s (continuous); toplid 0.45/r10 23.4 s
+  (89 %). Time from r at 0.25: r10→r50 saves ~28 % on both tasks.
+* **Unverified, SIM-screenable before any hardware run**: per-command mixed r
+  in one chain; per-command v change mid-chain; chaining the approach move to
+  consume the first-corner exemption.
+
+### 9.3d The chain-semantics screens (prepared 2026-08-14, ready to run)
+
+Three one-rung SIM runs on the LEFT arm answer the three unverified items.
+One path geometry — four IDENTICAL 90° corners (200 mm strokes, 45 mm steps)
+in blend_corner_001's proven box, constant orientation, worst segment 52 % of
+the J4 limit at 0.25 — so any per-corner difference is the per-move
+parameter. Each path file's header carries the predicted signature for
+honored / latch-first / latch-last; run.json records the dispatched
+`(v, r, connect)` per move verbatim (`commanded.program`).
+
+    cd src
+    python3 test_blend_corner.py --side left --mode SIM \
+            --path ../paths/chain_semantics_001.py     # per-move r
+    python3 test_blend_corner.py --side left --mode SIM \
+            --path ../paths/chain_semantics_002.py     # per-move v
+    python3 test_blend_corner.py --side left --mode SIM \
+            --path ../paths/chain_semantics_003.py     # chained approach
+
+Then pull the three run dirs and:
+
+    python3 analyse_coverage.py ../runs/<run_dir>      # per-corner cuts
+    python3 analyse_run.py      ../runs/<run_dir>      # dips / stalls
+
+Read 001 by corner cuts + which corners stop; 002 by per-stroke speed
+plateaus (100/250/150 mm/s if honored); 003 by whether corner P1 blends
+(~16 mm cut, no stop) while the prestart→P0 corner does not. The ladder is
+ONE rung at 0.25 by design — this box's J4 crosses its limit near
+0.385 m/s (§blend_corner_001), so do not pass --speed here.
+
+Dry-run status (this machine, emulator): dispatch mechanics, entry variants,
+program construction and run.json recording verified end-to-end; the
+emulator cannot execute the movel geometry itself (its known movel-IK
+limitation), so the semantics answers must come from the controller SIM
+runs. En route the emulator gained a fix: the vendor algo library's
+toolframe is process-global and any module constructing its own `Algo`
+resets it — `rm_emulator` now re-asserts the active tool frame at every
+IK/FK entry point instead of assuming it persists.
+
 ### 9.4 Practical rule
 
 Choose r per stroke from the allowed end-loss δ:  **r ≈ 133 · δ / L**.

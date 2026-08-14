@@ -14,6 +14,27 @@ STEP = 0.002          # commanded-path discretization (m)
 WIN = 0.030           # +/- window (m) around s when probing coverage distance
 SMOOTH_S = 0.07       # REAL position channel: box-smooth >= 70 ms (aliasing rule)
 
+def densify(T, max_step=0.002):
+    """Linear interpolation so consecutive trace points are <= max_step apart.
+
+    At 100 Hz the sample spacing is v/100 — 4.5 mm at 0.45 m/s, which is
+    wider than the 2 mm coverage tolerance: a perfectly-traversed straight
+    line would read as flecks of 'uncovered' between samples. Interpolating
+    the chords removes that artifact exactly; on a noisy REAL trace it adds
+    only jitter-level error, which the tolerance already absorbs.
+    """
+    if len(T) < 2:
+        return T
+    pts = []
+    for a, b in zip(T[:-1], T[1:]):
+        d = np.linalg.norm(b - a)
+        n = max(1, int(np.ceil(d / max_step)))
+        for k in range(n):
+            pts.append(a + (b - a) * (k / n))
+    pts.append(T[-1])
+    return np.array(pts)
+
+
 def load_run(rundir):
     d = json.load(open(f"{rundir}/run.json"))
     rows = list(csv.DictReader(open(f"{rundir}/stream.csv")))
@@ -28,6 +49,7 @@ def load_run(rundir):
         pad = w // 2
         Tp = np.pad(T, ((pad, pad), (0, 0)), mode="edge")
         T = np.stack([np.convolve(Tp[:, i], k, mode="valid") for i in range(3)], axis=1)
+    T = densify(T)
     P = np.array([p[:3] for p in d["commanded"]["poses"]])
     return d, T, t, P
 
