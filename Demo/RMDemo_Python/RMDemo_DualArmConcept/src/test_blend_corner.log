@@ -1173,3 +1173,1817 @@ r=25%          retained       1%?     157%?      60%?      96%?      81%?
   blend radius is not being applied at all.
   [INFO] left: run mode restored to REAL
   limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:15:47
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+     speeds  0.10, 0.20, 0.25, 0.35 m/s   (SPEED_LADDER in blend_corner_001.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (515, 32, -324) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 4   line_speed 0.100 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.100  line_acc 1.600  (originals restored at exit)
+  ramp 3 mm each way against a 65 mm mean segment (20.8x)
+  sample spacing 1.00 mm at 0.100 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~4 mm
+  resolution: r=25  5 of 5 corners measurable
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T191551_blend_r0_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 0 mm/s, 12% of the stage spent below it
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 478 samples (94.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191551_blend_r0_v100_left
+r=0%           retained   n=5 of 5  retained p25 46%  median 52%  p75 52%   v_min median 51 mm/s
+  [INFO] recording -> 20260814T191559_blend_r25_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 9% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 518 samples (97.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191559_blend_r25_v100_left
+r=25%          retained   n=5 of 5  retained p25 47%  median 55%  p75 61%   v_min median 53 mm/s
+  [INFO] recording -> 20260814T191609_blend_r50_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 11% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 478 samples (97.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191609_blend_r50_v100_left
+r=50%          retained   n=5 of 5  retained p25 62%  median 77%  p75 86%   v_min median 76 mm/s
+  measured this rung: worst J7 at 0 % of its limit
+
+==========================================================================
+  RUNG 2 of 4   line_speed 0.200 m/s   line_acc 1.600 m/s2
+==========================================================================
+  measured last rung: J7 at 0 % of its limit at 0.10 m/s -> this rung projects to 0 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.200  line_acc 1.600  (originals restored at exit)
+  ramp 13 mm each way against a 65 mm mean segment (5.2x)
+  sample spacing 2.00 mm at 0.200 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~8 mm
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T191617_blend_r0_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 0 mm/s, 29% of the stage spent below it
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 362 samples (96.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191617_blend_r0_v200_left
+r=0%           retained   n=5 of 5  retained p25 15%  median 15%  p75 15%   v_min median 29 mm/s
+  [INFO] recording -> 20260814T191624_blend_r25_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 17% of the stage spent below it
+  [INFO] the arm reached 149 mm/s typical against a commanded cap of 200 mm/s (74%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 317 samples (95.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191624_blend_r25_v200_left
+r=25%          retained   n=4 of 5  retained p25 52%  median 57%  p75 74%   v_min median 107 mm/s
+                          corners [4]: NO CRUISE PLATEAU on the approach (speed varies 36-36 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T191630_blend_r50_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 20% of the stage spent below it
+  [INFO] p95 at 105% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 282 samples (94.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191630_blend_r50_v200_left
+r=50%          retained   n=3 of 5  retained p25 17%  median 82%  p75 91%   v_min median 168 mm/s
+                          corners [3, 4]: NO CRUISE PLATEAU on the approach (speed varies 32-37 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+==========================================================================
+  RUNG 3 of 4   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  measured last rung: J7 at 0 % of its limit at 0.20 m/s -> this rung projects to 0 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 65 mm mean segment (3.3x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T191637_blend_r0_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 0 mm/s, 33% of the stage spent below it
+  [INFO] the arm reached 150 mm/s typical against a commanded cap of 250 mm/s (60%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 103% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 372 samples (96.6 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191637_blend_r0_v250_left
+r=0%           retained   n=5 of 5  retained p25 10%  median 11%  p75 13%   v_min median 25 mm/s
+  [INFO] recording -> 20260814T191644_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 19% of the stage spent below it
+  [INFO] the arm reached 160 mm/s typical against a commanded cap of 250 mm/s (64%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 100% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 293 samples (94.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191644_blend_r25_v250_left
+r=25%          retained   n=2 of 5  retained p25 12%  median 55%  p75 55%   v_min median 128 mm/s
+                          corners [3, 4, 5]: NO CRUISE PLATEAU on the approach (speed varies 37-43 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T191650_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 23% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 262 samples (95.0 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191650_blend_r50_v250_left
+r=50%          retained   n=3 of 5  retained p25 10%  median 87%  p75 89%   v_min median 192 mm/s
+                          corners [3, 4]: NO CRUISE PLATEAU on the approach (speed varies 35-42 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+==========================================================================
+  RUNG 4 of 4   line_speed 0.350 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  measured last rung: J7 at 0 % of its limit at 0.25 m/s -> this rung projects to 0 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.350  line_acc 1.600  (originals restored at exit)
+  ramp 38 mm each way against a 65 mm mean segment (1.7x)
+  sample spacing 3.50 mm at 0.350 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~14 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T191656_blend_r0_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 8 decelerations below half cruise, 1.33 per segment, deepest 0 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 168 mm/s typical against a commanded cap of 350 mm/s (48%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 75% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 355 samples (96.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191656_blend_r0_v350_left
+r=0%           retained   n=5 of 5  retained p25 7%  median 11%  p75 12%   v_min median 26 mm/s
+  [INFO] recording -> 20260814T191703_blend_r25_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 27% of the stage spent below it
+  [INFO] the arm reached 219 mm/s typical against a commanded cap of 350 mm/s (62%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 82% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 262 samples (94.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191703_blend_r25_v350_left
+r=25%          retained   n=3 of 5  retained p25 10%  median 62%  p75 89%   v_min median 166 mm/s
+                          corners [2, 5]: only 5-7 samples in the dip (need 8) — lower the speed or widen the blend
+  [INFO] recording -> 20260814T191709_blend_r50_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 0 mm/s, 31% of the stage spent below it
+  [INFO] the arm reached 248 mm/s typical against a commanded cap of 350 mm/s (71%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 235 samples (91.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191709_blend_r50_v350_left
+r=50%          retained   n=1 of 5  retained p25 11%  median 11%  p75 11%   v_min median 24 mm/s
+                          corners [2, 4, 5]: only 1-3 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [3]: NO CRUISE PLATEAU on the approach (speed varies 30-30 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:17:13
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:toplid_left
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (550, 44, -272) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T191717_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 24 decelerations below half cruise, 0.89 per segment, deepest 0 mm/s, 24% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3179 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191717_blend_r10_v250_left
+r=10%          retained   n=12 of 26  retained p25 16%  median 30%  p75 63%   v_min median 52 mm/s
+                          corners [2, 3, 4, 5, 6, 8, 10, 12, 17, 20, 21, 22]: NO CRUISE PLATEAU on the approach (speed varies 30-94 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T191753_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 27 decelerations below half cruise, 1.00 per segment, deepest 0 mm/s, 38% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3147 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191753_blend_r25_v250_left
+r=25%          NO RESULT — the tool traced 4.683 m against a commanded 6.202 m (76 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T191827_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 27 decelerations below half cruise, 1.00 per segment, deepest 0 mm/s, 32% of the stage spent below it
+  [INFO] p95 at 105% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2338 samples (98.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191827_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.627 m against a commanded 6.202 m (58 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:18:53
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:hinge_area_left
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    L_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (835, 23, -286) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T191857_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 48 decelerations below half cruise, 1.12 per segment, deepest 0 mm/s, 36% of the stage spent below it
+  [INFO] the arm reached 176 mm/s typical against a commanded cap of 250 mm/s (70%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3440 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191857_blend_r10_v250_left
+r=10%          retained   n=23 of 42  retained p25 7%  median 11%  p75 26%   v_min median 24 mm/s
+                          corners [5, 7, 9, 13, 15, 16, 23, 25, 27, 29, 31, 33, 36, 40]: NO CRUISE PLATEAU on the approach (speed varies 31-94 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T191936_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 39 decelerations below half cruise, 0.91 per segment, deepest 0 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 138 mm/s typical against a commanded cap of 250 mm/s (55%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3046 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T191936_blend_r25_v250_left
+r=25%          NO RESULT — the tool traced 3.741 m against a commanded 4.763 m (79 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T192010_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 46 decelerations below half cruise, 1.07 per segment, deepest 0 mm/s, 29% of the stage spent below it
+  [INFO] the arm reached 128 mm/s typical against a commanded cap of 250 mm/s (51%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2456 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192010_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 2.989 m against a commanded 4.763 m (63 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:22:36
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/blend_corner_001.py
+     7 points, 5 corners, 0.39 m, mean segment 65 mm
+     corners [90, 30, 60, 15, 45] deg   blends [0, 25, 50] %
+     speeds  0.10, 0.20, 0.25, 0.35 m/s   (SPEED_LADDER in blend_corner_001.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (515, 32, -324) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 4   line_speed 0.100 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.100  line_acc 1.600  (originals restored at exit)
+  ramp 3 mm each way against a 65 mm mean segment (20.8x)
+  sample spacing 1.00 mm at 0.100 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~4 mm
+  resolution: r=25  5 of 5 corners measurable
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T192240_blend_r0_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 10 decelerations below half cruise, 1.67 per segment, deepest 1 mm/s, 13% of the stage spent below it
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 524 samples (94.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192240_blend_r0_v100_left
+r=0%           retained   n=2 of 5  retained p25 4%  median 31%  p75 31%   v_min median 31 mm/s
+                          corners [2, 3, 5]: NO CRUISE PLATEAU on the approach (speed varies 31-33 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192249_blend_r25_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 2 mm/s, 10% of the stage spent below it
+  [INFO] p95 at 130% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 530 samples (97.0 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192249_blend_r25_v100_left
+r=25%          retained   n=1 of 5  retained p25 3%  median 3%  p75 3%   v_min median 3 mm/s
+                          corners [2, 3, 4, 5]: NO CRUISE PLATEAU on the approach (speed varies 30-37 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192259_blend_r50_v100_left  (100 Hz, ret=0)
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 1 mm/s, 13% of the stage spent below it
+  [INFO] p95 at 126% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 492 samples (95.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192259_blend_r50_v100_left
+r=50%          retained   n=2 of 5  retained p25 4%  median 72%  p75 72%   v_min median 74 mm/s
+                          corners [2, 3, 5]: NO CRUISE PLATEAU on the approach (speed varies 31-43 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 24 % of its limit
+
+==========================================================================
+  RUNG 2 of 4   line_speed 0.200 m/s   line_acc 1.600 m/s2
+==========================================================================
+  measured last rung: J4 at 24 % of its limit at 0.10 m/s -> this rung projects to 48 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.200  line_acc 1.600  (originals restored at exit)
+  ramp 13 mm each way against a 65 mm mean segment (5.2x)
+  sample spacing 2.00 mm at 0.200 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~8 mm
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T192308_blend_r0_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 2 mm/s, 29% of the stage spent below it
+  [INFO] the arm reached 148 mm/s typical against a commanded cap of 200 mm/s (74%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 396 samples (96.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192308_blend_r0_v200_left
+r=0%           retained   n=3 of 5  retained p25 2%  median 3%  p75 7%   v_min median 6 mm/s
+                          corners [2, 3]: NO CRUISE PLATEAU on the approach (speed varies 34-37 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192316_blend_r25_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 2 mm/s, 21% of the stage spent below it
+  [INFO] the arm reached 156 mm/s typical against a commanded cap of 200 mm/s (78%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 124% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 316 samples (95.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192316_blend_r25_v200_left
+r=25%          retained   n=1 of 5  retained p25 11%  median 11%  p75 11%   v_min median 22 mm/s
+                          corners [2, 3, 4, 5]: NO CRUISE PLATEAU on the approach (speed varies 30-44 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192323_blend_r50_v200_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 2 mm/s, 19% of the stage spent below it
+  [INFO] p95 at 125% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 279 samples (95.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192323_blend_r50_v200_left
+r=50%          retained   n=4 of 5  retained p25 54%  median 68%  p75 76%   v_min median 140 mm/s
+                          corners [2]: NO CRUISE PLATEAU on the approach (speed varies 34-34 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 40 % of its limit
+
+==========================================================================
+  RUNG 3 of 4   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  measured last rung: J4 at 40 % of its limit at 0.20 m/s -> this rung projects to 50 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 65 mm mean segment (3.3x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T192329_blend_r0_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 2 mm/s, 37% of the stage spent below it
+  [INFO] the arm reached 168 mm/s typical against a commanded cap of 250 mm/s (67%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 103% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 373 samples (93.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192329_blend_r0_v250_left
+r=0%           retained   n=4 of 5  retained p25 0%  median 1%  p75 2%   v_min median 2 mm/s
+                          corners [4]: NO CRUISE PLATEAU on the approach (speed varies 31-31 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192336_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 2 mm/s, 18% of the stage spent below it
+  [INFO] the arm reached 187 mm/s typical against a commanded cap of 250 mm/s (75%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 116% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 285 samples (94.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192336_blend_r25_v250_left
+r=25%          retained   n=2 of 5  retained p25 6%  median 70%  p75 70%   v_min median 164 mm/s
+                          corners [3, 4, 5]: NO CRUISE PLATEAU on the approach (speed varies 41-61 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192342_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 1 mm/s, 28% of the stage spent below it
+  [INFO] p95 at 125% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 256 samples (94.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192342_blend_r50_v250_left
+r=50%          retained   n=1 of 5  retained p25 6%  median 6%  p75 6%   v_min median 16 mm/s
+                          corners [2, 4, 5]: only 4-5 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [3]: NO CRUISE PLATEAU on the approach (speed varies 43-43 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 50 % of its limit
+
+==========================================================================
+  RUNG 4 of 4   line_speed 0.350 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  measured last rung: J4 at 50 % of its limit at 0.25 m/s -> this rung projects to 70 %
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.350  line_acc 1.600  (originals restored at exit)
+  ramp 38 mm each way against a 65 mm mean segment (1.7x)
+  sample spacing 3.50 mm at 0.350 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~14 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=25  0 of 5 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=50  5 of 5 corners measurable
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner        90 deg     30 deg     60 deg     15 deg     45 deg
+--------------------------------------------------------------------------
+  [INFO] recording -> 20260814T192349_blend_r0_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 7 decelerations below half cruise, 1.17 per segment, deepest 1 mm/s, 38% of the stage spent below it
+  [INFO] the arm reached 173 mm/s typical against a commanded cap of 350 mm/s (49%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 75% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 412 samples (96.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192349_blend_r0_v350_left
+r=0%           retained   n=4 of 5  retained p25 2%  median 4%  p75 8%   v_min median 10 mm/s
+                          corners [5]: NO CRUISE PLATEAU on the approach (speed varies 31-31 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192356_blend_r25_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 4 decelerations below half cruise, 0.67 per segment, deepest 2 mm/s, 29% of the stage spent below it
+  [INFO] the arm reached 229 mm/s typical against a commanded cap of 350 mm/s (66%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 95% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 274 samples (94.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192356_blend_r25_v350_left
+r=25%          retained   n=1 of 5  retained p25 0%  median 0%  p75 0%   v_min median 1 mm/s
+                          corners [2, 4]: only 6-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [3, 5]: NO CRUISE PLATEAU on the approach (speed varies 36-42 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192402_blend_r50_v350_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.50 per segment, deepest 1 mm/s, 39% of the stage spent below it
+  [INFO] the arm reached 255 mm/s typical against a commanded cap of 350 mm/s (73%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 114% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 230 samples (93.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192402_blend_r50_v350_left
+r=50%          retained   n=1 of 5  retained p25 59%  median 59%  p75 59%   v_min median 200 mm/s
+                          corners [2, 4, 5]: only 1-3 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [1]: NO CRUISE PLATEAU on the approach (speed varies 30-30 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 69 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:24:07
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:toplid_left
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (550, 44, -272) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T192410_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 26 decelerations below half cruise, 0.96 per segment, deepest 2 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3192 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192410_blend_r10_v250_left
+r=10%          retained   n=11 of 26  retained p25 4%  median 15%  p75 47%   v_min median 30 mm/s
+                          corners [3, 4, 5, 6, 7, 8, 10, 12, 17, 18, 20, 22, 23]: NO CRUISE PLATEAU on the approach (speed varies 31-90 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192446_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 38 decelerations below half cruise, 1.41 per segment, deepest 1 mm/s, 37% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3208 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192446_blend_r25_v250_left
+r=25%          NO RESULT — the tool traced 5.046 m against a commanded 6.202 m (81 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T192522_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 41 decelerations below half cruise, 1.52 per segment, deepest 1 mm/s, 31% of the stage spent below it
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2348 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192522_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.835 m against a commanded 6.202 m (62 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J4 at 59 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:25:47
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:hinge_area_left
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    L_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (835, 23, -286) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T192551_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 56 decelerations below half cruise, 1.30 per segment, deepest 1 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 188 mm/s typical against a commanded cap of 250 mm/s (75%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 113% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3445 samples (98.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192551_blend_r10_v250_left
+r=10%          retained   n=17 of 42  retained p25 4%  median 6%  p75 9%   v_min median 15 mm/s
+                          corners [1, 5, 7, 11, 13, 16, 17, 21, 23, 24, 25, 27, 28, 29, 31, 32, 33, 35, 39, 40]: NO CRUISE PLATEAU on the approach (speed varies 31-82 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192630_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 50 decelerations below half cruise, 1.16 per segment, deepest 2 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 154 mm/s typical against a commanded cap of 250 mm/s (62%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3062 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192630_blend_r25_v250_left
+r=25%          retained   n=11 of 42  retained p25 2%  median 13%  p75 79%   v_min median 34 mm/s
+                          corners [11, 13]: only 2-3 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [4, 5, 7, 9, 14, 15, 16, 17, 18, 20, 21, 22, 24, 26, 27, 28, 30, 32, 34, 35, 36, 38, 39, 40]: NO CRUISE PLATEAU on the approach (speed varies 30-98 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T192705_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 78 decelerations below half cruise, 1.81 per segment, deepest 2 mm/s, 27% of the stage spent below it
+  [INFO] the arm reached 146 mm/s typical against a commanded cap of 250 mm/s (58%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 114% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2464 samples (99.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T192705_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.453 m against a commanded 4.763 m (72 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J1 at 77 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:32:23
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:32:23
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:33:15
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:toplid_left
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.45 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (550, 44, -272) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.450 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.450  line_acc 1.600  (originals restored at exit)
+  ramp 63 mm each way against a 230 mm mean segment (3.6x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=10  7 of 26 corners measurable   <-- partial
+  resolution: r=25  14 of 26 corners measurable   <-- partial
+  resolution: r=50  16 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T193318_blend_r10_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 31 decelerations below half cruise, 1.15 per segment, deepest 3 mm/s, 33% of the stage spent below it
+  [INFO] the arm reached 291 mm/s typical against a commanded cap of 450 mm/s (65%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2338 samples (98.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193318_blend_r10_v450_left
+r=10%          retained   n=9 of 26  retained p25 1%  median 40%  p75 52%   v_min median 62 mm/s
+                          corners [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 18, 20, 21, 22, 25]: NO CRUISE PLATEAU on the approach (speed varies 31-97 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T193345_blend_r25_v450_left  (100 Hz, ret=0)
+  [FAIL] segment 26: arrival event reports failure
+  [INFO] smoothness: 21 decelerations below half cruise, 0.78 per segment, deepest 1 mm/s, 44% of the stage spent below it
+  [INFO] the arm reached 237 mm/s typical against a commanded cap of 450 mm/s (53%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 106% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 1798 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193345_blend_r25_v450_left
+  [INFO] recording -> 20260814T193406_blend_r50_v450_left  (100 Hz, ret=0)
+  [FAIL] segment 26: arrival event reports failure
+  [INFO] smoothness: 21 decelerations below half cruise, 0.78 per segment, deepest 2 mm/s, 23% of the stage spent below it
+  [INFO] the arm reached 232 mm/s typical against a commanded cap of 450 mm/s (52%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 102% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 1134 samples (98.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193406_blend_r50_v450_left
+  measured this rung: worst J4 at 98 % of its limit
+
+  [STOP] rung 0.450 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:34:20
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:hinge_area_left
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.45 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (835, 23, -286) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.450 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.450  line_acc 1.600  (originals restored at exit)
+  ramp 63 mm each way against a 111 mm mean segment (1.8x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  12 of 42 corners measurable   <-- partial
+  resolution: r=50  20 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T193423_blend_r10_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 49 decelerations below half cruise, 1.14 per segment, deepest 2 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 194 mm/s typical against a commanded cap of 450 mm/s (43%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 91% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 2872 samples (98.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193423_blend_r10_v450_left
+r=10%          retained   n=5 of 42  retained p25 3%  median 3%  p75 23%   v_min median 9 mm/s
+                          corners [1, 7, 13]: only 1-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [2, 4, 5, 9, 11, 14, 15, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42]: NO CRUISE PLATEAU on the approach (speed varies 30-98 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T193456_blend_r25_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 50 decelerations below half cruise, 1.16 per segment, deepest 2 mm/s, 32% of the stage spent below it
+  [INFO] the arm reached 177 mm/s typical against a commanded cap of 450 mm/s (39%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 90% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 2618 samples (99.0 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193456_blend_r25_v450_left
+r=25%          retained   n=4 of 42  retained p25 10%  median 10%  p75 51%   v_min median 29 mm/s
+                          corners [1, 11, 16, 21, 25, 29, 42]: only 2-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [2, 4, 5, 7, 14, 15, 17, 19, 22, 23, 24, 26, 27, 30, 31, 32, 33, 34, 35, 37, 38, 39, 40, 41]: NO CRUISE PLATEAU on the approach (speed varies 31-99 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T193527_blend_r50_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 38 decelerations below half cruise, 0.88 per segment, deepest 2 mm/s, 21% of the stage spent below it
+  [INFO] the arm reached 175 mm/s typical against a commanded cap of 450 mm/s (39%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 101% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 1995 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T193527_blend_r50_v450_left
+r=50%          NO RESULT — the tool traced 3.479 m against a commanded 4.763 m (73 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J4 at 95 % of its limit
+
+  [STOP] rung 0.450 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:39:56
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:toplid_left
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (750, 54, -233) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T194000_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 24 decelerations below half cruise, 0.89 per segment, deepest 0 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3173 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194000_blend_r10_v250_left
+r=10%          retained   n=10 of 26  retained p25 19%  median 27%  p75 55%   v_min median 48 mm/s
+                          corners [3, 5, 6, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 23, 25, 26]: NO CRUISE PLATEAU on the approach (speed varies 30-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T194035_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 25 decelerations below half cruise, 0.93 per segment, deepest 0 mm/s, 37% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3029 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194035_blend_r25_v250_left
+r=25%          NO RESULT — the tool traced 4.568 m against a commanded 6.202 m (74 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T194108_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 23 decelerations below half cruise, 0.85 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2282 samples (99.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194108_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.443 m against a commanded 6.202 m (56 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:41:33
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:hinge_area_left
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (925, 48, -256) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T194136_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 46 decelerations below half cruise, 1.07 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 170 mm/s typical against a commanded cap of 250 mm/s (68%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3462 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194136_blend_r10_v250_left
+r=10%          retained   n=23 of 42  retained p25 7%  median 11%  p75 24%   v_min median 26 mm/s
+                          corners [3, 5, 7, 10, 12, 14, 16, 18, 20, 21, 27, 28, 31, 33, 35, 36, 37, 40]: NO CRUISE PLATEAU on the approach (speed varies 30-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T194215_blend_r25_v250_left  (100 Hz, ret=0)
+  [FAIL] segment 42: arrival event reports failure
+  [INFO] smoothness: 37 decelerations below half cruise, 0.86 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 135 mm/s typical against a commanded cap of 250 mm/s (54%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3043 samples (98.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194215_blend_r25_v250_left
+  [INFO] recording -> 20260814T194249_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 40 decelerations below half cruise, 0.93 per segment, deepest 0 mm/s, 25% of the stage spent below it
+  [INFO] the arm reached 120 mm/s typical against a commanded cap of 250 mm/s (48%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2479 samples (99.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194249_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 2.989 m against a commanded 4.763 m (63 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:43:17
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:toplid_right
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    R_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_2 selected (was R_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (750, -54, -233) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T194321_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 25 decelerations below half cruise, 0.93 per segment, deepest 0 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3179 samples (98.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194321_blend_r10_v250_right
+r=10%          retained   n=10 of 26  retained p25 21%  median 32%  p75 55%   v_min median 51 mm/s
+                          corners [5, 6, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 23, 25, 26]: NO CRUISE PLATEAU on the approach (speed varies 30-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T194357_blend_r25_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 29 decelerations below half cruise, 1.07 per segment, deepest 0 mm/s, 36% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2989 samples (99.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194357_blend_r25_v250_right
+r=25%          NO RESULT — the tool traced 4.568 m against a commanded 6.202 m (74 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T194430_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 21 decelerations below half cruise, 0.78 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2263 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194430_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 3.443 m against a commanded 6.202 m (56 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:44:55
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:hinge_area_right
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    R_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (925, -48, -256) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T194459_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 47 decelerations below half cruise, 1.09 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 173 mm/s typical against a commanded cap of 250 mm/s (69%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3431 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194459_blend_r10_v250_right
+r=10%          retained   n=19 of 42  retained p25 6%  median 11%  p75 23%   v_min median 26 mm/s
+                          corners [3, 5, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 21, 27, 28, 31, 33, 35, 36, 37, 39, 40]: NO CRUISE PLATEAU on the approach (speed varies 30-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T194537_blend_r25_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 43 decelerations below half cruise, 1.00 per segment, deepest 0 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 139 mm/s typical against a commanded cap of 250 mm/s (56%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3118 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194537_blend_r25_v250_right
+r=25%          NO RESULT — the tool traced 3.746 m against a commanded 4.763 m (79 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T194612_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 37 decelerations below half cruise, 0.86 per segment, deepest 0 mm/s, 23% of the stage spent below it
+  [INFO] the arm reached 119 mm/s typical against a commanded cap of 250 mm/s (47%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2457 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194612_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 2.989 m against a commanded 4.763 m (63 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J7 at 0 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:48:27
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:toplid_left
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (750, 54, -233) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T194830_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 28 decelerations below half cruise, 1.04 per segment, deepest 2 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3157 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194830_blend_r10_v250_left
+r=10%          retained   n=8 of 26  retained p25 15%  median 24%  p75 49%   v_min median 48 mm/s
+                          corners [2, 4, 5, 6, 8, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 23, 25, 26]: NO CRUISE PLATEAU on the approach (speed varies 30-99 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T194905_blend_r25_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 32 decelerations below half cruise, 1.19 per segment, deepest 2 mm/s, 35% of the stage spent below it
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3015 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194905_blend_r25_v250_left
+r=25%          NO RESULT — the tool traced 4.859 m against a commanded 6.202 m (78 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T194940_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 37 decelerations below half cruise, 1.37 per segment, deepest 1 mm/s, 33% of the stage spent below it
+  [INFO] p95 at 113% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2282 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T194940_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.679 m against a commanded 6.202 m (59 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J4 at 63 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:50:05
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   task:hinge_area_left
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    L_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (925, 48, -256) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T195007_blend_r10_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 57 decelerations below half cruise, 1.33 per segment, deepest 2 mm/s, 36% of the stage spent below it
+  [INFO] the arm reached 190 mm/s typical against a commanded cap of 250 mm/s (76%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3480 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T195007_blend_r10_v250_left
+r=10%          retained   n=19 of 42  retained p25 3%  median 5%  p75 18%   v_min median 12 mm/s
+                          corners [3, 5, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 21, 25, 27, 32, 33, 36, 37, 38, 39, 40, 41]: NO CRUISE PLATEAU on the approach (speed varies 31-99 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T195046_blend_r25_v250_left  (100 Hz, ret=0)
+  [FAIL] segment 42: arrival event reports failure
+  [INFO] smoothness: 58 decelerations below half cruise, 1.35 per segment, deepest 2 mm/s, 33% of the stage spent below it
+  [INFO] the arm reached 151 mm/s typical against a commanded cap of 250 mm/s (60%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 113% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3061 samples (98.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T195046_blend_r25_v250_left
+  [INFO] recording -> 20260814T195121_blend_r50_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 66 decelerations below half cruise, 1.53 per segment, deepest 2 mm/s, 23% of the stage spent below it
+  [INFO] the arm reached 141 mm/s typical against a commanded cap of 250 mm/s (57%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 113% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2486 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T195121_blend_r50_v250_left
+r=50%          NO RESULT — the tool traced 3.463 m against a commanded 4.763 m (73 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J1 at 85 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:55:29
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:55:29
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:56:27
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:56:27
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:58:36
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:58:36
+========================================================================
+unknown argument: '--allow-over-limit'
+
+Usage: python3 <script>.py [--mode SIM|REAL] [--no-hands] [--no-pole]
+                           [-h|--help]
+  --mode SIM|REAL   engage and VERIFY the run mode before any motion
+                    (restored on exit); without it the test runs as-found
+  --no-hands        strip all hand steps/parts from the run
+  --no-pole         skip pole pre-positioning and strip pole/sync-lift
+                    steps (sync steps run as plain arm moves)
+  --clear-errors    clear LATCHED controller/joint errors before the run.
+                    A sudden trajectory abort (or an e-stop) latches joint
+                    errors and every motion command is then rejected with
+                    ret=1 — motion tests refuse to start until they clear
+  -h, --help        show the script's documentation and exit (no motion)
+C8 pole diagnostic (test_pole_only.py) only:
+  --diagnose-only   read state and report; NO pole motion at all
+
+Environment overrides:
+  RM_LEFT_IP / RM_RIGHT_IP / RM_ROBOT_PORT     arm endpoints
+  RM_HOST_IP / RM_UDP_PORT                     UDP push target (C5)
+  RM_ARM=left|right                            arm selection (C6/C7)
+  RM_LEFT_LIFT_GEAR / RM_RIGHT_LIFT_GEAR       1to1 | 2to3
+  RM_SYNC_BACKEND=canfd|planned                how the ARM half of a sync
+                    step is driven. canfd (default) = streamed passthrough,
+                    the combination bench_sync proved works. planned =
+                    rm_movej — LOCKED (vendor-confirmed Gen-3 defect,
+                    2026-08-08, no fix ETA); needs RM_UNLOCK_PLANNED_SYNC=1,
+                    only for re-testing after a RealMan firmware fix
+  RM_CANFD_RATE_HZ / RM_CANFD_ARM_S / RM_CANFD_FOLLOW   stream parameters
+  RM_SYNC_ORDER=lift_first|arm_first           sync dispatch order (a lift
+                    command lands on an in-flight movej under arm_first and
+                    KILLS it — that order froze the arms 2026-08-06/07)
+  RM_SYNC_LEAD_MS=N                            pole head start on sync steps
+  RM_ARM_TIMEOUT_S / RM_LIFT_TIMEOUT_S         arrival waits (default 40 / 60)
+  RM_HAND_DWELL_S / RM_HAND_MODBUS_DEVICE / RM_KEEP_MODBUS=1
+  RM_ALLOW_NO_UDP=1 / RM_EMU_TIME_SCALE
+
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 19:59:10
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:toplid_right
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    R_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_2 selected (was R_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (550, -44, -272) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T195914_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 29 decelerations below half cruise, 1.07 per segment, deepest 2 mm/s, 24% of the stage spent below it
+  [INFO] p95 at 110% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3198 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T195914_blend_r10_v250_right
+r=10%          retained   n=10 of 26  retained p25 2%  median 14%  p75 19%   v_min median 29 mm/s
+                          corners [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 20, 21, 22]: NO CRUISE PLATEAU on the approach (speed varies 30-87 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T195950_blend_r25_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 39 decelerations below half cruise, 1.44 per segment, deepest 1 mm/s, 36% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3165 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T195950_blend_r25_v250_right
+r=25%          NO RESULT — the tool traced 5.028 m against a commanded 6.202 m (81 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T200025_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 36 decelerations below half cruise, 1.33 per segment, deepest 1 mm/s, 31% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2333 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200025_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 3.821 m against a commanded 6.202 m (62 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J4 at 55 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 20:00:50
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:hinge_area_right
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25, 0.45 m/s   (defaults for a task sweep (MOTION_FINDINGS 8.4))
+     tool    R_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (835, -23, -286) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 2   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T200053_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 58 decelerations below half cruise, 1.35 per segment, deepest 1 mm/s, 37% of the stage spent below it
+  [INFO] the arm reached 193 mm/s typical against a commanded cap of 250 mm/s (77%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3461 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200053_blend_r10_v250_right
+r=10%          retained   n=13 of 42  retained p25 3%  median 4%  p75 15%   v_min median 10 mm/s
+                          corners [5, 7, 11, 13, 14, 15, 16, 18, 19, 20, 21, 23, 25, 26, 27, 29, 30, 31, 33, 35, 36, 38, 40]: NO CRUISE PLATEAU on the approach (speed varies 30-97 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T200132_blend_r25_v250_right  (100 Hz, ret=0)
+  [FAIL] segment 42: arrival event reports failure
+  [INFO] smoothness: 50 decelerations below half cruise, 1.16 per segment, deepest 1 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 157 mm/s typical against a commanded cap of 250 mm/s (63%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 110% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2916 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200132_blend_r25_v250_right
+  [INFO] recording -> 20260814T200205_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 60 decelerations below half cruise, 1.40 per segment, deepest 1 mm/s, 28% of the stage spent below it
+  [INFO] the arm reached 146 mm/s typical against a commanded cap of 250 mm/s (58%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 114% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2495 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200205_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 3.403 m against a commanded 4.763 m (71 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J5 at 85 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs 0.45 were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 20:04:02
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:toplid_right
+     28 points, 26 corners, 6.20 m, mean segment 230 mm
+     corners 26 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    R_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_2 selected (was R_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (750, -54, -233) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 230 mm mean segment (11.8x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  12 of 26 corners measurable   <-- partial
+  resolution: r=25  16 of 26 corners measurable   <-- partial
+  resolution: r=50  20 of 26 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     26 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T200405_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 27 decelerations below half cruise, 1.00 per segment, deepest 2 mm/s, 25% of the stage spent below it
+  [INFO] p95 at 110% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3196 samples (99.1 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200405_blend_r10_v250_right
+r=10%          retained   n=9 of 26  retained p25 16%  median 23%  p75 49%   v_min median 35 mm/s
+                          corners [3, 5, 7, 8, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 23, 25, 26]: NO CRUISE PLATEAU on the approach (speed varies 34-99 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T200441_blend_r25_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 35 decelerations below half cruise, 1.30 per segment, deepest 2 mm/s, 35% of the stage spent below it
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3037 samples (99.4 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200441_blend_r25_v250_right
+r=25%          NO RESULT — the tool traced 4.858 m against a commanded 6.202 m (78 %). It stopped short — check for the H45 stall.
+  [INFO] recording -> 20260814T200515_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 37 decelerations below half cruise, 1.37 per segment, deepest 1 mm/s, 35% of the stage spent below it
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2271 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200515_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 3.639 m against a commanded 6.202 m (59 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J4 at 57 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-14 20:05:40
+========================================================================
+  [NOTE] --reverse: traversing the path end-to-start. Same corners, same angles, opposite order — the control that separates a corner's ANGLE from its POSITION in the run.
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   task:hinge_area_right
+     44 points, 42 corners, 4.76 m, mean segment 111 mm
+     corners 42 (unlabelled)   blends [10, 25, 50] %
+     speeds  0.25 m/s   (--speed (off-ladder, single run))
+     tool    R_glove_4
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 30.00 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.250  line_acc 1.600
+  tool frame:    R_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (925, -48, -256) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  ramp 20 mm each way against a 111 mm mean segment (5.7x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=10  0 of 42 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  resolution: r=25  20 of 42 corners measurable   <-- partial
+  resolution: r=50  28 of 42 corners measurable   <-- partial
+  [NOTE] blend [50] % is >= 40 % of a segment: the dips from a segment's two ends MEET, so the approach never returns to cruise and retention is measured against a depressed reference. Those columns read ~12 points HIGH (measured) — compare them with r=0, not with 100 %.
+
+case           corner     42 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260814T200542_blend_r10_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 53 decelerations below half cruise, 1.23 per segment, deepest 1 mm/s, 35% of the stage spent below it
+  [INFO] the arm reached 187 mm/s typical against a commanded cap of 250 mm/s (75%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 113% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3479 samples (98.7 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200542_blend_r10_v250_right
+r=10%          retained   n=17 of 42  retained p25 5%  median 6%  p75 11%   v_min median 15 mm/s
+                          corners [32]: only 2-2 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [3, 5, 7, 10, 11, 12, 14, 16, 18, 19, 20, 21, 22, 28, 31, 33, 35, 36, 37, 38, 39, 40, 41]: NO CRUISE PLATEAU on the approach (speed varies 32-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T200622_blend_r25_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 55 decelerations below half cruise, 1.28 per segment, deepest 2 mm/s, 34% of the stage spent below it
+  [INFO] the arm reached 156 mm/s typical against a commanded cap of 250 mm/s (62%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 3133 samples (99.5 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200622_blend_r25_v250_right
+r=25%          retained   n=8 of 42  retained p25 4%  median 5%  p75 41%   v_min median 13 mm/s
+                          corners [28]: only 3-3 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 27, 30, 31, 32, 33, 35, 36, 37, 38, 39, 40, 41, 42]: NO CRUISE PLATEAU on the approach (speed varies 33-100 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  [INFO] recording -> 20260814T200657_blend_r50_v250_right  (100 Hz, ret=0)
+  [INFO] smoothness: 59 decelerations below half cruise, 1.37 per segment, deepest 2 mm/s, 24% of the stage spent below it
+  [INFO] the arm reached 142 mm/s typical against a commanded cap of 250 mm/s (57%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 112% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 2479 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260814T200657_blend_r50_v250_right
+r=50%          NO RESULT — the tool traced 3.447 m against a commanded 4.763 m (72 %). It stopped short — check for the H45 stall.
+  measured this rung: worst J1 at 100 % of its limit
+
+  [STOP] rung 0.250 m/s did not complete. Not climbing further — rungs (none remaining) were NOT run.
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] right: run mode restored to REAL
