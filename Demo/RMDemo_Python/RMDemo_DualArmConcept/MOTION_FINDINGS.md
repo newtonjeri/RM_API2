@@ -720,6 +720,15 @@ one hard NO:**
   898.3 mm, 7.33 m, 40 waypoints. The SIM rerun of this file also
   MEASURES the blend floor (which of 18/21.3/22/24.6/27.5 mm hops blend).
   Figure: `paths/toplid_left_002_rev3.png`.
+* **0.45 readiness (final check, same day).** `speed_limits.scale_for`
+  verified at the boundaries: acc floors at the DEFAULT 1.6 (the 3× law
+  only raises it, from v=0.533 up), speed hard-capped at the vendor 1.8,
+  explicit low acc refused; stage_runner shares the same function.
+  `preflight_j4` now scales per-segment predictions by V_LIST
+  (j4 × min(v%·rung, v_eff)/v_eff), so a v-capped path screens the speeds
+  its moves actually command — `toplid_left_002_v45.py` (strokes v=65,
+  ladder [0.45]) screens 84 % V_LIST-aware where the uniform screen would
+  have mis-refused at 129 %.
 
 ### 9.4 Practical rule
 

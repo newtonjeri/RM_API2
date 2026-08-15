@@ -226,8 +226,17 @@ def load_path(src):
 J4_LIMIT_PCT = 100.0
 
 
-def preflight_j4(poses, tool, speed):
+def preflight_j4(poses, tool, speed, v_list=None):
     """(worst % of the J4 limit, segment index) predicted offline, or None.
+
+    `v_list` (per-move v%, from a chain-semantics path file) scales each
+    segment's prediction to the speed that move will ACTUALLY command:
+    J4 is linear in TCP speed, and a segment's speed is bounded by both its
+    commanded v%*rung and the angular throttle (H67), so
+        j4_actual = j4_at_rung * min(v%*rung, v_eff) / v_eff.
+    Without this, a rung at 0.45 refuses a path whose strokes are v-capped
+    to 0.29 — the gate would screen a speed no move will ever run
+    (2026-08-15, toplid_left_002 at the 0.45 baseline).
 
     THE GATE THAT WOULD HAVE CAUGHT `20260813T183633`. That run climbed to
     0.45 m/s on `blend_corner_001` and came back "[FAIL] segment 5: arrival
@@ -267,7 +276,11 @@ def preflight_j4(poses, tool, speed):
         for r in rows_:
             if r["j4"] is None:
                 continue
-            pct = 100.0 * r["j4"] / oc.JOINT_LIMIT[3]
+            j4 = r["j4"]
+            if v_list is not None and 0 <= r["i"] < len(v_list) and r["v"] > 1e-9:
+                v_cmd = (v_list[r["i"]] / 100.0) * speed
+                j4 = j4 * min(v_cmd, r["v"]) / r["v"]
+            pct = 100.0 * j4 / oc.JOINT_LIMIT[3]
             if worst is None or pct > worst[0]:
                 worst = (pct, r["i"])
         return worst
@@ -1124,7 +1137,7 @@ def main() -> int:
 
             # THE PRE-FLIGHT ELBOW GATE — before the limits are raised, so a
             # refused rung never touches the controller's configuration.
-            worst = preflight_j4(poses, tool, speed)
+            worst = preflight_j4(poses, tool, speed, v_list=v_list)
             if worst is None:
                 print("  [WARN] the offline elbow screen could not run (no "
                       "TOOL_FRAME in the path file, an unknown frame, or a "
