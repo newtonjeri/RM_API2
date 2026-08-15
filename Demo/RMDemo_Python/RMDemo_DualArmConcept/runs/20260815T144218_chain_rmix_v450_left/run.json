@@ -1,0 +1,82 @@
+{
+  "run_id": "20260815T144218_chain_rmix_v450_left",
+  "task_name": "chain_rmix_v450",
+  "side": "left",
+  "timestamp_human": "2026-08-15 14:42:22",
+  "stream_file": "stream.csv",
+  "udp_cycle": 2,
+  "sample_rate_hz": 100.000000,
+  "num_samples": 343,
+  "duration_s": 3.720559,
+  "measured_rate_hz": 92.190448,
+  "frames_dropped": 0,
+  "first_parse_error": null,
+  "sdk": "hardware",
+  "hand_recorded": false,
+  "hand_note": "handState measured ALL-ZERO on the arm UDP line (bench_udp_fields, both arms) — Modbus ANGLE_ACT is the hand feedback path",
+  "mode": "SIMULATION",
+  "sim": true,
+  "path_file": "../paths/chain_semantics_004.py",
+  "speeds": {
+    "cleaning_pct": 100,
+    "blend_pct": 25,
+    "connect": 1
+  },
+  "limits_in_force": {
+    "line_speed": 0.450000,
+    "line_acc": 1.600000,
+    "angular_speed": 0.600000,
+    "angular_acc": 4.000000,
+    "joint_speed": [180.000000, 180.000000, 225.000000, 225.000000, 225.000000, 225.000000, 225.000000],
+    "joint_acc": [600.000000, 600.000000, 600.000000, 600.000000, 600.000000, 600.000000, 600.000000]
+  },
+  "line_speed_cap_m_s": 0.450000,
+  "ladder": {
+    "rung": 1,
+    "of": 1,
+    "line_speed": 0.450000,
+    "line_acc": 1.600000,
+    "all_rungs": [0.450000],
+    "predicted_j4_pct": null
+  },
+  "commanded": {
+    "tool_frame": "L_glove_4",
+    "blend_pct": 25,
+    "connect": 1,
+    "num_waypoints": 6,
+    "segments": 5,
+    "waypoint_names": ["P0", "P1", "P2", "P3", "P4", "P5"],
+    "poses": [
+      [0.530000, -0.060000, -0.323628, -3.117000, -0.400000, 0.077000],
+      [0.730000, -0.060000, -0.323628, -3.117000, -0.400000, 0.077000],
+      [0.730000, -0.015000, -0.323628, -3.117000, -0.400000, 0.077000],
+      [0.530000, -0.015000, -0.323628, -3.117000, -0.400000, 0.077000],
+      [0.530000, 0.030000, -0.323628, -3.117000, -0.400000, 0.077000],
+      [0.730000, 0.030000, -0.323628, -3.117000, -0.400000, 0.077000]
+    ],
+    "corner_angles_deg": [90, 90, 90, 90],
+    "program": [
+      [100, 50, 1],
+      [100, 0, 1],
+      [100, 25, 1],
+      [100, 50, 1],
+      [100, 0, 0]
+    ],
+    "r_list": [50, 0, 25, 50, 0],
+    "v_list": null,
+    "chain_approach": false
+  },
+  "speed_achieved": {
+    "typical_mm_s": 252.556716,
+    "p95_mm_s": 454.389453,
+    "moving_fraction": 0.742690,
+    "measured_over": "whole run",
+    "cap_mm_s": 450.000000,
+    "pct_of_cap": 56.123715,
+    "dips": 4,
+    "deepest_dip_mm_s": 0.000000,
+    "fraction_below_half_cruise": 0.271930
+  },
+  "num_stages": 0,
+  "stages": []
+}
