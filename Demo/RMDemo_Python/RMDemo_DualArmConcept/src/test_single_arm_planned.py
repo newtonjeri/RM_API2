@@ -43,6 +43,11 @@ from Robotic_Arm.rm_ctypes_wrap import rm_thread_mode_e
 
 ARM_SIDE = os.environ.get("RM_ARM", "left").lower()
 X_OFFSET_M = 0.20            # +X in the world/base frame, from rest_pose
+# Hardware-validated: 2026-08-06 the left arm executed this and landed
+# dx=+0.196 m (PHASE_PLAN C6). The target sits ~795 mm from the base against
+# a ~788 mm tip reach, so the vendor solver returns a best-effort pose ~4.5 mm
+# short and THE CONTROLLER ACCEPTS IT. The emulator must not be stricter —
+# see FK_VERIFY_TOL_M in rm_emulator.
 POSE_TOL_M = 0.02            # per-axis verification tolerance
 OFFAXIS_TOL_M = 0.03         # allowed drift on Y/Z during the X move
 

@@ -632,3 +632,249 @@ current c api version:  1.1.6
 
   Summary: 7 PASS, 0 FAIL, 0 SKIP
 
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:02:12
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.69 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  [FAIL] movej_p +X accepted  (ret=1 (1 can mean IK failure / unreachable))
+
+  Summary: 4 PASS, 1 FAIL, 0 SKIP
+EXIT 1
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:03:32
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.69 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.211 y=+0.086 z=+0.562  ->  target x=+0.411
+  movej_p +X + half_grasp: arm 1.54 s, hand finish skew -0.82 s  (hand done DURING arm motion)
+  displacement: dx=+0.200 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.200 m (target +0.20))
+  movej ready + release      ok=True  arm  2.10 s   hand  1.13 s   hand-arm finish -0.97 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -1.75s, -0.66s, -0.82s, -0.97s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+EXIT 0
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:18:53
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +10 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.70 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.662
+  movej_p +X + half_grasp: arm 0.81 s, hand finish skew -0.08 s  (hand done DURING arm motion)
+  displacement: dx=+0.100 dy=+0.000 dz=+0.000 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.100 m (target +0.10))
+  movej ready + release      ok=True  arm  2.09 s   hand  1.13 s   hand-arm finish -0.95 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -1.75s, -0.66s, -0.08s, -0.95s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+EXIT 0
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:56:58
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.69 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X + half_grasp: arm 2.73 s, hand finish skew -2.00 s  (hand done DURING arm motion)
+  displacement: dx=+0.196 dy=-0.001 dz=-0.002 m
+
+  Summary: 4 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "<frozen runpy>", line 286, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "test_single_arm_planned.py", line 278, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "test_single_arm_planned.py", line 232, in main
+    if abs(dx - X_OFFSET_M) <= POSE_TOL_M \
+                               ^^^^^^^^^^
+NameError: name 'POSE_TOL_M' is not defined
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:57:26
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.69 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X + half_grasp: arm 2.73 s, hand finish skew -2.00 s  (hand done DURING arm motion)
+  displacement: dx=+0.196 dy=-0.001 dz=-0.002 m
+
+  Summary: 4 PASS, 0 FAIL, 0 SKIP
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "<frozen runpy>", line 286, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "test_single_arm_planned.py", line 278, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "test_single_arm_planned.py", line 232, in main
+    if abs(dx - X_OFFSET_M) <= POSE_TOL_M \
+                               ^^^^^^^^^^
+NameError: name 'POSE_TOL_M' is not defined
+
+========================================================================
+  Script : test_single_arm_planned.py
+  Log    : test_single_arm_planned.log
+  Started: 2026-08-15 19:58:23
+========================================================================
+====================================================================
+C6  Single-arm planned moves + CONCURRENT hand motion
+    arm=left @ 192.168.1.10   movej v=20%   X offset +20 cm (world frame)
+    hand states: release / grasp / half_grasp (acked_angle: non-blocking + duration dwell, butterfli_hw semantics)
+    mode: as-found  (select with --mode SIM|REAL)
+    pole pre-positioned to full length (0.29 m) first
+    THE LEFT ARM, ITS POLE AND ITS HAND WILL MOVE
+====================================================================
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  [PASS] no latched controller errors  (no latched errors)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+  pre-positioning pole(s) to full_length (0.3 m -> left=300 (1to1)) ...
+  [INFO] left: pole at full length (4.69 s, event=True)
+  [PASS] pole pre-positioned to full length
+  movej ready + release      ok=True  arm  3.01 s   hand  1.25 s   hand-arm finish -1.75 s  (hand done DURING arm motion)
+  [PASS] movej to ready + hand release
+  movej rest + grasp         ok=True  arm  1.92 s   hand  1.25 s   hand-arm finish -0.66 s  (hand done DURING arm motion)
+  [PASS] movej to rest_pose + hand grasp
+  pose at rest: x=+0.562 y=+0.086 z=-0.211  ->  target x=+0.762
+  movej_p +X + half_grasp: arm 2.73 s, hand finish skew -2.00 s  (hand done DURING arm motion)
+  displacement: dx=+0.196 dy=-0.001 dz=-0.002 m
+  [PASS] movej_p +X + half_grasp verified  (dx=+0.196 m (target +0.20))
+  movej ready + release      ok=True  arm  2.87 s   hand  1.13 s   hand-arm finish -1.73 s  (hand done DURING arm motion)
+  [PASS] movej back to ready + hand release
+  [PASS] planned-move pipeline exercised  (movej x3 + movej_p x1 + hand x4 concurrent, no passthrough)
+  [PASS] hand moved concurrently with arm  (4/4 phases finished during arm motion; finish skews -1.75s, -0.66s, -2.00s, -1.73s)
+
+  Summary: 8 PASS, 0 FAIL, 0 SKIP
+EXIT 0

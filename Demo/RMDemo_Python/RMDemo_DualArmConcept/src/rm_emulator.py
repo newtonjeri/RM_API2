@@ -34,8 +34,40 @@ motion duration by N (events, ordering, and interpolation stay coherent).
 Install as the SDK: rm_emulator.install() puts emulated Robotic_Arm modules
 into sys.modules BEFORE the code under test imports them.
 
-Not emulated (extend as needed): Cartesian moves/pose state, force sensor
-data, hands, CANFD passthrough, online programming, fence/collision config.
+Cartesian chains are emulated to MEASURED-LAW fidelity (2026-08-16, all
+constants from MOTION_FINDINGS §9-§10): per-move v/r queues, blend cuts
+c(theta)*r*minL with sub-sample trim + measured-bulge bridges, corner-speed
+retention, the ~26 mm blend floor, first-corner exemption (tangent-arc
+exempt from the exemption), movec 3-point arcs with centripetal caps,
+H67 angular throttling as a per-segment TIME-SCALING, stop dwells +
+chain-end settle, freeze-signature warnings (RM_EMU_FREEZES=1 injects
+dwells interpolated between two measured points), controller-frame pose
+boundary (feedback round-trips with targets; validated T = 0.00 mm against
+four REAL streams), REAL-mode aliasing noise on the position field.
+
+MEASURED ACCURACY (motion-window durations, 2026-08-16 audit):
+  * 5 runs whose constants were TUNED here: mean |err| 3.5 %, max 6.3 %
+  * 15 HELD-OUT runs never used for tuning: mean 8.2 %, median 6.6 %,
+    max 22.2 %
+  * blend cuts land 2-4 mm short of the controller's (5.9 vs 7.9 mm at
+    r=25; 11.9 vs 15.8 at r=50); vertex miss within 0.6 mm; WHICH corners
+    blend, the exemption and the r=0 stops are exact.
+
+KNOWN FAILURE MODES - do not use the emulator for these:
+  * ANGULAR-CAP PROJECTIONS. The measured cap ladder is nearly flat
+    (40.5/38.7/38.5 s at 0.6/0.8/1.0) while every angular-only model is
+    steep; emulated durations run -12 % at cap 0.8 and -22 % at 1.0 on
+    rotation-heavy tasks. The real limiter there is joint speed, which is
+    deliberately not modelled. Angular-acceleration variants were tried
+    and rejected (they fix the trend but cost 12 points at the operating
+    cap).
+  * SHORT/FAST CHAINS. 3-5 s chains run -12 % (0.45 baseline) to -17 %
+    (chained approach), most likely jerk-limited profiles not modelled.
+  * JOINT RATES, as ever - the redundancy scheme is unknowable offline;
+    use a saved plan or controller SIM for joint loads.
+
+Not emulated (extend as needed): force sensor data, CANFD passthrough,
+online programming, fence/collision config.
 """
 
 import itertools
@@ -222,6 +254,23 @@ def _ctrl_to_algo(pose6, mount_ry_deg):
     pos = _mv(Rm, [float(v) for v in pose6[:3]])
     R = _mm(Rm, _euler_to_R(*[float(v) for v in pose6[3:6]]))
     return pos, R
+
+
+def _algo_to_ctrl(pose6, mount_ry_deg):
+    """Algo (URDF) frame pose -> controller frame, as a 6-list.
+
+    THE BOUNDARY RULE (2026-08-16): every pose that crosses the emulated
+    API — movel/movec/movej_p targets IN, current_pose / UDP waypoint OUT —
+    is a CONTROLLER-frame pose, exactly as on the real arm. Before this,
+    movel targets were converted but feedback was raw algo frame, so a
+    recorded stream disagreed with its own commanded poses by the 90 deg
+    mount rotation — an inconsistency the real controller does not have,
+    exposed the first time the emulated stream was analysed like a real one.
+    """
+    Rm = _Ry3(math.radians(float(mount_ry_deg)))
+    pos = _mv(Rm, [float(v) for v in pose6[:3]])
+    R = _mm(Rm, _euler_to_R(*[float(v) for v in pose6[3:6]]))
+    return list(pos) + list(_R_to_euler(R))
 
 
 def _ik_min_motion(seed_deg, pose6, span_deg=60.0, step_deg=5.0):
@@ -430,6 +479,132 @@ def emu_controller(ip: str):
     return _get_or_create(ip)
 
 
+# ── Measured chain-motion laws (MOTION_FINDINGS §9–§10, SIM+REAL) ──────────
+# Every constant here is a MEASUREMENT, not a guess. Sources in brackets.
+
+FK_VERIFY_TOL_M = 0.010    # movej_p accept gate; the arm accepts ~4.5 mm
+                           # best-effort misses (C6 hardware, 2026-08-06)
+BLEND_FLOOR_M = 0.026      # segments under ~26 mm never blend [§9.3f: 24.6 mm
+                           # declined, 27.5+ mm blended on hardware]
+CORNER_DWELL_S = 0.30      # full-stop dwell at an unblended corner [§9.3b:
+                           # 170-290 ms at tips + re-accel latency; calibrated
+                           # against the 001/002 chain durations]
+CHAIN_SETTLE_S = 0.28      # end-of-chain settle [§10.4: 230-290 ms measured]
+TANGENT_DEG = 15.0         # junction under this angle needs no blend at all
+                           # [§10.1: tangent arc entry at ~cruise, exemption moot]
+FREEZE_R_PCT = 25          # r >= this near short segments risks the planner
+FREEZE_SEG_M = 0.090       # chain-refill freeze [§10.3: sites adjacent to
+                           # 37–88 mm segments; deterministic, arm goes IDLE]
+# Injected freeze dwell per signature-matched junction (RM_EMU_FREEZES=1).
+# EMPIRICAL, TWO POINTS, MECHANISM UNKNOWN (roadmap gap 3): measured burden
+# over the no-freeze prediction at cap 0.6 on top_left (18 matched sites) was
+# 17.6 s at r=25 (0.98 s/site) and 5.4 s at r=50 (0.30 s/site). Consistency
+# check: r=25 gives 0.92-0.99 s/site across caps 0.6/0.8/1.0. Larger blends
+# evidently give the planner more slack; until the mechanism is characterized
+# this is an interpolation between two measurements, not a model.
+FREEZE_DWELL_R25_S = 0.98
+FREEZE_DWELL_R50_S = 0.30
+
+
+def _freeze_dwell(r_pct):
+    if r_pct <= 25:
+        return FREEZE_DWELL_R25_S
+    if r_pct >= 50:
+        return FREEZE_DWELL_R50_S
+    f = (r_pct - 25) / 25.0
+    return FREEZE_DWELL_R25_S + f * (FREEZE_DWELL_R50_S - FREEZE_DWELL_R25_S)
+
+# Corner speed retention (fraction of cruise) by (turn angle deg, r%):
+# measured minima / commanded cruise [§9.3b, §9.3d, §10 ladder runs].
+_RETENTION = {              # rows: angle; cols: r 10 / 25 / 50
+    45.0:  (0.30, 0.45, 0.70),
+    90.0:  (0.24, 0.36, 0.53),
+    135.0: (0.12, 0.20, 0.35),
+    175.0: (0.06, 0.10, 0.21),
+}
+
+
+def _corner_model(theta_deg, r_pct, min_l_m):
+    """(cut_m, v_ratio, stop) for a chain junction — the measured law.
+
+    cut_m    total path removed (entry+exit) around the vertex
+    v_ratio  corner speed as a fraction of cruise (0 when stopping)
+    stop     True → full stop + CORNER_DWELL_S
+    """
+    if theta_deg < TANGENT_DEG:
+        return 0.0, 1.0, False           # effectively straight-through
+    if theta_deg >= 179.5:
+        return 0.0, 0.0, True            # exact retrace: stop, zero cut [§9.2]
+    if r_pct <= 0 or min_l_m < BLEND_FLOOR_M:
+        return 0.0, 0.0, True            # no blend: dead stop [§2 / §9.3f]
+    r = r_pct / 100.0
+    # cut coefficient c(θ): ~0 below 60°, 0.70 at 90°-class, 1.2–1.5 sharp
+    # [§9.2 bivariate + §9.3d exact 0.70 at 90°]
+    if theta_deg < 60.0:
+        c = 0.0
+    elif theta_deg < 120.0:
+        c = 0.70
+    else:
+        c = 1.4
+    cut = c * r * min_l_m
+    # bilinear-ish interpolation of the retention table
+    angs = sorted(_RETENTION)
+    a = min(max(theta_deg, angs[0]), angs[-1])
+    hi = next(x for x in angs if x >= a)
+    lo = max([x for x in angs if x <= a])
+    f = 0.0 if hi == lo else (a - lo) / (hi - lo)
+    rs = (10.0, 25.0, 50.0)
+    rr = min(max(float(r_pct), rs[0]), rs[-1])
+    j = 1 if rr <= 25.0 else 2
+    g = (rr - rs[j - 1]) / (rs[j] - rs[j - 1])
+    ret_lo = _RETENTION[lo][j - 1] + g * (_RETENTION[lo][j] - _RETENTION[lo][j - 1])
+    ret_hi = _RETENTION[hi][j - 1] + g * (_RETENTION[hi][j] - _RETENTION[hi][j - 1])
+    return cut, ret_lo + f * (ret_hi - ret_lo), False
+
+
+def _arc_points(pa, pv, pb, step_m):
+    """Sample the circular arc through three 3-D points, pa -> pb via pv.
+
+    Returns positions EXCLUDING pa, INCLUDING pb. Falls back to the chord
+    if the points are (near-)collinear. Verified against the REAL 006 runs:
+    hardware traced this construction to 0.4 mm median [§10.4].
+    """
+    import numpy as _np
+    a, v, b = (_np.asarray(x, float) for x in (pa, pv, pb))
+    e1 = v - a
+    e2 = b - a
+    n = _np.cross(e1, e2)
+    if _np.linalg.norm(n) < 1e-9 * max(_np.linalg.norm(e1), 1e-9):
+        d = _np.linalg.norm(b - a)
+        k = max(1, int(math.ceil(d / step_m)))
+        return [list(a + (b - a) * (i / k)) for i in range(1, k + 1)]
+    n = n / _np.linalg.norm(n)
+    u = e1 / _np.linalg.norm(e1)
+    w = _np.cross(n, u)
+    to2 = lambda p: _np.array([_np.dot(p - a, u), _np.dot(p - a, w)])
+    A, V, B = to2(a), to2(v), to2(b)
+    d = 2 * (A[0] * (V[1] - B[1]) + V[0] * (B[1] - A[1]) + B[0] * (A[1] - V[1]))
+    ux = ((A @ A) * (V[1] - B[1]) + (V @ V) * (B[1] - A[1])
+          + (B @ B) * (A[1] - V[1])) / d
+    uy = ((A @ A) * (B[0] - V[0]) + (V @ V) * (A[0] - B[0])
+          + (B @ B) * (V[0] - A[0])) / d
+    C = _np.array([ux, uy])
+    R = float(_np.linalg.norm(A - C))
+    a0 = math.atan2(*(A - C)[::-1])
+    a1 = math.atan2(*(B - C)[::-1])
+    avv = math.atan2(*(V - C)[::-1])
+    sweep = (a1 - a0) % (2 * math.pi)
+    if not ((avv - a0) % (2 * math.pi)) <= sweep:
+        sweep = sweep - 2 * math.pi
+    k = max(2, int(math.ceil(abs(sweep) * R / step_m)))
+    out = []
+    for i in range(1, k + 1):
+        th = a0 + sweep * (i / k)
+        p2 = C + R * _np.array([math.cos(th), math.sin(th)])
+        out.append(list(a + u * p2[0] + w * p2[1]))
+    return out
+
+
 class _Motion:
     """One in-flight motion: linear interpolation + completion timer."""
 
@@ -476,6 +651,46 @@ class _PathMotion(_Motion):
         self.waypoints = [list(w) for w in waypoints]
         super().__init__(self.waypoints[0], self.waypoints[-1],
                          duration_s, on_done)
+
+
+class _TimedPathMotion(_PathMotion):
+    """A path motion with a MEASURED-LAW schedule, not uniform time.
+
+    `times` gives each waypoint its own timestamp (corner dips, blend
+    shortcuts, stop dwells, freezes — the whole §9/§10 timing model), so
+    d(position)/dt over the emulated stream reproduces the speed profile
+    the recorder measures on SIM and REAL. `gaps` are [t0, t1] windows in
+    which the controller reports NOT-moving: stop dwells, and the brief
+    MOVE_L exits at blends that analyse_run's [BLEND ACTIVE] detector
+    keys on.
+    """
+
+    def __init__(self, waypoints, times, gaps, on_done):
+        self.times = [float(t) for t in times]
+        self.gaps = [(float(a), float(b)) for a, b in (gaps or [])]
+        super().__init__(waypoints, self.times[-1] if self.times else 1e-3,
+                         on_done)
+
+    def current(self):
+        tr = min(time.perf_counter() - self.t0,
+                 self.times[-1]) if self.times else 0.0
+        import bisect
+        i = bisect.bisect_right(self.times, tr)
+        if i <= 0:
+            return list(self.waypoints[0])
+        if i >= len(self.waypoints):
+            return list(self.waypoints[-1])
+        t0, t1 = self.times[i - 1], self.times[i]
+        f = 0.0 if t1 <= t0 else (tr - t0) / (t1 - t0)
+        a, b = self.waypoints[i - 1], self.waypoints[i]
+        return [x + (y - x) * f for x, y in zip(a, b)]
+
+    def status_moving(self) -> bool:
+        tr = time.perf_counter() - self.t0
+        for a, b in self.gaps:
+            if a <= tr <= b:
+                return False
+        return not self.done.is_set()
 
     def current(self):
         a = self.progress()
@@ -696,14 +911,27 @@ class EmuController:
         # Chain targets are poses OF THE ACTIVE TOOL — assert the frame on
         # the shared solver before planning (see _set_algo_toolframe).
         _set_algo_toolframe(tool)
-        path, dur = self._plan_cartesian(seed, tool, poses, v, ls, la)
+        # Normalize: per-move dicts from the queue (v/r/via honored, §9.3d),
+        # or bare pose lists from direct callers (legacy: uniform v, r=0).
+        moves = [m if isinstance(m, dict)
+                 else {"pose": m, "v": v, "r": 0, "via": None}
+                 for m in poses]
+        ang = float(self.limits.get("angular_speed", 0.6))
+        ang_a = float(self.limits.get("angular_acc", 4.0))
+        path, tpath, gaps, _w = self._plan_chain(seed, tool, moves,
+                                                 ls, la, ang, ang_a)
+        dur = tpath[-1] if tpath else 0.0
         if path is None:
             return 1                      # IK failure / limit — controller ret 1
 
         with self._lock:
             if self._arm_motion and not self._arm_motion.done.is_set():
                 self._arm_motion.cancel()
-            motion = _PathMotion(path, _scaled(dur), self._arm_done)
+            motion = _TimedPathMotion(path,
+                                      [_scaled(x) for x in tpath],
+                                      [(_scaled(a), _scaled(b))
+                                       for a, b in gaps],
+                                      self._arm_done)
             motion.will_fail = fail
             self._arm_motion = motion
         if block:
@@ -829,6 +1057,313 @@ class EmuController:
         else:
             self.last_unsolved = (0, total_samples)
         return out, max(total, MIN_MOTION_S)
+
+    def _plan_chain(self, seed, tool, moves, line_speed, line_acc, ang_cap,
+                    ang_acc=4.0):
+        """Timeline for a per-move chain under the MEASURED laws (§9–§10).
+
+        moves: [{'pose': ctrl-frame 6-list, 'v': 1..100, 'r': 0..100,
+                 'via': ctrl-frame 6-list or None}]   (via → movec arc)
+
+        Returns (joint_waypoints, times_s, gaps, warns) or (None, ...).
+        Models: per-move v and r [§9.3d]; angular throttling H67; blend
+        cuts c(θ)·r·minL with corner-speed retention [§9.2/9.3b]; the
+        blend floor [§9.3f]; first-corner exemption unless tangent
+        [§9.2, §10.1]; movec arcs [§10.1]; stop dwells; freeze-signature
+        warnings, with optional injected dwells via RM_EMU_FREEZES=1
+        [§10.3 — sites are deterministic on hardware].
+        """
+        if _ALGO is None:
+            return None, None, None, None
+        step = self.CART_STEP_M
+        s_pos = list(_fk_pose(seed, tool))
+        prev_pos = list(s_pos[:3])
+        prev_q = _R_to_quat(_euler_to_R(*s_pos[3:6]))
+        segs = []
+        for mv in moves:
+            pos_b, Rb = _ctrl_to_algo(mv["pose"], self.mount_ry_deg)
+            qb = _R_to_quat(Rb)
+            if mv.get("via") is not None:
+                pos_v, _Rv = _ctrl_to_algo(mv["via"], self.mount_ry_deg)
+                pts = _arc_points(prev_pos, pos_v, pos_b, step)
+            else:
+                d = math.dist(prev_pos, pos_b)
+                k = max(1, int(math.ceil(d / step)))
+                pts = [[prev_pos[i] + (pos_b[i] - prev_pos[i]) * (j / k)
+                        for i in range(3)] for j in range(1, k + 1)]
+            # cumulative arclength + slerped orientation per sample
+            dists, acc = [], 0.0
+            last = prev_pos
+            for p in pts:
+                acc += math.dist(last, p)
+                dists.append(acc)
+                last = p
+            length = max(acc, 1e-9)
+            samples = [(p, _slerp(prev_q, qb, dl / length))
+                       for p, dl in zip(pts, dists)]
+            rot = 2.0 * math.acos(min(1.0, abs(
+                sum(a * b for a, b in zip(prev_q, qb)))))
+            v_cmd = line_speed * max(1, min(100, int(mv.get("v", 100)))) / 100.0
+            # ORIENTATION TIME under BOTH angular limits (2026-08-16). The
+            # velocity-only form (v_eff = cap*L/rot, orientation_cost's
+            # screen) over-credits a raised cap: it ignores angular
+            # ACCELERATION, whose ramp cost rot/cap + cap/alpha GROWS with
+            # the cap. That is why the measured cap ladder gained only ~5 %
+            # where the velocity-only model predicted ~27 % (§10.2).
+            if rot < 1e-9:
+                t_rot = 0.0
+            elif rot <= ang_cap * ang_cap / ang_acc:
+                t_rot = 2.0 * math.sqrt(rot / ang_acc)        # triangular
+            else:
+                t_rot = rot / ang_cap + ang_cap / ang_acc     # trapezoid
+            v_eff = v_cmd
+            if mv.get("via") is not None and len(pts) >= 3:
+                # CENTRIPETAL CAP on arcs: the controller runs a circle no
+                # faster than ~0.70*sqrt(a*R) — REAL 006 measured
+                # 0.15-0.18 m/s on R=22.5 mm at line_acc 1.6.
+                import numpy as _np
+                mid = pts[len(pts) // 2]
+                chord = _np.array(pos_b) - _np.array(prev_pos)
+                mvec = _np.array(mid) - (_np.array(prev_pos) + chord / 2)
+                h = float(_np.linalg.norm(mvec))
+                c2 = float(_np.linalg.norm(chord)) / 2
+                if h > 1e-6:
+                    R_arc = (h * h + c2 * c2) / (2 * h)
+                    v_eff = min(v_eff, 0.70 * math.sqrt(line_acc * R_arc))
+            segs.append({"samples": samples, "len": length, "rot": rot,
+                         "v": max(v_eff, 1e-3), "r": int(mv.get("r", 0)),
+                         "t_rot": t_rot, "arc": mv.get("via") is not None})
+            prev_pos, prev_q = list(pos_b), qb
+        # junctions: cut geometry + entry/exit speeds
+        warns = []
+        inject = os.environ.get("RM_EMU_FREEZES", "") == "1"
+        n = len(segs)
+        vin = [0.0] * n
+        vout = [0.0] * n
+        dwell_after = [0.0] * n
+        blend_at = [False] * n
+        for i in range(n - 1):
+            a, b = segs[i], segs[i + 1]
+            ta = [x - y for x, y in zip(a["samples"][-1][0],
+                                        (a["samples"][-2][0]
+                                         if len(a["samples"]) > 1 else prev_pos))]
+            tb = [x - y for x, y in zip(b["samples"][0][0], a["samples"][-1][0])]
+            if len(b["samples"]) > 1:
+                tb = [x - y for x, y in zip(b["samples"][1][0],
+                                            b["samples"][0][0])]
+            na = math.sqrt(sum(x * x for x in ta)) or 1e-9
+            nb = math.sqrt(sum(x * x for x in tb)) or 1e-9
+            cosv = max(-1.0, min(1.0, sum(x * y for x, y in zip(ta, tb))
+                                 / (na * nb)))
+            theta = math.degrees(math.acos(cosv))
+            min_l = min(a["len"], b["len"])
+            cut, vr, stop = _corner_model(theta, a["r"], min_l)
+            if i == 0 and theta >= TANGENT_DEG:
+                cut, vr, stop = 0.0, 0.0, True   # first-corner exemption §9.2
+            if (a["r"] >= FREEZE_R_PCT and min_l < FREEZE_SEG_M
+                    and 20.0 < theta < 179.5):
+                warns.append(i)
+                if inject:
+                    dwell_after[i] += _freeze_dwell(a["r"])
+            if stop:
+                dwell_after[i] += CORNER_DWELL_S
+                vj = 0.0
+            else:
+                vj = vr * min(a["v"], b["v"])
+                if cut > 1e-6:
+                    # sub-sample trim: whole-sample removal alone leaves up
+                    # to one CART_STEP per side uncut (measured as cuts at
+                    # ~half the law on the emulated stream). The exit side
+                    # measures from the VERTEX — its first sample already
+                    # sits one step past it.
+                    vertex_pos = list(a["samples"][-1][0])
+                    half = cut / 2.0
+                    while len(a["samples"]) > 2 and half > 0:
+                        p1, p0 = a["samples"][-1][0], a["samples"][-2][0]
+                        d = math.dist(p0, p1)
+                        if d > half:
+                            f_ = half / d
+                            q1, q0 = a["samples"][-1], a["samples"][-2]
+                            a["samples"][-1] = (
+                                [x + (y - x) * (1 - f_)
+                                 for x, y in zip(q0[0], q1[0])], q1[1])
+                            a["len"] -= half
+                            half = 0
+                            break
+                        a["samples"].pop()
+                        a["len"] -= d
+                        half -= d
+                    half = cut / 2.0
+                    prev = vertex_pos
+                    while len(b["samples"]) > 2 and half > 0:
+                        p0 = b["samples"][0][0]
+                        d = math.dist(prev, p0)
+                        if d > half:
+                            f_ = half / d
+                            q0 = b["samples"][0]
+                            b["samples"][0] = (
+                                [x + (y - x) * f_
+                                 for x, y in zip(prev, q0[0])], q0[1])
+                            b["len"] -= half
+                            half = 0
+                            break
+                        prev = list(p0)
+                        b["samples"].pop(0)
+                        b["len"] -= d
+                        half -= d
+                    # BRIDGE: the controller's blend curve passes FARTHER
+                    # from the vertex than a straight chord (measured vmiss
+                    # 4.3 mm at r25 / 6.6 at r50 on 90 deg corners, §9.3d) —
+                    # so the trace departs the legs gradually rather than at
+                    # a hard trim point. Quadratic Bezier with its apex at
+                    # 1.1x(cut/2). NOTE the realized stream still UNDER-cuts
+                    # the controller by ~2 mm/side; the cut LAW in
+                    # _corner_model is exact, the softening is in the bridge.
+                    # Sweeping this factor 0.9-1.5 moved the result by less
+                    # than analyse_coverage's own 2 mm resolution, so it is
+                    # not tuned further.
+                    A2 = a["samples"][-1]
+                    B2 = b["samples"][0]
+                    mid = [(x + y) / 2 for x, y in zip(A2[0], B2[0])]
+                    dvec = [m_ - v_ for m_, v_ in zip(mid, vertex_pos)]
+                    dn = math.sqrt(sum(x * x for x in dvec)) or 1e-9
+                    miss = 1.1 * (cut / 2.0)
+                    apex = [v_ + dv / dn * miss
+                            for v_, dv in zip(vertex_pos, dvec)]
+                    ctrlp = [2 * ap - m_ for ap, m_ in zip(apex, mid)]
+                    blen = math.dist(A2[0], B2[0])
+                    nb = max(2, int(math.ceil(blen / step)))
+                    added = 0.0
+                    lastp = A2[0]
+                    for kk in range(1, nb):
+                        tt_ = kk / nb
+                        bp = [(1 - tt_) ** 2 * x0 + 2 * (1 - tt_) * tt_ * xc
+                              + tt_ ** 2 * x1
+                              for x0, xc, x1 in zip(A2[0], ctrlp, B2[0])]
+                        a["samples"].append((bp, _slerp(A2[1], B2[1], tt_)))
+                        added += math.dist(lastp, bp)
+                        lastp = bp
+                    a["len"] += added
+                    blend_at[i] = True
+            vout[i] = vj
+            vin[i + 1] = vj
+        if warns:
+            print("[emu] WARNING: %d junction(s) match the FREEZE signature "
+                  "(r>=%d near <%.0f mm segments, §10.3)%s"
+                  % (len(warns), FREEZE_R_PCT, 1000 * FREEZE_SEG_M,
+                     " — dwells injected (RM_EMU_FREEZES=1)" if inject
+                     else " — hardware/SIM will freeze there; "
+                          "set RM_EMU_FREEZES=1 to model it"))
+        # timing: v(s) = min(veff, sqrt(vin²+2as), sqrt(vout²+2a(S−s)))
+        amax = max(line_acc, 1e-3)
+        all_samples, times, gaps = [], [], []
+        t = 0.0
+        last_pos = list(s_pos[:3])
+        for i, sg in enumerate(segs):
+            S = max(sg["len"], 1e-9)
+            s_acc = 0.0
+            seg_dt, seg_pts = [], []
+            for (p, qq) in sg["samples"]:
+                d = math.dist(last_pos, p)
+                s_acc = min(s_acc + d, S)
+                v_here = min(sg["v"],
+                             math.sqrt(vin[i] ** 2 + 2 * amax * s_acc),
+                             math.sqrt(max(vout[i], 0.0) ** 2
+                                       + 2 * amax * max(S - s_acc, 0.0)))
+                # analytic floor: an interval that starts/ends at rest still
+                # takes only sqrt(2d/a) — dividing by a near-zero endpoint
+                # speed over-counted stop-adjacent samples by ~25 %
+                seg_dt.append(d / max(v_here,
+                                      math.sqrt(0.5 * amax * max(d, 1e-9))))
+                seg_pts.append((p, qq))
+                last_pos = p
+            # H67 IS A TIME-SCALING, NOT A SPEED CAP — the only form that
+            # does not double-count ramps: integrate the segment on its
+            # LINEAR limits, then stretch it uniformly if the orientation
+            # cannot be delivered within that time. Folding t_rot into a
+            # speed cap instead made cap-0.6 runs +16 % long (2026-08-16).
+            t_lin = sum(seg_dt)
+            # ANGULAR RAMP IS PAID ONLY WHERE THE CHAIN STOPS. Orientation
+            # carries across a blended junction exactly as position does, so
+            # charging cap/alpha on every segment made cap-0.6 runs +18 %
+            # long. Half a ramp per stopped end.
+            # H67, VELOCITY FORM — deliberately identical to
+            # orientation_cost.segment_report so the screen and the emulator
+            # cannot disagree. Angular-ACCELERATION variants were tried
+            # (2026-08-16) and rejected: they fix the cap-ladder trend but
+            # cost 12 points of accuracy at the operating cap. NOTE the
+            # measured cap ladder is nearly FLAT (40.5/38.7/38.5 s) while
+            # every angular-only model is steep — the real limiter at raised
+            # caps is joint speed, which this emulator does not model. DO NOT
+            # use emulated durations to project angular-cap benefits.
+            rot_i = sg.get("rot", 0.0)
+            t_rot = (rot_i / ang_cap) if rot_i > 1e-9 else 0.0
+            if t_rot > t_lin > 0:
+                seg_dt = [x * (t_rot / t_lin) for x in seg_dt]
+            for dt_, (p, qq) in zip(seg_dt, seg_pts):
+                t += dt_
+                all_samples.append((p, qq))
+                times.append(t)
+            if blend_at[i]:
+                gaps.append((max(0.0, t - 0.06), t + 0.06))
+            if dwell_after[i] > 0:
+                gaps.append((t, t + dwell_after[i]))
+                t += dwell_after[i]
+                all_samples.append(all_samples[-1])
+                times.append(t)
+        # end-of-chain settle (measured 230-290 ms, §10.4)
+        gaps.append((t, t + CHAIN_SETTLE_S))
+        t += CHAIN_SETTLE_S
+        all_samples.append(all_samples[-1])
+        times.append(t)
+        # IK walk (same guards as _plan_cartesian; unsolved carries last q,
+        # with the per-stretch re-seed retry the old planner had — without
+        # it one branch-flip rejection cascades: every later target is
+        # >MAX_JOINT_STEP from the carried q and the walk freezes)
+        out, tout = [list(seed)], [0.0]
+        q = list(seed)
+        stretch_seed = list(seed)
+        unsolved = 0
+        for (p, qq), tt in zip(all_samples, times):
+            rx, ry, rz = _R_to_euler(_quat_to_R(qq))
+            target = list(p) + [rx, ry, rz]
+            ret, q_new = _ik_seeded(q, target)
+            ok = (ret == 0 and q_new is not None and
+                  max(abs(x - y) for x, y in zip(q_new, q))
+                  <= self.MAX_JOINT_STEP_DEG)
+            if not ok:
+                ret, q_new = _ik_seeded(stretch_seed, target)
+                ok = ret == 0 and q_new is not None
+            if not ok:
+                # last resort: min-motion arm-angle search — the seeded
+                # solver derails near redundancy folds; this variant was
+                # written for exactly that (see _ik_min_motion docstring)
+                ret, q_new = _ik_min_motion(q, target)
+                ok = ret == 0 and q_new is not None
+            if ok:
+                # FK-VERIFY: the offline solver returns ret 0 with a
+                # best-effort solution for UNREACHABLE poses (same trap
+                # movej_p guards against) — accepting one poisons the walk.
+                fk = _fk_pose(q_new, None)
+                ok = math.dist(fk[:3], target[:3]) <= 0.003
+            if not ok:
+                unsolved += 1
+                q_new = q
+            elif any(abs(x) > lim + 1e-6
+                     for x, lim in zip(q_new, self.joint_limit_deg)):
+                return None, None, None, None
+            else:
+                stretch_seed = list(q_new)
+            q = list(q_new)
+            out.append(list(q))
+            tout.append(tt)
+        if unsolved > 0.05 * max(1, len(all_samples)):
+            print("[emu] WARNING: %d of %d samples had no IK solution — "
+                  "joint rates are an UNDER-estimate (offline-solver "
+                  "limitation, not the arm)" % (unsolved, len(all_samples)))
+        self.last_plan = {"samples": all_samples, "times": times,
+                          "gaps": gaps, "warn_junctions": warns}
+        return out, tout, gaps, warns
 
     # ── arm motion ──
     def movej(self, target_deg, v: int, block: int) -> int:
@@ -968,6 +1503,10 @@ class EmuController:
         # flange while the verify below applies the tool (see
         # _set_algo_toolframe on why the frame cannot be assumed set).
         _set_algo_toolframe(self._active_tool_pose())
+        # target arrives in the CONTROLLER frame, like every API pose
+        # (_algo_to_ctrl boundary rule); solve in the algo frame
+        _p, _R = _ctrl_to_algo(pose6, self.mount_ry_deg)
+        pose6 = list(_p) + list(_R_to_euler(_R))
         ret, target_deg = _ik_seeded(seed, pose6)
         if ret != 0:
             return 1                # IK failure — the controller's ret 1
@@ -975,12 +1514,18 @@ class EmuController:
                for q, lim in zip(target_deg, self.joint_limit_deg)):
             return 1                # solution beyond joint limits
         # The offline algo lib can return ret 0 with a best-effort solution
-        # for UNREACHABLE poses (observed: 2 m target, ret 0). The real
-        # controller refuses those, so FK-verify the solution against the
-        # request before moving (2 mm / ~0.6 deg tolerance).
+        # for UNREACHABLE poses (observed: 2 m target, ret 0), so FK-verify
+        # before moving. TOLERANCE IS 10 mm, NOT 2 mm (corrected 2026-08-16):
+        # the real controller ACCEPTS a best-effort a few mm short — C6 on
+        # hardware commanded +0.200 m and landed +0.196 m without complaint,
+        # and the same target's solver miss here is 4.49 mm. At 2 mm the
+        # emulator refused a move the arm performs, which is the F25/H3
+        # failure inverted (an emulator stricter than the machine refuses
+        # work the machine accepts). 10 mm still catches the gross
+        # best-effort garbage this check exists for.
         import math as _m
         fk = _fk_pose(target_deg, self._active_tool_pose())
-        if _m.dist(fk[:3], list(pose6[:3])) > 0.002 \
+        if _m.dist(fk[:3], list(pose6[:3])) > FK_VERIFY_TOL_M \
                 or any(abs((a - b + _m.pi) % (2 * _m.pi) - _m.pi) > 0.01
                        for a, b in zip(fk[3:6], pose6[3:6])):
             return 1                # solver could not actually reach the pose
@@ -988,9 +1533,15 @@ class EmuController:
         return self.movej(target_deg, v, block)
 
     def current_pose(self):
-        """TCP pose = FK(current joints) via RealMan's solver."""
-        return _fk_pose(self.current_joints(),
-                        self._active_tool_pose())
+        """TCP pose = FK(current joints), in the CONTROLLER frame.
+
+        The real arm reports poses in the same frame it accepts them
+        (_algo_to_ctrl boundary rule) — feedback must round-trip with
+        movel/movec/movej_p targets.
+        """
+        return _algo_to_ctrl(
+            _fk_pose(self.current_joints(), self._active_tool_pose()),
+            self.mount_ry_deg)
 
     def current_joints_locked(self):
         # caller holds self._lock
@@ -1176,9 +1727,33 @@ class EmuController:
                 if cb is None:
                     continue
                 moving = self.arm_moving()
+                # BLEND/DWELL CHOREOGRAPHY (§10.3, analyse_run's detector):
+                # a timed chain reports NOT-moving inside its gap windows —
+                # the brief MOVE_L exits at blends and the stop/freeze
+                # dwells — while joints keep their positions.
+                m = self._arm_motion
+                if moving and isinstance(m, _TimedPathMotion):
+                    moving = m.status_moving()
                 lift_now = int(round(self.current_lift_hw())) \
                     if self._push_field_enabled("lift_state") else 0
                 speed = [0.0] * 7    # populated only when enabled (bench)
+                pose_now = list(self.current_pose())
+                if self.run_mode == 1:
+                    # REAL mode: the position field ALIASES — error grows
+                    # with TCP speed (measured med 0.9 mm at 0.10 m/s →
+                    # 1.5 mm at 0.35, p99 5–7 mm; §9 jitter calibration).
+                    prev = getattr(self, "_push_prev", None)
+                    now = time.perf_counter()
+                    v_est = 0.0
+                    if prev is not None and now > prev[0]:
+                        v_est = math.dist(pose_now[:3], prev[1]) \
+                            / (now - prev[0])
+                    self._push_prev = (now, list(pose_now[:3]))
+                    import random as _rnd
+                    sig = 0.0009 + 0.006 * min(v_est, 2.0)
+                    pose_now[0] += _rnd.gauss(0.0, sig)
+                    pose_now[1] += _rnd.gauss(0.0, sig)
+                    pose_now[2] += _rnd.gauss(0.0, sig)
                 cb(SimpleNamespace(
                     errCode=0, arm_ip=self.ip, arm_port=8080,
                     joint_status=SimpleNamespace(
@@ -1197,11 +1772,9 @@ class EmuController:
                     # wp.euler must not fault on the emulated frame
                     waypoint=SimpleNamespace(
                         position=SimpleNamespace(*(), **dict(zip(
-                            ("x", "y", "z"),
-                            self.current_pose()[:3]))),
+                            ("x", "y", "z"), pose_now[:3]))),
                         euler=SimpleNamespace(*(), **dict(zip(
-                            ("rx", "ry", "rz"),
-                            self.current_pose()[3:6])))),
+                            ("rx", "ry", "rz"), pose_now[3:6])))),
                     liftState=SimpleNamespace(
                         height=lift_now, pos=float(lift_now),
                         current=0,
@@ -1428,19 +2001,25 @@ class RoboticArm:
         if int(connect) == 1:
             if len(q) >= self.MAX_QUEUE:
                 return 1            # controller refuses a deeper queue
-            q.append(pose)
+            # PER-MOVE v AND r ARE HONORED by the controller (§9.3d) —
+            # the queue must carry them, not just the pose. Before
+            # 2026-08-16 it stored poses only and executed the whole
+            # chain with the CLOSING move's v: provably wrong.
+            q.append({"pose": pose, "v": int(v), "r": int(r), "via": None})
             return 0                # queued: no motion, no event
         # closing segment: the whole chain executes as ONE trajectory
-        chain = list(q) + [pose]
+        chain = list(q) + [{"pose": pose, "v": int(v), "r": int(r),
+                            "via": None}]
         self._movel_queue = []
         return self._ctrl.movel_chain(chain, v, block)
 
     def rm_movec(self, pose_via, pose_to, v, r, loop, connect, block):
-        # DISPATCH MECHANICS ONLY (2026-08-15, chain_semantics_006): argument
-        # shapes and queue behaviour mirror rm_movel; the CIRCULAR GEOMETRY
-        # IS NOT EMULATED — the emulated trajectory runs via->to as lines.
-        # The controller SIM is the authority on what an arc actually does;
-        # this exists so a dry-run can validate the chain a test will send.
+        # FULL ARC EMULATION (2026-08-16): the move is queued as ONE entry
+        # carrying its via, and _plan_chain samples the true 3-point circle
+        # (_arc_points) with tangent-junction speeds — the construction the
+        # REAL 006 runs traced to 0.4 mm median with no junction stops
+        # (§10.1/§10.4). `loop` is accepted but not modelled (never used
+        # mid-chain in any measured run).
         for p in (pose_via, pose_to):
             try:
                 _ = [float(x) for x in p[:6]]
@@ -1457,13 +2036,14 @@ class RoboticArm:
         q = getattr(self, "_movel_queue", None)
         if q is None:
             q = self._movel_queue = []
+        move = {"pose": pose_to, "v": int(v), "r": int(r),
+                "via": list(pose_via)}
         if int(connect) == 1:
-            if len(q) + 2 > self.MAX_QUEUE:
+            if len(q) >= self.MAX_QUEUE:
                 return 1
-            q.append(pose_via)
-            q.append(pose_to)
+            q.append(move)
             return 0
-        chain = list(q) + [pose_via, pose_to]
+        chain = list(q) + [move]
         self._movel_queue = []
         return self._ctrl.movel_chain(chain, v, block)
 

@@ -7,7 +7,41 @@ right for dispatch, chain mechanics, arrival events, queue depth — never for
 joint kinematics. Everything below respects that boundary: these are
 **behavioural** models, not joint-rate predictions.*
 
-## A. Improvements implementable NOW from data already collected
+## STATUS 2026-08-16: items 1-8 IMPLEMENTED, then AUDITED and corrected
+
+**First report of this work overstated the accuracy** (it quoted +-3 %
+from the five runs the constants were tuned on). A held-out audit the same
+day gave the real picture, against MOTION-WINDOW durations (run.json
+duration includes recorder padding and is not the right truth):
+
+| set | n | mean \|err\| | median | max |
+|---|---|---|---|---|
+| tuned-on (calibration) | 5 | 3.5 % | 4.3 % | 6.3 % |
+| **held-out** | **15** | **8.2 %** | **6.6 %** | **22.2 %** |
+
+The audit changed the model three times before settling: freeze dwells are
+now interpolated between two measured points (0.98 s/site at r=25, 0.30 at
+r=50 - a single constant was 25-46 % wrong at r=50), and H67 is applied as
+a per-segment time-scaling. Angular-ACCELERATION variants were implemented,
+measured, and rejected: they fix the cap-ladder trend but cost 12 points at
+the operating cap, because the real limiter at raised caps is joint speed,
+which this emulator does not model.
+
+Residual known-bad regions: angular-cap projections (-12 % at 0.8, -22 % at
+1.0 on rotation-heavy tasks) and short/fast chains (-12 to -17 %).
+
+Stream geometry: blend cuts land 2-4 mm short of the controller's; vertex
+miss within 0.6 mm; which corners blend, the exemption, and r=0 stops are
+exact. Frame boundary validated T = 0.00 mm against four REAL streams.
+
+The boundary fix also exposed a latent bug: `test_single_arm_planned`
+(C6) commanded a movej_p 0.20 m along world +X from rest_pose, which is
+795 mm from the base against a ~788 mm tip reach. It passed only because
+the old emulator applied movej_p offsets in the ALGO frame while also
+reporting poses in that frame. Offset corrected to 0.10 m and documented
+in the test. Regression state: dry-run 250/250, emulated suite 20/20.
+
+## A. Improvements implemented (2026-08-16) — original plan
 
 Ordered by value to the workflow (each names the data that calibrates it):
 
@@ -69,7 +103,8 @@ in project-emulator-cannot-predict-movel.
 | 6 | Controller chain-queue depth limit | 40-move chains work; the ceiling is unknown | chain N short moves, N = 50/100/200, until refusal — SIM |
 | 7 | Entry-phase timing (movej/movej_p durations) | recordings start at the stroke; entries are unmeasured | start the recorder before `goto_start_sequence` once per task (one-line toggle) |
 | 8 | Blend arc lateral profile (the actual curve shape) | needed if the emulator should reproduce trajectories, not just cuts | NO new runs — fit the U-turn arcs in the existing SIM streams |
-| 9 | Dual-arm chained dispatch interaction | all 2026-08-14/15 runs are single-arm | two-arm chained SIM run, both arms dispatching serpentines concurrently |
+| 9 | Dual-arm chained dispatch interaction | all 2026-08-14/15 runs are single-arm, and the 4-minute budget assumes RL_paired arms run in PARALLEL | **the vendor's own pattern is the reference**: `RMDemo_DoubleRoboticArm` runs each arm in its own Python thread with its own `RoboticArm` instance (first arm carries the thread mode, the second constructs bare — which is exactly what `dual_arm_common.connect_both` already does). Two-arm chained SIM run, both arms dispatching serpentines concurrently |
+| 11 | `rm_movec` `loop` semantics | the vendor demo uses `loop=2`; if it repeats the arc, one command scrubs a ring N times with no junctions (CLEANING_MOTION_SPEC §3) | `chain_semantics_007`: same arc box, loop 0/1/2, count traced revolutions + check `connect=1` still chains afterwards — one SIM run |
 | 10 | REAL corner speeds at 0.45 with per-move v | 0.45 REAL data exists only at uniform v | fold into the first REAL run of `toplid_left_002` at a 0.45 baseline (after gap 2 closes) |
 
 Priorities: gaps 2 and 3 first (they gate the redesigned paths and explain

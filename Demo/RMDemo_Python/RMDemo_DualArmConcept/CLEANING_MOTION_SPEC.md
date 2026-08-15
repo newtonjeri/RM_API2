@@ -121,12 +121,15 @@ configurable limit exactly like line_speed (same vendor-advisory caveats,
 H62, ratchet rule). Raising it toward 1.0–1.2 rad/s would directly raise
 `v_eff` on curved/rotating strokes — the bulk of seat_ring, top, bowl and
 rim work — and its joint-space cost lands mostly on the wrist (J5–J7),
-which every measurement shows loafing (≤36 % in all REAL runs). **SIM-TESTED with a decomposition caveat (§10.2): genuine cruise gain is
-real but concentrates on LONG rotating segments (top_left: only ~5 %);
-the headline r≥25 duration drops were freeze-shrinkage. The cap remains
-the right lever for long-stroke, J4-light rotating tasks (bowl ring,
-annular arcs) — and it is DOUBLE-EDGED: throttling protects J4-critical
-strokes, so any cap raise requires re-screening J4 at the new cap.** Screen exactly
+which every measurement shows loafing (≤36 % in all REAL runs). **TESTED SIM + REAL (§10.2/§10.4). Cap 1.0 is SAFE on top_left — H63
+dwell 0 ms on every joint at every cap, all peaks ≤86 %, wrist cost
+modest (J6 61→79 %, J5 ≤25 %, J7 ≤55 %) — so 1.0 is adopted as the
+working cap. But the gain is smaller than the headline: genuine cruise
+gain concentrates on LONG rotating segments (top_left only ~5 %); the
+r≥25 duration drops were freeze-shrinkage. It is DOUBLE-EDGED —
+throttling protects J4-critical strokes, so any cap raise requires
+re-screening J4 at the new cap (hardware-validated: 65→80 % on
+top_left).** Screen exactly
 like the speed ladder: SIM first, one task, angular cap stepped 0.6 → 0.8
 → 1.0, H63 dwell rule on every joint.
 
@@ -147,10 +150,25 @@ What a hand does on a fixture, and the primitive that reproduces it:
 | human element | robot primitive | status |
 |---|---|---|
 | long sweeping strokes on open surfaces | blended movel serpentine, padded turns | VERIFIED (§9.3g) |
-| curved strokes following contours; rim/edge following | **`rm_movec`** chained arcs | **VERIFIED SIM 2026-08-15**: 0.00 mm median radial error, no stops, junctions 2× faster than blended corners (§10.1) |
+| curved strokes following contours; rim/edge following | **`rm_movec`** chained arcs | **VERIFIED ON HARDWARE 2026-08-15** (§10.4): radial error median 0.37–0.43 mm (SIM 0.00), no stops, junctions ~2× faster than blended corners |
 | scrub cycles on soiled spots | short exact-180 retraces at max accel (§2c), 2–3 Hz | components verified |
 | flowing direction changes, no dead stops | blend chains + turnarounds in padding | VERIFIED |
 | varying contact pressure | NOT commandable (position control + glove compliance); hover offset is the proxy | out of scope |
+
+**`loop` — an untested multiplier for scrub cycles (from the vendor's own
+dual-arm demo, `RMDemo_DoubleRoboticArm`, 2026-08-16).** That demo calls
+`rm_movec(..., loop=2)`, and its English docstring documents the argument as
+"Number of loops" (the SDK's own text reads `loop (int): 规划圈数` — Newton to
+confirm the reading). If it means what the demo implies, ONE command wipes a
+ring N times with **zero junctions and zero re-dispatch** — the natural
+primitive for scrubbing an annular region, and a direct answer to the
+"~2.5 Hz scrub" line in §2c. Our `chain_semantics_006` deliberately left
+`loop` unscreened. **This is an IMPROVEMENT OPPORTUNITY, not a blocker** —
+the vendor ships a working example of it, so nothing downstream waits on it.
+When convenient, `chain_semantics_007` settles it in one SIM run: same arc
+geometry, `loop` 0/1/2, measuring revolutions traced, whether `connect=1`
+still chains after a looped arc, and the per-revolution time. Design against
+chained single arcs today; adopt `loop` as a simplification if it verifies.
 
 The single biggest wiping-action win is **movec for the annular regions**.
 `seat_ring`, `bowl_inside_rim`, `bowl_inside_ring` are circles authored as
@@ -161,11 +179,12 @@ becomes the only (honest) speed limit. This also directly attacks the
 `seat_ring` family's 0.14 m/s ceiling: its J4 spikes live at polygon
 vertices where translation direction snaps.
 
-**Required screen before design relies on it — `chain_semantics_006`:**
-does movec accept connect=1 into a movel chain; does r blend arc→line; does
-the first-corner exemption apply; what does `loop` do mid-chain; does the
-UDP stream trace the commanded arc. Same one-geometry/three-outcomes
-pattern as 001–003.
+**Screen COMPLETE (`chain_semantics_006`, SIM + REAL — §10.1/§10.4):**
+movec accepts `connect=1` mid-chain, traces the true 3-point circle
+(0.00 mm median radial error in SIM, 0.37–0.43 mm on hardware), and
+crosses its junctions without stopping at ~2× the speed of an equivalent
+blended 90° corner. Tangent-arc entry also makes the first-corner
+exemption moot. The annular redesigns may proceed on this primitive.
 
 ## 4. Proximal glove surfaces — the contact-area rule
 

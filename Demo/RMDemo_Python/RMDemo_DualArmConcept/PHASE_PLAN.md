@@ -15,11 +15,11 @@ corrected or retracted here — see F22-F25 and the gate notes.)*
 | | |
 |---|---|
 | **Architecture** | ROS 2 plans and validates; the RealMan controller executes. Frame chain now proven against both controllers: **0.0 mm / 0.07 deg**. |
-| **Phase 1** | All blocking gates ✅/🔵. Caveat recorded: C2/C3/C9/C17 were measured at **arm v=20 %**, while the tasks now run 50/100 % — the evidence is at a setting that no longer ships. |
+| **Phase 1** | All blocking gates ✅/🔵. **The two audit caveats are CLOSED by the 2026-08-13→16 corpus — see §4.4.** (1) The v=20 % note applied to the arm+pole SYNC gates; the shipped cleaning path is *serialized by design* (`stage_runner` blocks on the pole's arrival event before any pose is resolved) and never dispatches concurrent arm+pole, while the path that *does* ship — chained `movel` at v=100 — now has **80 REAL runs**. (2) C12's model-vs-model objection is answered: the executed tool path tracks the COMMANDED CONFIG polyline to **0.86 mm median across 94 REAL runs**. |
 | **Phase 2 build** | `task_config.py`, `cleaning_path.py`, `stage_runner.py`, `controller_caps.py`, `speed_limits.py`, `power_probe.py`, `recover_joints.py`, `run_recorder.py`, `error_codes.py`, `payload_audit.py`, `blockly_points.py`. Four tasks: hinge_area_{right,left}, toplid_{right,left}. Dry run **249/249**, emulated suite **20/20**. |
 | **Hardware status** | ✅ **ALL FOUR TASKS COMPLETE, 13/13 runs, every one with `collision_stage=3` APPLIED** (2026-08-10 22:00–22:19). `hinge_area_left`, `toplid_left`, `hinge_area_right`, `toplid_right` all pass in SIMULATION; `toplid_left` and `hinge_area_left` also pass in REAL. Speed stepped **38 % → 68 % → 94 %** with REAL runs completing at each. |
 | **Root cause** | ✅ **ESTABLISHED and FIXED: the payload centroid.** Six tool frames carried a centre of mass written 1000× too large — 128 metres — so the controller's torque model predicted a force the joints never produced and reported it as `0x100D`, *arm collision detected* (F26–F28, F31). RealMan's own remedy for that code says re-establish the tool coordinate system when there is a load at the end. |
-| **Open risks** | R10 under-voltage — **untested since**, and the only thing SIM cannot cover · WP6 acceptance not started · the right arm has had **no REAL run** · R12 blend r=10 still unmeasured (F27 shows it is not what 0x100D reported). |
+| **Open risks** | R10 under-voltage — **still untested**, and the only thing SIM cannot cover · WP6 acceptance (5× clean per task) not started. **R12 CLOSED**: blend r=10 and the whole r/v space are now measured exhaustively (MOTION_FINDINGS §9–§10). **"Right arm has had no REAL run" is STALE**: the right arm has **17 REAL runs** (toplid_right + hinge_area_right, 2026-08-11 and 2026-08-14), so both arms are hardware-exercised — what the right arm still lacks is WP6 *acceptance*, not first contact. |
 
 ---
 
@@ -187,9 +187,103 @@ None of C1–C16 sends a target that came from MoveIt. These close that gap.
 | C17 | **CANFD sync** (hardware) | Does the shipped `RM_SYNC_BACKEND=canfd` path reproduce `bench_sync` — arm streamed while the pole runs, both complete, no faults? | yes | ✅ **PASSED BOTH ARMS 2026-08-08, 7/7 each.** Sync steps: lift 5.96 s / arm 4.01 s, dispatch skew 6–17 ms (budget 50), pole outlasts the arm by +1.90 s, arrival event for every device, zero latched faults. **R1b closed — the architecture is confirmed end to end**  **AUDIT NOTE:** measured at arm v=20 %; the cleaning tasks run 50/100 % and, being serialized, never use canfd sync at all — so C17 closes the architecture question, not the cleaning-path critical path |
 | C13 | Fence characterization | What the fence bounds (TCP vs body), reject-vs-stop | **no** | ⬜ Dropped from blocking — safety rests on primitives + offline FCL |
 
+### 4.4 Caveat closure — the execution-grounded evidence (added 2026-08-16)
+
+Both audit caveats above were written before any measurement of the
+executed `movel` path existed. That measurement now exists.
+
+**(1) "Measured at arm v=20 %, a setting that no longer ships."** This
+attached to C2/C3/C9/C17, all of which test *concurrent* arm+pole motion.
+`stage_runner`'s stage model is serialized: the pole moves first and blocks
+on its device-2 arrival event because it moves the arm base, so no cleaning
+task ever dispatches arm and pole together. Lift telemetry agrees — during
+every REAL cleaning stroke the lift is static (0.0–0.7 mm range); the large
+ranges in the corpus are the separate pole-positioning stage. Meanwhile the
+mechanism that *does* ship — a chained `movel` program at `cleaning_pct=100`
+with `connect=1` — has run **80 times on hardware** across both arms, four
+tasks, r = 0/10/12/25/35/50, line speeds 0.10–0.45 and per-move v (MOTION_FINDINGS
+§9–§10). The setting the gates were measured at is the right setting for what
+they test; the shipped setting is separately and far more heavily evidenced.
+
+**(2) C12 "model-vs-model, does not answer R11."** The objection was that the
+verifier sweeps the SAVED PLAN (joint-linear) while `stage_runner` sends
+Cartesian `movel` through the CONFIG waypoints — 46.8–57.1 mm apart, with
+neither side hardware truth. Hardware truth now exists: matching every REAL
+run's trace to its own commanded polyline (sequence-aware, `analyse_coverage.py`)
+gives a **median residual of 0.86 mm over 94 REAL runs**; on the runs whose
+recording covers exactly the chained program (2026-08-13 onward) p95 is
+1.3–5.0 mm, and that spread is the blend cut, which §9.2/§9.3d quantify
+exactly (`cut ≈ c(θ)·(r/100)·min(L_in,L_out)`).
+
+So the executed tool path **is** the config polyline minus a known cut
+envelope. The verifier should sweep the CONFIG path, not the saved plan, and
+doing so is now hardware-grounded rather than model-vs-model. R11 is answered
+for the TOOL path.
+
+**What remains open, and it is a design note rather than a gate:** the tool
+path being verified does not pin the ARM configuration along it — the
+controller re-resolves the redundancy, arm angle swinging up to 144°
+peak-to-peak within one stroke (MOTION_FINDINGS §6). Whole-arm clearance
+therefore still needs either a sweep across the arm-angle range or a pinned
+redundancy. Tool-path clearance is grounded; whole-arm clearance is not.
+
+### 4.5 COLLISION / BRIDGE AUDIT (2026-08-16) — the objective-critical gaps
+
+*Prompted by Newton: the recent work is motion tuning; the ARCHITECTURE this
+project exists to build is MoveIt-plans / controller-executes with collision
+responsibility retained offline. Audited against code, SDK and runs.*
+
+**Built and working**
+
+| piece | state | evidence |
+|---|---|---|
+| Offline segment verifier (WP1) | ✅ `segment_verifier.py` — whole-robot FCL (URDF FK + link BVHs) vs the commode meshes at scene pose, plus `rm_algo_safety_robot_self_collision_detection` | imports and resolves URDF/SRDF today |
+| Clearance map (WP2) | ✅ `run_hinge_verify.py`, all four tasks | §4.2 C12 |
+| Rehearsal validator | ✅ `test_rehearsal_validate.py` (SIM execute → UDP capture → FCL) | C11, 7/7 + 3/3 |
+| MoveIt → controller link | ✅ but NARROW: `stage_runner` loads the saved MTC plan and takes every named-pose joint solution from it (hard runtime dependency) | `stage_runner.py:387` |
+| Arm self-collision at runtime | ✅ enabled programmatically on every connect | `dual_arm_common.ensure_self_collision_enabled` |
+
+**NOT built — and each changes what the architecture can claim**
+
+1. **The SDK's primitive scene modelling is UNUSED.** The controller accepts
+   geometric primitives — `rm_fence_config_t` with `form` 1 = cuboid,
+   2 = point-normal plane, 3 = sphere, via `rm_add_electronic_fence_config` /
+   `rm_set_virtual_wall_config`, plus `rm_algo_set_tool_envelope` (tool
+   spheres). **Our code calls none of them**; only `arm_census` reads their
+   enable flags. C13 was dropped from blocking with the rationale "safety
+   rests on primitives + offline FCL", but the controller-side primitives
+   were never configured — so the only ACTIVE controller-side geometric
+   guard is arm self-collision. The fixture is invisible to the controller.
+2. **`controller_planned` mode (§6.2) was never built.** The planned A/B —
+   the same task under `ruckig_pro_only` and under controller planning, the
+   strongest evidence for the architecture — does not exist.
+3. **`docs/icd/` is EMPTY.** The interface control document between MoveIt
+   and the RM controller was scoped and never written.
+4. **C12 still sweeps the SAVED PLAN.** §4.4 established that the executed
+   tool path is the CONFIG polyline (0.86 mm median, 94 REAL runs); the
+   verifier has not been repointed at it. This is now a small code change
+   with the evidence already in hand.
+5. **Whole-arm clearance remains ungrounded** (arm angle swings 144° within
+   a stroke) — tool-path clearance is proven, arm clearance is not.
+6. **The collision layer is UNEXERCISED by everything since 2026-08-10.**
+   All 2026-08-13→16 runs are free-space with NO commode present, and the
+   new paths (`toplid_left_002` rev3/v45, `chain_semantics_00*`) have
+   **never been through `segment_verifier`**. They are motion-validated and
+   collision-unvalidated. No commode-present run of them is permissible
+   until WP2 covers them.
+7. **Two diverging PHASE_PLAN copies**: this one (live) and
+   `~/alix_ws/src/alix/docs/PHASE_PLAN.md` (snapshot, 2026-08-11).
+
+**Read of the whole:** the execution half of the architecture is now deeply
+evidenced; the COLLISION half is where it was on 2026-08-10, and the recent
+motion gains have all been banked in free space. Closing items 1, 4 and 6 is
+what converts this work into the architecture the project set out to build.
+
+---
+
 ### 4.3 Approval rule
 
-> **APPROVED 2026-08-08: every blocking gate is ✅/🔵** — C1 C2 C3 C5 C6
+> **APPROVED 2026-08-08; caveats closed 2026-08-16 (§4.4).** Every blocking gate is ✅/🔵 — C1 C2 C3 C5 C6
 > C7 C8 C10 C11 C12 C14 C15 C16 C17 (C9 closed with C17).
 > C4 (free mode) and C13 (fence) stay open by design — the cleaning tasks
 > use neither. Phase 2 is in progress; its remaining risk is R10
