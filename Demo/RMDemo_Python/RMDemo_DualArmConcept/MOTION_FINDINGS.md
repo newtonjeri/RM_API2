@@ -730,6 +730,39 @@ one hard NO:**
   ladder [0.45]) screens 84 % V_LIST-aware where the uniform screen would
   have mis-refused at 129 %.
 
+### 9.3g HARDWARE RESULTS — toplid_left_002 rev 3, REAL at 0.25 and 0.45 (2026-08-15)
+
+Four runs (SIM+REAL × 0.25/0.45-capped). Headline: **the redesign works on
+hardware at both speeds.**
+
+| run | area coverage | stops >80 ms | duration | J4 peak | dwell@98 % |
+|---|---|---|---|---|---|
+| SIM 0.25 | 100.00 % | 4 | 42.5 s | (SIM channels dead) | — |
+| REAL 0.25 | **100.00 %** | **4** | 42.4 s | **59.5 %** | 0 ms |
+| SIM 0.45 | 100.00 % | 7 | 34.8 s | — | — |
+| REAL 0.45 | **100.00 %** | **7** | 34.9 s | **87.1 %** | 0 ms |
+
+* Full path reached in all four (0 short); commanded-path coverage
+  98–99.6 % at the 2 mm tolerance (REAL delta = aliasing jitter only).
+* SIM↔REAL parity within 0.3 s of duration; stop maps match.
+* Stops at 0.25: touchdown 340 ms (designed), one left-turn corner 170 ms,
+  rim entry 250 ms, chain-close 240 ms. **The apex r=0 reversal was
+  crisp — under 80 ms below 20 mm/s**, not a dwell. At 0.45: 7 stops,
+  90–200 ms, clustered at the wedge/rim-entry cluster + touchdown 470 ms.
+* Peak current 8.0 A (0.25) / 9.7 A (0.45) — half the 16.7 A violent-run
+  reference. J4 at 0.45: measured 87.1 % vs the V_LIST-aware screen's
+  84 % — 3 points optimistic, margin held, zero dwell.
+* v45 verdict: **18 % faster (42.4 → 34.9 s) at identical coverage and
+  safe margins** — the per-move-v architecture pays off on hardware.
+* **The blend floor is NOT a pure length threshold.** Floor-risk hop
+  outcomes: at 0.25 the 21.3 mm hop blended while 22.0/24.6/27.5 mm
+  stopped; at 0.45 the 18.0 and 22.0 mm hops blended (33 mm/s minima)
+  while 21.3 and 27.5 stopped. Length, corner angle, speed and the next
+  move all enter the planner's decision. Practically: most turns blended
+  (32–35 of 39 moves flow), the rest stop briefly (90–250 ms), and the
+  emulator model (EMULATOR_ROADMAP A1) should treat sub-30 mm blends as
+  UNCERTAIN rather than modelled.
+
 ### 9.4 Practical rule
 
 Choose r per stroke from the allowed end-loss δ:  **r ≈ 133 · δ / L**.

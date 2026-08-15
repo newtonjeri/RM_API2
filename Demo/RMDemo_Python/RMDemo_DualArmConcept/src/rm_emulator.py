@@ -1435,6 +1435,38 @@ class RoboticArm:
         self._movel_queue = []
         return self._ctrl.movel_chain(chain, v, block)
 
+    def rm_movec(self, pose_via, pose_to, v, r, loop, connect, block):
+        # DISPATCH MECHANICS ONLY (2026-08-15, chain_semantics_006): argument
+        # shapes and queue behaviour mirror rm_movel; the CIRCULAR GEOMETRY
+        # IS NOT EMULATED — the emulated trajectory runs via->to as lines.
+        # The controller SIM is the authority on what an arc actually does;
+        # this exists so a dry-run can validate the chain a test will send.
+        for p in (pose_via, pose_to):
+            try:
+                _ = [float(x) for x in p[:6]]
+            except TypeError:
+                raise TypeError(f"'{type(p).__name__}' object is not "
+                                "subscriptable")
+            if len(p) < 6:
+                return 1
+        if not (1 <= int(v) <= 100) or not (0 <= int(r) <= 100) \
+                or int(loop) < 0:
+            return 1
+        if self._ctrl.motion_locked:
+            return 1
+        q = getattr(self, "_movel_queue", None)
+        if q is None:
+            q = self._movel_queue = []
+        if int(connect) == 1:
+            if len(q) + 2 > self.MAX_QUEUE:
+                return 1
+            q.append(pose_via)
+            q.append(pose_to)
+            return 0
+        chain = list(q) + [pose_via, pose_to]
+        self._movel_queue = []
+        return self._ctrl.movel_chain(chain, v, block)
+
     def rm_change_tool_frame(self, name):
         name = name.decode() if isinstance(name, bytes) else str(name)
         if name not in self._ctrl.tool_frames:

@@ -175,7 +175,8 @@ def load_path(src):
             if nm in ("POSES_MM", "SEQUENCE", "BLEND_SWEEP", "CORNER_ANGLES",
                       "TCP_LINEAR_VELOCITY", "SEGMENT_SPEEDS", "BLEND",
                       "SPEED_LADDER", "TOOL_FRAME",
-                      "R_LIST", "V_LIST", "CHAIN_APPROACH"):
+                      "R_LIST", "V_LIST", "CHAIN_APPROACH",
+                      "VIA_MM", "ARC_LIST"):
                 try:
                     got[nm] = ast.literal_eval(node.value)
                 except ValueError:
@@ -220,13 +221,21 @@ def load_path(src):
         "r_list": got.get("R_LIST"),
         "v_list": got.get("V_LIST"),
         "chain_approach": bool(got.get("CHAIN_APPROACH", False)),
+        # ARCS (chain_semantics_006): ARC_LIST has one entry PER MOVE — None
+        # for a movel, or a VIA_MM key for an rm_movec through that via to
+        # the move's target. loop is always dispatched 0 (untested; the 006
+        # header says why). VIA_MM poses are mm+rad like POSES_MM.
+        "vias": {str(k): [v[0] / 1000.0, v[1] / 1000.0, v[2] / 1000.0,
+                          v[3], v[4], v[5]]
+                 for k, v in got.get("VIA_MM", {}).items()},
+        "arc_list": got.get("ARC_LIST"),
     }
 
 
 J4_LIMIT_PCT = 100.0
 
 
-def preflight_j4(poses, tool, speed, v_list=None):
+def preflight_j4(poses, tool, speed, v_list=None, angular_cap=None):
     """(worst % of the J4 limit, segment index) predicted offline, or None.
 
     `v_list` (per-move v%, from a chain-semantics path file) scales each
@@ -261,7 +270,11 @@ def preflight_j4(poses, tool, speed, v_list=None):
         if err is not None and err > 0.001:
             return None                  # transform unverified: refuse to opine
         worst = None
-        rows_ = oc.segment_report(poses, tool, speed)
+        # A RAISED ANGULAR CAP UN-THROTTLES SEGMENTS AND RAISES THEIR J4 —
+        # screening at the default 0.6 while running at 1.0 would
+        # under-predict exactly the segments the ladder exists to speed up.
+        rows_ = (oc.segment_report(poses, tool, speed, cap=angular_cap)
+                 if angular_cap else oc.segment_report(poses, tool, speed))
         if rows_ and all(r["j4"] is None for r in rows_):
             # Every segment failed IK. Offline that means the emulator is
             # installed and intercepting the algorithm library — its IK
@@ -808,11 +821,14 @@ def build_program(n_moves, blend, connect, r_list=None, v_list=None):
     return prog
 
 
-def run_one(arm, poses, program, mon):
+def run_one(arm, poses, program, mon, arc_vias=None):
     """Dispatch the polyline with its per-move program. True on success.
 
     `program[i]` is the (v%, r%, connect) for the move ENDING at
     `poses[i+1]` — built by `build_program`, recorded verbatim in run.json.
+    `arc_vias[i]` (chain_semantics_006), when not None, is a via POSE: the
+    move is dispatched as `rm_movec(via, target, v, r, 0, c, 0)` instead of
+    a movel — loop pinned to 0, everything else identical.
 
     A chained program produces ONE arrival event, from the closing
     `connect=0` segment; a discrete program produces one per move. Waiting
@@ -823,9 +839,15 @@ def run_one(arm, poses, program, mon):
         v, r, c = program[i]
         if c == 0:
             mon.expect(arm.handle_id, DEV_JOINT)
-        ret = arm.robot.rm_movel(p, v, r, c, 0)
+        via = arc_vias[i] if arc_vias else None
+        if via is not None:
+            ret = arm.robot.rm_movec(list(via), p, v, r, 0, c, 0)
+        else:
+            ret = arm.robot.rm_movel(p, v, r, c, 0)
         if ret != 0:
-            print(f"  [FAIL] segment {i} rm_movel ret={ret}")
+            print(f"  [FAIL] segment {i} "
+                  f"{'rm_movec' if via is not None else 'rm_movel'} "
+                  f"ret={ret}")
             return False
         if c == 0:
             arrived, ok = mon.wait(arm.handle_id, DEV_JOINT, 90.0)
@@ -841,7 +863,8 @@ def run_one(arm, poses, program, mon):
 
 def main() -> int:
     handle_cli(__doc__, extra_flags=("--connect0", "--reverse"),
-               value_flags=("--side", "--path", "--speed", "--line-acc"))
+               value_flags=("--side", "--path", "--speed", "--line-acc",
+                            "--angular-speed"))
     forced = parse_mode_arg()
     side = "left"
     if "--side" in sys.argv:
@@ -861,7 +884,8 @@ def main() -> int:
         path = {"poses": tp, "labels": tl, "blends": [10, 25, 50],
                 "angles": [], "speed": 0.25, "ladder": [0.25, 0.45],
                 "tool": ttool, "seg_speeds": {},
-                "r_list": None, "v_list": None, "chain_approach": False}
+                "r_list": None, "v_list": None, "chain_approach": False,
+                "vias": {}, "arc_list": None}
     else:
         path = load_path(src)
     poses, labels = path["poses"], path["labels"]
@@ -886,13 +910,25 @@ def main() -> int:
         if bad:
             raise SystemExit("%s values out of range %d..%d: %s"
                              % (nm, lo, hi, bad))
-    if (r_list or v_list or chain_approach) and "--reverse" in sys.argv:
+    vias = path.get("vias", {})
+    arc_list = path.get("arc_list")
+    if arc_list is not None:
+        if len(arc_list) != n_moves:
+            raise SystemExit("ARC_LIST has %d entries but the path has %d "
+                             "moves — one per move (None = movel)."
+                             % (len(arc_list), n_moves))
+        missing = [str(a) for a in arc_list
+                   if a is not None and str(a) not in vias]
+        if missing:
+            raise SystemExit("ARC_LIST vias not in VIA_MM: %s" % missing)
+    if (r_list or v_list or chain_approach or arc_list) \
+            and "--reverse" in sys.argv:
         raise SystemExit("--reverse would traverse the poses backwards while "
                          "R_LIST/V_LIST stay in forward dispatch order — the "
                          "parameters would land on different moves than the "
                          "path file documents. Write a reversed path file "
                          "instead.")
-    if (r_list or v_list or chain_approach) and also_c0:
+    if (r_list or v_list or chain_approach or arc_list) and also_c0:
         raise SystemExit("--connect0 breaks the chain, and every "
                          "chain-semantics question is ABOUT the chain. "
                          "Nothing this run measured would answer it.")
@@ -917,6 +953,21 @@ def main() -> int:
     req_acc = None
     if "--line-acc" in sys.argv:
         req_acc = float(sys.argv[sys.argv.index("--line-acc") + 1])
+    # THE ANGULAR-CAP LADDER (CLEANING_MOTION_SPEC 2b). The 0.6 rad/s cap
+    # throttles more of the cleaning path than J4 does; this flag raises it
+    # for ONE run, with the same floor-at-default rule the linear pair uses:
+    # angular_acc = max(shipped 4.0, 3 x cap). Above 1.33 rad/s the 3x law
+    # would push the acc past the shipped 4.0 — unexplored, refused here.
+    # Limits RATCHET (H62): run reset_limits.py afterwards.
+    req_ang = None
+    if "--angular-speed" in sys.argv:
+        req_ang = float(sys.argv[sys.argv.index("--angular-speed") + 1])
+        if not (0 < req_ang <= 1.33):
+            raise SystemExit(
+                "--angular-speed %.3f out of the screened range (0, 1.33] "
+                "rad/s — beyond 1.33 the 3x ratio needs angular_acc above "
+                "the shipped 4.0 rad/s^2, which nothing has tested."
+                % req_ang)
     # THE LADDER. Every rung runs in turn, ASCENDING, each recorded on its
     # own, and the climb STOPS at the first rung that fails — continuing past
     # a stall is how the 0.80 run that reversed four joints in 80 ms happened.
@@ -1137,7 +1188,8 @@ def main() -> int:
 
             # THE PRE-FLIGHT ELBOW GATE — before the limits are raised, so a
             # refused rung never touches the controller's configuration.
-            worst = preflight_j4(poses, tool, speed, v_list=v_list)
+            worst = preflight_j4(poses, tool, speed, v_list=v_list,
+                                 angular_cap=req_ang)
             if worst is None:
                 print("  [WARN] the offline elbow screen could not run (no "
                       "TOOL_FRAME in the path file, an unknown frame, or a "
@@ -1182,16 +1234,31 @@ def main() -> int:
                       "joints need a saved plan and are NOT screened)"
                       % (worst[1], worst[0]))
 
-            if (abs(speed_limits.read(arm.robot).get("line_speed", -1) - speed)
-                    > 1e-6
-                    or abs(speed_limits.read(arm.robot).get("line_acc", -1)
-                           - line_acc) > 1e-6):
+            lim_now = speed_limits.read(arm.robot)
+            if (abs(lim_now.get("line_speed", -1) - speed) > 1e-6
+                    or abs(lim_now.get("line_acc", -1) - line_acc) > 1e-6
+                    # THE ANGULAR PAIR TOO (2026-08-15): this gate once
+                    # checked only the line pair, so `--angular-speed` on an
+                    # arm already at the right line limits was silently
+                    # NEVER APPLIED — the ladder would have measured the
+                    # 0.6 default at every rung and read as "the cap makes
+                    # no difference".
+                    or (req_ang is not None
+                        and abs(lim_now.get("angular_speed", -1) - req_ang)
+                        > 1e-6)):
                 # Set BOTH together. Raising only the speed is rejected with a
                 # bare ret=1 when acc < 3x speed, and the run then silently
                 # proceeds at whatever was already configured.
-                prev = speed_limits.apply(
-                    arm.robot, allow_raise=True,
-                    line_speed=speed, line_acc=line_acc)
+                kw = {"line_speed": speed, "line_acc": line_acc}
+                if req_ang is not None:
+                    kw["angular_speed"] = req_ang
+                    kw["angular_acc"] = max(4.0, 3.0 * req_ang * (1 + 1e-9))
+                prev = speed_limits.apply(arm.robot, allow_raise=True, **kw)
+                if req_ang is not None:
+                    print("  limits set:    angular_speed %.3f  angular_acc "
+                          "%.3f  (originals restored at exit; reset_limits "
+                          "afterwards — H62 ratchet)"
+                          % (kw["angular_speed"], kw["angular_acc"]))
                 # Capture only the FIRST rung's previous values — that is what
                 # the arm had before this program touched it, and what the
                 # restore at exit must return it to. Capturing per rung would
@@ -1244,7 +1311,7 @@ def main() -> int:
                       "depressed reference. Those columns read ~12 points HIGH "
                       "(measured) — compare them with r=0, not with 100 %%."
                       % wide)
-            if r_list or v_list or chain_approach:
+            if r_list or v_list or chain_approach or arc_list:
                 # THE PROGRAM, MOVE BY MOVE, BEFORE ANY MOTION — this is a
                 # chain-semantics screen, so what each move will be sent with
                 # is the entire point. Printed from the same builder the
@@ -1253,16 +1320,20 @@ def main() -> int:
                 pv = build_program(n_moves, cases[0][0], cases[0][1],
                                    r_list, v_list)
                 pv_lab = list(labels)
+                pv_arc = list(arc_list) if arc_list else [None] * len(pv)
                 if chain_approach:
                     pv = [(TRANSIT_V, int(cases[0][0]), 1)] + pv
                     pv_lab = ["prestart"] + pv_lab
+                    pv_arc = [None] + pv_arc
                 print("  CHAIN PROGRAM (%d moves%s):"
                       % (len(pv), ", approach chained" if chain_approach
                          else ""))
                 for mi, (mv, mr, mc) in enumerate(pv):
+                    arc = ("  ARC via %s" % pv_arc[mi]
+                           if pv_arc[mi] is not None else "")
                     print("    move %d  %-9s -> %-9s  v=%3d%%  r=%3d  "
-                          "connect=%d" % (mi + 1, pv_lab[mi], pv_lab[mi + 1],
-                                          mv, mr, mc))
+                          "connect=%d%s" % (mi + 1, pv_lab[mi],
+                                            pv_lab[mi + 1], mv, mr, mc, arc))
             print()
             print("%-14s %-10s %s" % ("case", "corner", hdr))
             print("-" * 74)
@@ -1302,12 +1373,16 @@ def main() -> int:
                 # exemption is consumed by it.
                 d_program = build_program(n_moves, blend, connect,
                                           r_list, v_list)
+                d_arcs = ([None if a is None else list(vias[str(a)])
+                           for a in arc_list] if arc_list else None)
                 if chain_approach:
                     pre0 = list(poses[0])
                     pre0[2] += PRESTART_LIFT_M
                     d_poses = [pre0] + [list(p) for p in poses]
                     d_labels = ["prestart"] + list(labels)
                     d_program = [(TRANSIT_V, int(blend), 1)] + d_program
+                    if d_arcs is not None:
+                        d_arcs = [None] + d_arcs
                 else:
                     d_poses = [list(p) for p in poses]
                     d_labels = list(labels)
@@ -1317,6 +1392,8 @@ def main() -> int:
                 # showed how easily the wrong one gets read. Chain-semantics
                 # cases carry their protocol in the name for the same reason.
                 case_tag = ("blend_r%d%s" % (blend, "" if connect else "_c0"))
+                if arc_list:
+                    case_tag = "chain_arc_r%d" % blend
                 if r_list:
                     case_tag = "chain_rmix"
                 if v_list:
@@ -1332,7 +1409,7 @@ def main() -> int:
                     print("  [WARN] recorder did not start; this case is not "
                           "introspectable afterwards")
                 t0 = time.perf_counter()
-                ok = run_one(arm, d_poses, d_program, mon)
+                ok = run_one(arm, d_poses, d_program, mon, arc_vias=d_arcs)
                 t1 = time.perf_counter()
                 # Metadata in the same shape stage_runner writes, so a blend
                 # run is introspectable with the same tooling as a task run.
@@ -1365,6 +1442,9 @@ def main() -> int:
                         "r_list": r_list,
                         "v_list": v_list,
                         "chain_approach": bool(chain_approach),
+                        # arcs: per-move via pose (None = movel), as
+                        # dispatched — loop is always 0.
+                        "arc_vias": d_arcs,
                     },
                 })
                 run_dir = rec.stop()
