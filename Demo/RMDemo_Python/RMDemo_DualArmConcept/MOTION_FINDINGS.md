@@ -682,6 +682,45 @@ one hard NO:**
   ≤ ~85 % J4); 0.45 then buys its time on hops, rim and edge — and H67
   already throttles the rotating strokes below 0.45 anyway.
 
+### 9.3f Results of the 0.45 screens and the toplid_left_002 SIM run (2026-08-15)
+
+* **0.45 chain semantics: HONORED, identical geometry.** `chain_semantics_004`
+  ran (no refusal at ~94 % predicted J4) with cuts bit-for-bit equal to the
+  0.25 twin (0 / 0+stop / 7.9 / 15.8 mm); B's mid-chain r=0 stopped at
+  2.0 mm/s; r=25/50 corners carried 143–162 mm/s (more than at 0.25 — the
+  scaling holds; the r=50 collapse seen on hinge REAL did not reproduce on
+  this clean SIM geometry). `chain_semantics_005` plateaus 251/424/340 vs
+  predicted 250/450/350 — per-move v honored at operating speed, same ~5 %
+  mapping bias as everywhere.
+* **toplid_left_002 SIM: coverage goal met, continuity goal partly met.**
+  Full path reached (0 short), NO freeze, NO early termination, 42.4 s.
+  **Area coverage measured from the traced path: 100.00 %** of the
+  original-area hull within the 10 mm effective half-band (17 130 samples).
+  In-area cuts: zero at every corner (only the wedge hop corner cut
+  1.9/2.0 mm — in padding). Designed stops behaved (touchdown 0.43 s,
+  apex ~0.55 s).
+* **NEW FINDING — the blend floor.** The controller BLENDED only 4 of 40
+  corners and executed **29 brief mid-run stops** (sub-0.4 s, tool at
+  rest — arm_status IDLE spans) at the turnarounds: segments of 9–25 mm
+  are apparently TOO SHORT to blend at any commanded r, and the controller
+  falls back to a full stop. Consistent with prior data: hinge corners
+  with ≥30 mm segments blended; the 45 mm steps of chain_semantics blend;
+  nothing below ~25 mm ever has. All 29 stops sit at padded/edge corners
+  OUTSIDE the cleaned area, so coverage and in-area continuity are intact —
+  but the no-stops goal fails at the turnarounds.
+* **Fix APPLIED (rev 3, same day): two-pass serpentine.** Odd rows
+  top→bottom, then even rows bottom→top; hops become 18–39 mm. Floor-risk
+  moves: 29 → 5 mid-path (18–27.5 mm; the fan's bottom convergence is
+  geometric) + the rim-entry hop. Structural bonuses: the pass transition
+  runs UP the right edge as one 171 mm cleaning move (the right boundary
+  strip gets its own pass); row 14 reaches the apex through a blendable
+  ~90° corner; the wedge row runs apex→left in one stroke (no U-turn);
+  touchdown moved to the top-LEFT padding (the reach-safe side).
+  Re-verified: 100.00 % area coverage, worst J4 71 % at 0.25, reach max
+  898.3 mm, 7.33 m, 40 waypoints. The SIM rerun of this file also
+  MEASURES the blend floor (which of 18/21.3/22/24.6/27.5 mm hops blend).
+  Figure: `paths/toplid_left_002_rev3.png`.
+
 ### 9.4 Practical rule
 
 Choose r per stroke from the allowed end-loss δ:  **r ≈ 133 · δ / L**.

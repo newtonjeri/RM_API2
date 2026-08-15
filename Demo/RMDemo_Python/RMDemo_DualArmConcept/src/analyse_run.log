@@ -4171,3 +4171,115 @@ I. GRAVITY TORQUE vs MEASURED CURRENT — F30
   Log    : analyse_run.log
   Started: 2026-08-15 10:27:14
 ========================================================================
+
+========================================================================
+  Script : analyse_run.py
+  Log    : analyse_run.log
+  Started: 2026-08-15 12:24:16
+========================================================================
+==============================================================================
+  20260815T144323_chain_rmix_vmix_capp_v250_left
+==============================================================================
+A. PROVENANCE — what was asked for, and how the arm was configured
+   run            20260815T144323_chain_rmix_vmix_capp_v250_left
+   mode           SIMULATION   (nothing physical moved)
+   side / path    left / ../paths/toplid_left_002.py
+   tool frame     L_glove_2
+   waypoints      42 over 41 segments
+   blend / connect r=35 %   connect=1
+   ladder rung    1 of 1   (all rungs [0.25])
+   limits in force line_speed 0.250  line_acc 1.600  angular 0.600 / 4.000
+
+B. STREAM HEALTH — is this recording usable at all
+   4244 samples over 42.44 s = 100.0 Hz
+   dt ms          median 10.0  p5 9.9  p95 10.1  max 11.3
+   position channel: 27 % of moving intervals advance < 40 % of the median step (1.79 mm)
+                     ^ EXPECTED on this controller — the position field is not synchronous with the push. Speeds here are differenced over 7 samples for that reason; single-sample differencing reads up to 162 % of a cap the arm never exceeded.
+
+C. MOTION — did it go where it was sent, and when did it start
+   first motion   0.45 s after recording started
+   traced         6.936 m
+   commanded      6.961 m   (traced/commanded 100 %)
+                  ^ summed arc runs 7-10 % LONG on this stream (noise, not travel), so 100-110 %% is normal and a shortfall can hide inside it — which is why the end pose is checked separately:
+   start error    0.0 mm      end error 0.0 mm
+
+D. TCP SPEED
+   typical 224 mm/s   p95 265 mm/s   peak 267 mm/s
+   cap in force 250 mm/s -> typical is 90 % of it, p95 106 %
+                  ^ the MEDIAN sitting well under the cap is expected, not a fault: it is bound by ACCELERATION (H57 — at fixed line_speed 0.45 the median rose 62.6 -> 87.6 % as line_acc went 1.6 -> 3.6 while p95 stayed pinned at the cap).
+   28 decelerations below half cruise; 32 % of moving samples spent under it
+
+E. JOINTS — travel, rate against the limit, and DWELL near it
+   joint travel deg  deg per m peak deg/s   % limit      p95     limit
+   J1         298.3       43.0          0        0%        0       180
+   J2         833.4      120.2          0        0%        0       180
+   J3         350.3       50.5          0        0%        0       225
+   J4        1524.3      219.8          0        0%        0       225
+   J5         126.2       18.2          0        0%        0       225
+   J6         602.0       86.8          0        0%        0       225
+   J7         250.0       36.0          0        0%        0       225
+   worst: J7 at 0 % of its limit
+   dwell (max over joints of |rate|/limit at each sample):
+     >=  95 %        0 ms
+     >=  98 %        0 ms
+     >= 100 %        0 ms
+
+F. WHERE THE TCP MOTION COMES FROM
+   FK+tool model matches the recorded TCP to 0.00 mm — the split below is sound
+   joint     TCP metres    share
+   J1             1.472       5%
+   J2             7.353      25%
+   J3             2.664       9%
+   J4            13.653      47%
+   J5             0.498       2%
+   J6             3.567      12%
+   J7             0.094       0%
+   the joints produce 29.30 m of TCP motion to deliver a 6.94 m path = 4.2x
+                  ^ the excess CANCELS: this is a 7-DOF arm on a 6-DOF task with no null-space objective, so nothing penalises internal motion that goes nowhere. A joint with large travel and a small share is churning.
+
+J. CONDITIONING — how close to a singularity
+   sigma_min   min 0.0269 at t=32.72s   p05 0.0460   median 0.1221
+   the SDK calls a pose singular below 0.01 (its default)
+   [WARN] only 2.7x the SDK's singular threshold — the lowest across all our recordings is toplid_right at 0.0285 (2.9x)
+   1 % of samples sit below the 0.03 watch level
+
+G. ELECTRICAL — R10, the top open risk in PHASE_PLAN
+   joint      peak mA    median mA
+   J1             196          168
+   J2             986          978
+   J3             149           64
+   J4            2088         1907
+   J5             140          132
+   J6             257          235
+   J7             103           31
+   highest draw: J4 at 2.09 A
+                  ^ PHASE_PLAN's R10 discriminator is WHICH joint spikes: J2/J4 points at supply margin, J6/J7 at wrist demand. For reference the 0.80 m/s run that reversed four joints in 80 ms drew 16.7 A on J4.
+   peak current DURING a speed dip: 1.91 A (91 % of the run's peak)
+   voltage        CONSTANT at 22.00 V — a placeholder, not a measurement (F30 found this across 2085 samples). No recording in this state can show an undervoltage sag.
+   temperature    30 30 31 31-32 32 32 33 C per joint
+
+H. FAULTS AND STATE
+   joint error flags   all zero
+   joint enables       all high throughout
+   arm_status          IDLE@0.3s -> MOVE_L@0.8s -> IDLE@1.6s -> MOVE_L@1.7s -> IDLE@3.2s -> MOVE_L@3.4s -> IDLE@3.5s -> MOVE_L@3.7s -> IDLE@7.1s -> MOVE_L@7.2s ...
+   [BLEND ACTIVE] the controller left MOVE_L 4 time(s) mid-run WITH THE TOOL STILL MOVING (up to 157 mm/s). That is the blend arc between two queued trajectories — independent confirmation, from the controller's own state machine, that the radius is being applied.
+   [NOTE] 29 mid-run IDLE span(s) with the tool at rest — real stops between trajectories.
+   corners that blended: 1* 2* 3* 4* 5* 6* 7* 8* 9* 10* 11 12* 13* 14* 15 16* 17* 18* 19* 20* 21* 22* 23* 24* 25* 26* 27* 28* 29* 30* 31* 32* 33* 34* 35* 36* 37* 38 39* 40   (* = none, the tool ran through inside a single trajectory)
+                  ^ the FIRST corner is the one without a blend. Measured across the 2026-08-13 runs this is positional, not angular: reversing the path moved the effect onto whichever corner came first.
+   nothing reported on any fault channel.
+                  ^ this is NOT proof the run was fine. The arm has completed a run at 105.9 % of J4's limit, drawing 16.7 A, with every one of these channels clean (H39). The pendant showed 'Out Of Reach, reason: Joint4 overspeed' for a refusal that none of these columns reported.
+
+I. GRAVITY TORQUE vs MEASURED CURRENT — F30
+   payload not supplied — pass --payload M,CX,CY,CZ (read it with payload_audit.py; it is CONTROLLER state, not in run.json)
+   joint  tau arm Nm    +payload     peak A effort Nm
+   J1           4.12        4.12       0.20        60
+   J2          10.47       10.47       0.99        60
+   J3           1.81        1.81       0.15        30
+   J4           2.94        2.94       2.09        30
+   J5           0.53        0.53       0.14        10
+   J6           0.13        0.13       0.26        10
+   J7           0.00        0.00       0.10        10
+   model ranks joints J2>J1>J4 ; the arm draws most on J4>J2>J6
+                  ^ they DISAGREE on the top joint. That is F30's direction if the gap is on J4: gravity alone does not explain its draw. It is also what a missing inertial term looks like, so this is a lead, not a finding.
+                  ^ without the payload this is the ARM ONLY. F30 is a claim ABOUT the payload record, so the comparison is not yet the one that tests it.
+
