@@ -2987,3 +2987,258 @@ r=50%          NO RESULT — the tool traced 3.447 m against a commanded 4.763 m
   blend radius is not being applied at all.
   parked at REST
   [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:35:03
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   ../paths/chain_semantics_001.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_001.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.250  line_acc 1.600
+  [FAIL] cannot select tool frame 'L_glove_4' (ret=1). It must exist on the controller — write it with test_frame_alignment.py --mode REAL --create-frames. Refusing to dispatch through the wrong tool.
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:35:04
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   ../paths/chain_semantics_002.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_002.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.250  line_acc 1.600
+  [FAIL] cannot select tool frame 'L_glove_4' (ret=1). It must exist on the controller — write it with test_frame_alignment.py --mode REAL --create-frames. Refusing to dispatch through the wrong tool.
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:35:05
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=right
+     path   ../paths/chain_semantics_003.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_003.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] right: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.250  line_acc 1.600
+  [FAIL] cannot select tool frame 'L_glove_4' (ret=1). It must exist on the controller — write it with test_frame_alignment.py --mode REAL --create-frames. Refusing to dispatch through the wrong tool.
+  tool frame restored to R_glove_4 (ret=0)
+  [INFO] right: run mode restored to REAL
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:36:45
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/chain_semantics_001.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_001.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (530, -60, -324) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 138 mm mean segment (7.1x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=25  0 of 4 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  CHAIN PROGRAM (5 moves):
+    move 1  P0        -> P1         v=100%  r= 50  connect=1
+    move 2  P1        -> P2         v=100%  r=  0  connect=1
+    move 3  P2        -> P3         v=100%  r= 25  connect=1
+    move 4  P3        -> P4         v=100%  r= 50  connect=1
+    move 5  P4        -> P5         v=100%  r=  0  connect=0
+
+case           corner        90 deg     90 deg     90 deg     90 deg
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260815T123649_chain_rmix_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 5 decelerations below half cruise, 1.00 per segment, deepest 0 mm/s, 20% of the stage spent below it
+  [INFO] p95 at 107% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 411 samples (93.8 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T123649_chain_rmix_v250_left
+chain_rmix     retained       8%        9%       36%       86%? 
+               v_min m/s   0.019      0.019      0.087      0.130   
+                          corners [4]: NO CRUISE PLATEAU on the approach (speed varies 44-44 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:37:21
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/chain_semantics_002.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_002.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (530, -60, -324) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 138 mm mean segment (7.1x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=25  0 of 4 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  CHAIN PROGRAM (5 moves):
+    move 1  P0        -> P1         v= 40%  r= 25  connect=1
+    move 2  P1        -> P2         v= 40%  r= 25  connect=1
+    move 3  P2        -> P3         v=100%  r= 25  connect=1
+    move 4  P3        -> P4         v=100%  r= 25  connect=1
+    move 5  P4        -> P5         v= 60%  r=  0  connect=0
+
+case           corner        90 deg     90 deg     90 deg     90 deg
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260815T123725_chain_vmix_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 3 decelerations below half cruise, 0.60 per segment, deepest 0 mm/s, 5% of the stage spent below it
+  [INFO] the arm reached 104 mm/s typical against a commanded cap of 250 mm/s (42%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 102% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 575 samples (95.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T123725_chain_vmix_v250_left
+chain_vmix     retained      49%?      89%       28%       45%? 
+               v_min m/s   0.044      0.086      0.067      0.067   
+                          corners [1, 4]: NO CRUISE PLATEAU on the approach (speed varies 35-45 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 12:37:46
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/chain_semantics_003.py
+     6 points, 4 corners, 0.69 m, mean segment 138 mm
+     corners [90, 90, 90, 90] deg   blends [25] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in chain_semantics_003.py)
+     tool    L_glove_4
+==========================================================================
+  orientation is CONSTANT on every segment, so the angular cap
+  cannot time-scale anything (H67) — a dip IS the corner
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_4 (already selected)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (530, -60, -324) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 138 mm mean segment (7.1x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=25  0 of 4 corners measurable   <-- NONE measurable; run it for duration, near-stops and joint load, not retention
+  CHAIN PROGRAM (6 moves, approach chained):
+    move 1  prestart  -> P0         v= 50%  r= 25  connect=1
+    move 2  P0        -> P1         v=100%  r= 25  connect=1
+    move 3  P1        -> P2         v=100%  r= 25  connect=1
+    move 4  P2        -> P3         v=100%  r= 25  connect=1
+    move 5  P3        -> P4         v=100%  r= 25  connect=1
+    move 6  P4        -> P5         v=100%  r=  0  connect=0
+
+case           corner        90 deg     90 deg     90 deg     90 deg
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> STOP (approach joins the chain), all at 50 %
+  [INFO] recording -> 20260815T123749_blend_r25_capp_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 5 decelerations below half cruise, 0.83 per segment, deepest 0 mm/s, 18% of the stage spent below it
+  [INFO] the arm reached 172 mm/s typical against a commanded cap of 250 mm/s (69%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 471 samples (93.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T123749_blend_r25_capp_v250_left
+blend_r25_capp retained      21%       29%       45%?      28%       45%? 
+               v_min m/s   0.027      0.067      0.067      0.067      0.067   
+                          corners [3, 5]: NO CRUISE PLATEAU on the approach (speed varies 44-47 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
