@@ -3467,3 +3467,393 @@ chain_rmix_vmix_capp retained      30%       15%        2%        5%?      10%  
   tool frame restored to L_glove_4 (ret=0)
   [INFO] left: run mode restored to REAL
   limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 15:35:19
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/toplid_left_002.py
+     40 points, 38 corners, 7.33 m, mean segment 188 mm
+     corners 38 (unlabelled)   blends [35] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in toplid_left_002.py)
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (505, 43, -273) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 188 mm mean segment (9.6x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=35  4 of 38 corners measurable   <-- partial
+  CHAIN PROGRAM (40 moves, approach chained):
+    move 1  prestart  -> u00_touch  v= 50%  r= 35  connect=1
+    move 2  u00_touch -> u01_p01L   v= 60%  r= 12  connect=1
+    move 3  u01_p01L  -> u02_p01R   v=100%  r= 12  connect=1
+    move 4  u02_p01R  -> u03_p03R   v= 60%  r= 25  connect=1
+    move 5  u03_p03R  -> u04_p03L   v=100%  r= 35  connect=1
+    move 6  u04_p03L  -> u05_p05L   v= 60%  r= 25  connect=1
+    move 7  u05_p05L  -> u06_p05R   v=100%  r= 12  connect=1
+    move 8  u06_p05R  -> u07_p07R   v= 60%  r= 25  connect=1
+    move 9  u07_p07R  -> u08_p07L   v=100%  r= 35  connect=1
+    move 10  u08_p07L  -> u09_p09L   v= 60%  r= 25  connect=1
+    move 11  u09_p09L  -> u10_p09R   v=100%  r= 12  connect=1
+    move 12  u10_p09R  -> u11_p11R   v= 60%  r= 25  connect=1
+    move 13  u11_p11R  -> u12_p11L   v=100%  r= 35  connect=1
+    move 14  u12_p11L  -> u13_p13L   v= 60%  r= 25  connect=1
+    move 15  u13_p13L  -> u14_p13R   v=100%  r= 12  connect=1
+    move 16  u14_p13R  -> u16_edgeup  v= 60%  r= 12  connect=1
+    move 17  u16_edgeup -> u16_q02L   v=100%  r= 35  connect=1
+    move 18  u16_q02L  -> u17_q04L   v= 60%  r= 25  connect=1
+    move 19  u17_q04L  -> u18_q04R   v=100%  r= 12  connect=1
+    move 20  u18_q04R  -> u19_q06R   v= 60%  r= 25  connect=1
+    move 21  u19_q06R  -> u20_q06L   v=100%  r= 35  connect=1
+    move 22  u20_q06L  -> u21_q08L   v= 60%  r= 25  connect=1
+    move 23  u21_q08L  -> u22_q08R   v=100%  r= 12  connect=1
+    move 24  u22_q08R  -> u23_q10R   v= 60%  r= 25  connect=1
+    move 25  u23_q10R  -> u24_q10L   v=100%  r= 35  connect=1
+    move 26  u24_q10L  -> u25_q12L   v= 60%  r= 25  connect=1
+    move 27  u25_q12L  -> u26_q12R   v=100%  r= 12  connect=1
+    move 28  u26_q12R  -> u28_apex1  v= 60%  r= 25  connect=1
+    move 29  u28_apex1 -> u29_q14L   v=100%  r= 35  connect=1
+    move 30  u29_q14L  -> u30_r15L   v= 60%  r= 25  connect=1
+    move 31  u30_r15L  -> u31_apex2  v=100%  r=  0  connect=1
+    move 32  u31_apex2 -> u32_wedgeL  v=100%  r= 35  connect=1
+    move 33  u32_wedgeL -> u33_rim13  v= 60%  r= 10  connect=1
+    move 34  u33_rim13 -> u33_rim11  v= 60%  r= 10  connect=1
+    move 35  u33_rim11 -> u34_rim7   v= 60%  r= 10  connect=1
+    move 36  u34_rim7  -> u35_rim5   v= 60%  r= 10  connect=1
+    move 37  u35_rim5  -> u36_rim3   v= 60%  r= 10  connect=1
+    move 38  u36_rim3  -> u37_rim1   v= 60%  r= 10  connect=1
+    move 39  u37_rim1  -> u39_edge20  v= 60%  r= 10  connect=1
+    move 40  u39_edge20 -> u40_edge2  v= 60%  r=  0  connect=0
+
+case           corner     38 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> STOP (approach joins the chain), all at 50 %
+  [INFO] recording -> 20260815T153521_chain_rmix_vmix_capp_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 46 decelerations below half cruise, 1.15 per segment, deepest 0 mm/s, 24% of the stage spent below it
+  [INFO] p95 at 104% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 4254 samples (99.3 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T153521_chain_rmix_vmix_capp_v250_left
+chain_rmix_vmix_capp retained      37%?        -         8%       41%        7%       17%       10%      100%?      10%       21%       57%       41%       10%       38%        8%        8%        7%       67%?      10%      188%?      10%       66%?      56%      140%?      10%       42%?       8%       13%?      14%       42%       10%       14%         -        37%       85%?      24%       37%       32%       76%  
+               v_min m/s   0.041          -      0.020      0.031      0.016      0.019      0.025      0.145      0.025      0.028      0.138      0.045      0.023      0.020      0.020      0.020      0.016      0.083      0.025      0.056      0.025      0.084      0.138      0.054      0.023      0.020      0.020      0.025      0.035      0.035      0.025      0.035          -      0.029      0.028      0.035      0.049      0.046      0.109   
+                          corners [8, 18, 20, 22]: only 2-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [1, 24, 26, 28, 35]: NO CRUISE PLATEAU on the approach (speed varies 30-79 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 15:37:49
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/toplid_left_002.py
+     40 points, 38 corners, 7.33 m, mean segment 188 mm
+     corners 38 (unlabelled)   blends [35] %
+     speeds  0.25 m/s   (TCP_LINEAR_VELOCITY in toplid_left_002.py)
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (505, 43, -273) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.250 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.250  line_acc 1.600  (originals restored at exit)
+  ramp 20 mm each way against a 188 mm mean segment (9.6x)
+  sample spacing 2.50 mm at 0.250 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~10 mm
+  resolution: r=35  4 of 38 corners measurable   <-- partial
+  CHAIN PROGRAM (40 moves, approach chained):
+    move 1  prestart  -> u00_touch  v= 50%  r= 35  connect=1
+    move 2  u00_touch -> u01_p01L   v= 60%  r= 12  connect=1
+    move 3  u01_p01L  -> u02_p01R   v=100%  r= 12  connect=1
+    move 4  u02_p01R  -> u03_p03R   v= 60%  r= 25  connect=1
+    move 5  u03_p03R  -> u04_p03L   v=100%  r= 35  connect=1
+    move 6  u04_p03L  -> u05_p05L   v= 60%  r= 25  connect=1
+    move 7  u05_p05L  -> u06_p05R   v=100%  r= 12  connect=1
+    move 8  u06_p05R  -> u07_p07R   v= 60%  r= 25  connect=1
+    move 9  u07_p07R  -> u08_p07L   v=100%  r= 35  connect=1
+    move 10  u08_p07L  -> u09_p09L   v= 60%  r= 25  connect=1
+    move 11  u09_p09L  -> u10_p09R   v=100%  r= 12  connect=1
+    move 12  u10_p09R  -> u11_p11R   v= 60%  r= 25  connect=1
+    move 13  u11_p11R  -> u12_p11L   v=100%  r= 35  connect=1
+    move 14  u12_p11L  -> u13_p13L   v= 60%  r= 25  connect=1
+    move 15  u13_p13L  -> u14_p13R   v=100%  r= 12  connect=1
+    move 16  u14_p13R  -> u16_edgeup  v= 60%  r= 12  connect=1
+    move 17  u16_edgeup -> u16_q02L   v=100%  r= 35  connect=1
+    move 18  u16_q02L  -> u17_q04L   v= 60%  r= 25  connect=1
+    move 19  u17_q04L  -> u18_q04R   v=100%  r= 12  connect=1
+    move 20  u18_q04R  -> u19_q06R   v= 60%  r= 25  connect=1
+    move 21  u19_q06R  -> u20_q06L   v=100%  r= 35  connect=1
+    move 22  u20_q06L  -> u21_q08L   v= 60%  r= 25  connect=1
+    move 23  u21_q08L  -> u22_q08R   v=100%  r= 12  connect=1
+    move 24  u22_q08R  -> u23_q10R   v= 60%  r= 25  connect=1
+    move 25  u23_q10R  -> u24_q10L   v=100%  r= 35  connect=1
+    move 26  u24_q10L  -> u25_q12L   v= 60%  r= 25  connect=1
+    move 27  u25_q12L  -> u26_q12R   v=100%  r= 12  connect=1
+    move 28  u26_q12R  -> u28_apex1  v= 60%  r= 25  connect=1
+    move 29  u28_apex1 -> u29_q14L   v=100%  r= 35  connect=1
+    move 30  u29_q14L  -> u30_r15L   v= 60%  r= 25  connect=1
+    move 31  u30_r15L  -> u31_apex2  v=100%  r=  0  connect=1
+    move 32  u31_apex2 -> u32_wedgeL  v=100%  r= 35  connect=1
+    move 33  u32_wedgeL -> u33_rim13  v= 60%  r= 10  connect=1
+    move 34  u33_rim13 -> u33_rim11  v= 60%  r= 10  connect=1
+    move 35  u33_rim11 -> u34_rim7   v= 60%  r= 10  connect=1
+    move 36  u34_rim7  -> u35_rim5   v= 60%  r= 10  connect=1
+    move 37  u35_rim5  -> u36_rim3   v= 60%  r= 10  connect=1
+    move 38  u36_rim3  -> u37_rim1   v= 60%  r= 10  connect=1
+    move 39  u37_rim1  -> u39_edge20  v= 60%  r= 10  connect=1
+    move 40  u39_edge20 -> u40_edge2  v= 60%  r=  0  connect=0
+
+case           corner     38 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> STOP (approach joins the chain), all at 50 %
+  [INFO] recording -> 20260815T153752_chain_rmix_vmix_capp_v250_left  (100 Hz, ret=0)
+  [INFO] smoothness: 46 decelerations below half cruise, 1.15 per segment, deepest 1 mm/s, 22% of the stage spent below it
+  [INFO] p95 at 111% of cap — consistent with the pendant override at 100% (H59).
+  [INFO] recorded 4244 samples (99.0 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T153752_chain_rmix_vmix_capp_v250_left
+chain_rmix_vmix_capp retained      11%      100%?       5%       30%        3%       13%        9%      100%?       8%       20%       11%       78%?       7%       20%?       7%        5%?       3%       87%?       8%      297%?       8%       60%?      49%?     108%?       7%       23%       50%?       8%?       8%       33%?       6%        8%        1%?      31%?      20%       46%?      93%?      18%       81%  
+               v_min m/s   0.014      0.161      0.012      0.024      0.008      0.016      0.022      0.145      0.021      0.025      0.026      0.122      0.018      0.016      0.018      0.012      0.008      0.106      0.019      0.097      0.021      0.073      0.116      0.046      0.018      0.018      0.116      0.015      0.021      0.021      0.015      0.021      0.001      0.022      0.029      0.117      0.019      0.026      0.120   
+                          corners [2, 8, 12, 18, 20, 22, 36]: only 1-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [14, 16, 23, 24, 27, 28, 30, 33, 34, 37]: NO CRUISE PLATEAU on the approach (speed varies 30-93 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 60 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 15:40:25
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/toplid_left_002_v45.py
+     40 points, 38 corners, 7.33 m, mean segment 188 mm
+     corners 38 (unlabelled)   blends [35] %
+     speeds  0.45 m/s   (TCP_LINEAR_VELOCITY in toplid_left_002_v45.py)
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to SIMULATION (--mode)
+  run mode: SIMULATION   SIMULATION: nothing physical moves
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (505, 43, -273) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.450 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.450  line_acc 1.600  (originals restored at exit)
+  ramp 63 mm each way against a 188 mm mean segment (3.0x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=35  4 of 38 corners measurable   <-- partial
+  CHAIN PROGRAM (40 moves, approach chained):
+    move 1  prestart  -> u00_touch  v= 50%  r= 35  connect=1
+    move 2  u00_touch -> u01_p01L   v= 60%  r= 12  connect=1
+    move 3  u01_p01L  -> u02_p01R   v= 65%  r= 12  connect=1
+    move 4  u02_p01R  -> u03_p03R   v= 60%  r= 25  connect=1
+    move 5  u03_p03R  -> u04_p03L   v= 65%  r= 35  connect=1
+    move 6  u04_p03L  -> u05_p05L   v= 60%  r= 25  connect=1
+    move 7  u05_p05L  -> u06_p05R   v= 65%  r= 12  connect=1
+    move 8  u06_p05R  -> u07_p07R   v= 60%  r= 25  connect=1
+    move 9  u07_p07R  -> u08_p07L   v= 65%  r= 35  connect=1
+    move 10  u08_p07L  -> u09_p09L   v= 60%  r= 25  connect=1
+    move 11  u09_p09L  -> u10_p09R   v= 65%  r= 12  connect=1
+    move 12  u10_p09R  -> u11_p11R   v= 60%  r= 25  connect=1
+    move 13  u11_p11R  -> u12_p11L   v= 65%  r= 35  connect=1
+    move 14  u12_p11L  -> u13_p13L   v= 60%  r= 25  connect=1
+    move 15  u13_p13L  -> u14_p13R   v= 65%  r= 12  connect=1
+    move 16  u14_p13R  -> u16_edgeup  v= 60%  r= 12  connect=1
+    move 17  u16_edgeup -> u16_q02L   v= 65%  r= 35  connect=1
+    move 18  u16_q02L  -> u17_q04L   v= 60%  r= 25  connect=1
+    move 19  u17_q04L  -> u18_q04R   v= 65%  r= 12  connect=1
+    move 20  u18_q04R  -> u19_q06R   v= 60%  r= 25  connect=1
+    move 21  u19_q06R  -> u20_q06L   v= 65%  r= 35  connect=1
+    move 22  u20_q06L  -> u21_q08L   v= 60%  r= 25  connect=1
+    move 23  u21_q08L  -> u22_q08R   v= 65%  r= 12  connect=1
+    move 24  u22_q08R  -> u23_q10R   v= 60%  r= 25  connect=1
+    move 25  u23_q10R  -> u24_q10L   v= 65%  r= 35  connect=1
+    move 26  u24_q10L  -> u25_q12L   v= 60%  r= 25  connect=1
+    move 27  u25_q12L  -> u26_q12R   v= 65%  r= 12  connect=1
+    move 28  u26_q12R  -> u28_apex1  v= 60%  r= 25  connect=1
+    move 29  u28_apex1 -> u29_q14L   v= 65%  r= 35  connect=1
+    move 30  u29_q14L  -> u30_r15L   v= 60%  r= 25  connect=1
+    move 31  u30_r15L  -> u31_apex2  v= 65%  r=  0  connect=1
+    move 32  u31_apex2 -> u32_wedgeL  v= 65%  r= 35  connect=1
+    move 33  u32_wedgeL -> u33_rim13  v= 60%  r= 10  connect=1
+    move 34  u33_rim13 -> u33_rim11  v= 60%  r= 10  connect=1
+    move 35  u33_rim11 -> u34_rim7   v= 60%  r= 10  connect=1
+    move 36  u34_rim7  -> u35_rim5   v= 60%  r= 10  connect=1
+    move 37  u35_rim5  -> u36_rim3   v= 60%  r= 10  connect=1
+    move 38  u36_rim3  -> u37_rim1   v= 60%  r= 10  connect=1
+    move 39  u37_rim1  -> u39_edge20  v= 60%  r= 10  connect=1
+    move 40  u39_edge20 -> u40_edge2  v= 60%  r=  0  connect=0
+
+case           corner     38 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> STOP (approach joins the chain), all at 50 %
+  [INFO] recording -> 20260815T154027_chain_rmix_vmix_capp_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 31 decelerations below half cruise, 0.78 per segment, deepest 0 mm/s, 25% of the stage spent below it
+  [INFO] the arm reached 269 mm/s typical against a commanded cap of 450 mm/s (60%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 70% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 3480 samples (99.2 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T154027_chain_rmix_vmix_capp_v450_left
+chain_rmix_vmix_capp retained      12%         -        12%       55%?      10%         -        17%         -        15%       28%       18%         -        13%       42%       16%       13%       10%       40%?      17%      172%?      15%       37%?      73%      100%?      13%       46%?      16%       11%?       0%?       8%?       8%        0%         -        75%?      88%?        -        71%       45%       97%  
+               v_min m/s   0.026          -      0.034      0.034      0.027          -      0.047          -      0.043      0.052      0.052          -      0.039      0.038      0.048      0.034      0.027      0.083      0.047      0.091      0.043      0.076      0.211      0.074      0.039      0.042      0.048      0.022      0.001      0.002      0.022      0.001          -      0.047      0.052          -      0.095      0.087      0.204   
+                          corners [18, 20, 22, 26]: only 2-7 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [4, 24, 28, 29, 30, 34, 35]: NO CRUISE PLATEAU on the approach (speed varies 31-99 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J7 at 0 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : test_blend_corner.py
+  Log    : test_blend_corner.log
+  Started: 2026-08-15 15:43:27
+========================================================================
+==========================================================================
+C19  blend / connect corner test   side=left
+     path   ../paths/toplid_left_002_v45.py
+     40 points, 38 corners, 7.33 m, mean segment 188 mm
+     corners 38 (unlabelled)   blends [35] %
+     speeds  0.45 m/s   (TCP_LINEAR_VELOCITY in toplid_left_002_v45.py)
+     tool    L_glove_2
+==========================================================================
+  [WARN] this path CHANGES ORIENTATION (max 39.31 deg on a segment). The angular cap can then time-scale a segment (H67), which is indistinguishable from a corner deceleration — the retained-speed column below is NOT a clean corner measurement. The recording and log are still valid.
+
+current c api version:  1.1.6
+  [INFO] left: run mode set to REAL (--mode)
+  run mode: REAL
+  limits found:  line_speed 0.450  line_acc 1.900
+  tool frame:    L_glove_2 selected (was L_glove_4, restored at exit)
+  entry:         movej REST -> movej_p prestart +50 mm world Z -> movel 50 mm approach, all at 50 %
+  waypoint 0:    (505, 43, -273) mm
+  parks at REST when the sweep finishes.
+
+==========================================================================
+  RUNG 1 of 1   line_speed 0.450 m/s   line_acc 1.600 m/s2
+==========================================================================
+  [NOTE] above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  [WARN] the offline elbow screen could not run (no TOOL_FRAME in the path file, an unknown frame, or a failed transform self-check). This rung is UNSCREENED — its joint demand is unknown, not known to be safe.
+  limits set:    line_speed 0.450  line_acc 1.600  (originals restored at exit)
+  ramp 63 mm each way against a 188 mm mean segment (3.0x)
+  sample spacing 4.50 mm at 0.450 m/s — a corner needs >= 8 samples in its dip for the validated +-5 pt accuracy, so a blend of at least ~18 mm
+  [WARN] segments barely reach cruise — there is no plateau to lose at a corner. Lengthen them in the path file or lower the speed.
+  resolution: r=35  4 of 38 corners measurable   <-- partial
+  CHAIN PROGRAM (40 moves, approach chained):
+    move 1  prestart  -> u00_touch  v= 50%  r= 35  connect=1
+    move 2  u00_touch -> u01_p01L   v= 60%  r= 12  connect=1
+    move 3  u01_p01L  -> u02_p01R   v= 65%  r= 12  connect=1
+    move 4  u02_p01R  -> u03_p03R   v= 60%  r= 25  connect=1
+    move 5  u03_p03R  -> u04_p03L   v= 65%  r= 35  connect=1
+    move 6  u04_p03L  -> u05_p05L   v= 60%  r= 25  connect=1
+    move 7  u05_p05L  -> u06_p05R   v= 65%  r= 12  connect=1
+    move 8  u06_p05R  -> u07_p07R   v= 60%  r= 25  connect=1
+    move 9  u07_p07R  -> u08_p07L   v= 65%  r= 35  connect=1
+    move 10  u08_p07L  -> u09_p09L   v= 60%  r= 25  connect=1
+    move 11  u09_p09L  -> u10_p09R   v= 65%  r= 12  connect=1
+    move 12  u10_p09R  -> u11_p11R   v= 60%  r= 25  connect=1
+    move 13  u11_p11R  -> u12_p11L   v= 65%  r= 35  connect=1
+    move 14  u12_p11L  -> u13_p13L   v= 60%  r= 25  connect=1
+    move 15  u13_p13L  -> u14_p13R   v= 65%  r= 12  connect=1
+    move 16  u14_p13R  -> u16_edgeup  v= 60%  r= 12  connect=1
+    move 17  u16_edgeup -> u16_q02L   v= 65%  r= 35  connect=1
+    move 18  u16_q02L  -> u17_q04L   v= 60%  r= 25  connect=1
+    move 19  u17_q04L  -> u18_q04R   v= 65%  r= 12  connect=1
+    move 20  u18_q04R  -> u19_q06R   v= 60%  r= 25  connect=1
+    move 21  u19_q06R  -> u20_q06L   v= 65%  r= 35  connect=1
+    move 22  u20_q06L  -> u21_q08L   v= 60%  r= 25  connect=1
+    move 23  u21_q08L  -> u22_q08R   v= 65%  r= 12  connect=1
+    move 24  u22_q08R  -> u23_q10R   v= 60%  r= 25  connect=1
+    move 25  u23_q10R  -> u24_q10L   v= 65%  r= 35  connect=1
+    move 26  u24_q10L  -> u25_q12L   v= 60%  r= 25  connect=1
+    move 27  u25_q12L  -> u26_q12R   v= 65%  r= 12  connect=1
+    move 28  u26_q12R  -> u28_apex1  v= 60%  r= 25  connect=1
+    move 29  u28_apex1 -> u29_q14L   v= 65%  r= 35  connect=1
+    move 30  u29_q14L  -> u30_r15L   v= 60%  r= 25  connect=1
+    move 31  u30_r15L  -> u31_apex2  v= 65%  r=  0  connect=1
+    move 32  u31_apex2 -> u32_wedgeL  v= 65%  r= 35  connect=1
+    move 33  u32_wedgeL -> u33_rim13  v= 60%  r= 10  connect=1
+    move 34  u33_rim13 -> u33_rim11  v= 60%  r= 10  connect=1
+    move 35  u33_rim11 -> u34_rim7   v= 60%  r= 10  connect=1
+    move 36  u34_rim7  -> u35_rim5   v= 60%  r= 10  connect=1
+    move 37  u35_rim5  -> u36_rim3   v= 60%  r= 10  connect=1
+    move 38  u36_rim3  -> u37_rim1   v= 60%  r= 10  connect=1
+    move 39  u37_rim1  -> u39_edge20  v= 60%  r= 10  connect=1
+    move 40  u39_edge20 -> u40_edge2  v= 60%  r=  0  connect=0
+
+case           corner     38 corners — distribution reported, not per-corner
+--------------------------------------------------------------------------
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> STOP (approach joins the chain), all at 50 %
+  [INFO] recording -> 20260815T154329_chain_rmix_vmix_capp_v450_left  (100 Hz, ret=0)
+  [INFO] smoothness: 44 decelerations below half cruise, 1.10 per segment, deepest 1 mm/s, 22% of the stage spent below it
+  [INFO] the arm reached 275 mm/s typical against a commanded cap of 450 mm/s (61%). This is EXPECTED, not a fault: the median is bound by ACCELERATION. MEASURED 2026-08-12 at line_speed 0.45 with v=100 fixed, it rose 62.6% -> 77.0% -> 87.6% of cap as line_acc went 1.6 -> 2.4 -> 3.6 while p95 stayed pinned at the cap (H57). Raise line_acc, not line_speed, to close the gap — but see H62: RealMan advises against changing the TCP defaults, citing immediate-stop behaviour.
+  [WARN] p95 reached only 72% of the commanded cap. At a 100% pendant override p95 lands AT or slightly ABOVE the cap (measured 105-110%, H59). This run looks DERATED — check the pendant's real-time speed adjustment before trusting any timing from it.
+  [INFO] recorded 3490 samples (98.9 Hz measured) -> /home/alai-labs/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/runs/20260815T154329_chain_rmix_vmix_capp_v450_left
+chain_rmix_vmix_capp retained       3%         -         3%       10%        7%?      10%?      13%         -        11%         -        74%         -        11%       39%       13%        3%        6%?      22%?      12%      136%?      11%       44%?      16%         -        11%       49%?      13%       13%?       1%       13%        8%        1%        2%       68%?      30%       47%       59%?      37%       89%  
+               v_min m/s   0.006          -      0.008      0.008      0.018      0.018      0.039          -      0.033          -      0.216          -      0.032      0.035      0.039      0.008      0.017      0.017      0.034      0.085      0.033      0.091      0.048          -      0.032      0.043      0.039      0.025      0.004      0.015      0.025      0.004      0.003      0.049      0.064      0.068      0.081      0.077      0.188   
+                          corners [20, 22, 26]: only 2-6 samples in the dip (need 8) — lower the speed or widen the blend
+                          corners [5, 6, 17, 18, 28, 34, 37]: NO CRUISE PLATEAU on the approach (speed varies 31-91 % across the middle of the segment) — the segment never settles, so there is no cruise to retain. Lengthen it or lower the speed.
+  measured this rung: worst J4 at 87 % of its limit
+
+  retained = corner minimum / cruise on the approach.
+  A working blend holds most of its cruise; ~0 % is a full stop.
+  DECISIVE: compare r=0 with the largest r. If they match, the
+  blend radius is not being applied at all.
+  parked at REST
+  tool frame restored to L_glove_4 (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.44999998807907104, 'line_acc': 1.899999976158142, 'angular_speed': 0.6000000238418579, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
