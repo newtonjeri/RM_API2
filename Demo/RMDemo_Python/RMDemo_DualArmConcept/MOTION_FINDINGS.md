@@ -601,6 +601,87 @@ toolframe is process-global and any module constructing its own `Algo`
 resets it — `rm_emulator` now re-asserts the active tool frame at every
 IK/FK entry point instead of assuming it persists.
 
+**RESULTS (SIM, left arm, 2026-08-15 12:36-12:38 — all three HONORED):**
+
+* **Per-move r IS honored** (`chain_rmix` 123649). Cuts track the program
+  exactly: A 0 (exempt, stop 3.4 mm/s), B **r=0 honored — full stop
+  2.3 mm/s, zero cut, chain continues**, C (r=25) 7.9 mm cut at
+  89.6 mm/s, D (r=50) 15.8 mm cut at 133 mm/s. Neither latch hypothesis
+  fits. Mixed radii in one chain are real.
+* **Per-move v IS honored, and a v change does not break the blend**
+  (`chain_vmix` 123725). Stroke plateaus 94 / 243 / 145 mm/s against
+  predicted 100 / 250 / 150; corners between v-changes stay continuous
+  (67–90 mm/s, zero stops). Latch-first (all ~100) and latch-last
+  (all ~150) both excluded.
+* **The chained approach consumes the first-corner exemption**
+  (`blend_r25_capp` 123749). The approach corner P0: zero cut, stop at
+  2.9 mm/s — the exemption landed there. Corner P1, exempt in 001/002,
+  **now blends** (7.9 mm cut, 89 mm/s through). Independent confirmation
+  from the controller state machine (analyse_run H): 4 mid-run MOVE_L
+  exits with the tool still moving; "corners that blended: 1* 2 3 4 5".
+* Calibration note: at these 90°/45 mm corners the cut is
+  **0.70 × (r/100) × minL** (both radii, exactly), vs 1.2–1.5 measured on
+  the tasks' ≥60° corners with longer segments — the coefficient is
+  geometry-dependent; the §9.4 rule (1.4×) is the conservative bound.
+
+All three levers the path redesign needs are therefore real: r per corner,
+v per segment (slow ONLY into the J4-critical segment), and an entry that
+spends the unblendable corner on the touchdown instead of the path.
+
+### 9.3e The redesigned task path (2026-08-15) and the 0.45 m/s question
+
+**`paths/toplid_left_002.py`** — same cleaned footprint as the original
+(every stroke end, rim point and edge point IS an original waypoint), built
+on the verified semantics: serpentine over the 7 fan strokes, chained
+approach (exemption spent at a touchdown 25 mm outside the top-right
+corner), left turns padded 20 mm past the rim at r=35 (all cuts land in the
+padding), right-edge corners r=12 unpadded (~2–4 mm cuts; the right hops
+double as a right-edge pass), rim + top-edge passes kept at r=10, and ONE
+deliberate r=0 stop at the point12 fan reversal. 3.43 m vs 6.20 m; the
+killer traverse, the second rim pass and the point13 spur are gone. Screens
+worst 71 % of J4 at 0.25 (original's measured range: 56–73 %). Comparison
+figure: `paths/toplid_left_002_vs_original.png`.
+
+**Revision 2 (same day) — glove-complete stroke density.** Against
+`glove_frames.yaml` (L_glove_frame_2: 35 mm brush width) with Newton's
+1.5 cm tolerance, the guaranteed band per stroke is 20 mm — and the
+ORIGINAL task's 24–42 mm row spacing never guaranteed coverage. Rev 2
+interpolates the fan to 14 rows (positions linear, orientations slerped
+between proven neighbours; max gap 19.5 mm) plus a short wedge row at the
+point12 apex that U-turns inside already-covered ground. Verified
+numerically: **100.00 % of the original-area hull within 10 mm of a
+cleaning centerline** (17 130 samples). 6.91 m, 41 waypoints, worst J4
+71 % at 0.25. En route: a second reach lesson — the wedge legs screened
+133 % when they carried point13's orientation toward the apex; slerping
+the wedge orientation like the rows fixed it to <71 %. Emulator roadmap
+from the collected data: `EMULATOR_ROADMAP.md`.
+
+**Design lesson — the right edge has NO padding room.** The fan's right
+ends sit at the arm's practical boundary (898 mm base distance, the
+original's own max). A 20 mm extension there pushed the J4 screen from
+~70 % to 110–244 % — near the straight-elbow region, dq4/ds explodes with
+millimetres. Padding is a LEFT-side tool on this task.
+
+**Does all this generalise to 0.45 m/s? Partly measured, partly screened,
+one hard NO:**
+
+* Generalises on evidence: blend-cut geometry is speed-independent
+  0.10–0.35 (SIM, exact) and hinge coverage at 0.45 REAL matches 0.25
+  within noise; corner speed at r ≤ 25 SCALES with v (minima ~double from
+  0.25→0.45); the v-mix screen already ran mixed speeds in one chain.
+* Not yet verified at a 0.45 baseline: the chain semantics themselves.
+  Screens ready: `chain_semantics_004` (r-mix) and `005` (v-mix,
+  plateaus ~250/450/350 if honored) — same box, J4 screens ~94 % at 0.45,
+  marginal by design, SIM refuses safely.
+* Known NOT to generalise: **r = 50 at 0.45** (hinge REAL corner minima
+  collapse, shallow corners dip to 5 mm/s — r=50 is a 0.25-only radius;
+  toplid_left_002's r=35 sits below that regime but 004 will bound it),
+  and **this task's strokes at 0.45**: they measured 56–73 % of J4 at
+  0.25, which scales past 100 % at 0.45 regardless of blending. At a 0.45
+  baseline the stroke entries in V_LIST must drop to ~65 (0.29 m/s,
+  ≤ ~85 % J4); 0.45 then buys its time on hops, rim and edge — and H67
+  already throttles the rotating strokes below 0.45 anyway.
+
 ### 9.4 Practical rule
 
 Choose r per stroke from the allowed end-loss δ:  **r ≈ 133 · δ / L**.
