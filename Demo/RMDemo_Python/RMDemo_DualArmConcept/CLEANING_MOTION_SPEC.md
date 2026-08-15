@@ -72,8 +72,12 @@ configurable limit exactly like line_speed (same vendor-advisory caveats,
 H62, ratchet rule). Raising it toward 1.0–1.2 rad/s would directly raise
 `v_eff` on curved/rotating strokes — the bulk of seat_ring, top, bowl and
 rim work — and its joint-space cost lands mostly on the wrist (J5–J7),
-which every measurement shows loafing (≤36 % in all REAL runs). **This is
-the highest-leverage untested knob in the entire program.** Screen exactly
+which every measurement shows loafing (≤36 % in all REAL runs). **SIM-TESTED with a decomposition caveat (§10.2): genuine cruise gain is
+real but concentrates on LONG rotating segments (top_left: only ~5 %);
+the headline r≥25 duration drops were freeze-shrinkage. The cap remains
+the right lever for long-stroke, J4-light rotating tasks (bowl ring,
+annular arcs) — and it is DOUBLE-EDGED: throttling protects J4-critical
+strokes, so any cap raise requires re-screening J4 at the new cap.** Screen exactly
 like the speed ladder: SIM first, one task, angular cap stepped 0.6 → 0.8
 → 1.0, H63 dwell rule on every joint.
 
@@ -94,7 +98,7 @@ What a hand does on a fixture, and the primitive that reproduces it:
 | human element | robot primitive | status |
 |---|---|---|
 | long sweeping strokes on open surfaces | blended movel serpentine, padded turns | VERIFIED (§9.3g) |
-| curved strokes following contours; rim/edge following | **`rm_movec(pose_via, pose_to, v, r, loop, connect, block)`** — circular arcs, chainable, blendable | EXISTS, UNTESTED |
+| curved strokes following contours; rim/edge following | **`rm_movec`** chained arcs | **VERIFIED SIM 2026-08-15**: 0.00 mm median radial error, no stops, junctions 2× faster than blended corners (§10.1) |
 | scrub cycles on soiled spots | short exact-180 retraces at max accel (§2c), 2–3 Hz | components verified |
 | flowing direction changes, no dead stops | blend chains + turnarounds in padding | VERIFIED |
 | varying contact pressure | NOT commandable (position control + glove compliance); hover offset is the proxy | out of scope |
@@ -204,6 +208,14 @@ recovers 60–90 s of overhead that the 240 s must also contain. With both,
 the activity lands at ≈ 210–240 s. **The 4-minute target is reachable,
 and it is reachable ONLY with the angular-cap program and the slow-family
 redesigns — not with line speed alone.**
+
+### 7b. Measured caution — the r ≥ 25 freeze hazard on dense geometry
+
+The cap-ladder runs exposed that dense task paths (top_left, 42 waypoints)
+spend up to 37 % of runtime in deterministic >1 s freezes at r = 25/50 —
+r = 10 shows zero (§10.3). Until the freeze matrix characterizes the
+mechanism, dense-geometry tasks run r = 10; large radii only on sparse
+padded geometry; arcs preferred over blends at direction changes.
 
 ## 8. Execution order (each step SIM-gated like everything in §9)
 

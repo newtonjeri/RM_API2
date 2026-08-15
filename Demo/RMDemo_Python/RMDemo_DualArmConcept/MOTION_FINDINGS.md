@@ -790,3 +790,57 @@ drop SIM runs before quoting any joint-load figure. Those two steps are what
 turned §1 from wrong into right.
 
 ---
+
+## 10. movec arcs and the angular-cap ladder — SIM results (2026-08-15 evening)
+
+### 10.1 `rm_movec` chains, blends, and traces true circles
+
+`chain_semantics_006` (two runs, identical): both arcs accepted with
+connect=1 mid-chain; **radial error median 0.00 mm, max 0.28 mm** against
+the ideal 3-point circle; full 180° spans traversed; z exact.
+**No stop anywhere in the chain** — junction minima 101–237 mm/s, and the
+FIRST junction crossed at 237 mm/s ≈ cruise: with tangent geometry there
+is nothing for the first-corner exemption to skip — **tangent-arc entry
+makes the exemption moot**. Junctions carry ~2× the speed of equivalent
+blended 90° movel corners (101–118 vs 60–90 mm/s at r=25).
+The wiping-arc primitive is REAL and better-behaved than corner blending.
+
+### 10.2 The angular cap — real but geometry-dependent, and double-edged (REVISED after decomposition)
+
+task:top_left at 0.25, cap 0.6 → 0.8 → 1.0 (limits verified applied and
+restored; the gate screened cap-aware at 85 % worst):
+
+| r | dur 0.6 | dur 0.8 | dur 1.0 | avg mm/s 0.6→1.0 | time <25 mm/s |
+|---|---|---|---|---|---|
+| 10 | 41.2 | 39.7 | 38.9 (−6 %) | 117→124 | ~18 % flat |
+| 25 | 60.0 | 51.6 | 45.9 (−23 %) | 69→91 | 51→38 % |
+| 50 | 47.7 | 41.4 | 38.3 (−20 %) | 70→87 | 44→31 % |
+
+**Decomposition (the double-check that mattered):** the r=25/50 duration
+gains are ~95 % FREEZE-SHRINKAGE, not faster cruising — moving time
+improved only 2–5 %. The genuine throttle gain (r=10: −2.3 s) localizes
+to the six LONGEST segments (116–267 mm, +2.24 s of the +2.3), exactly
+where sustained rotation-limited cruise exists. So: the cap lever is
+REAL but scales with long rotating segments — top_left (median 125 mm)
+was a weak probe. Best beneficiaries: high-rotation, J4-LIGHT tasks
+(bowl_inside_ring: 33 % J4, 31/31 throttled). **Double edge:** on
+J4-critical strokes the throttle is PROTECTIVE — raising the cap
+removes it and exposes J4 (the cap-aware gate showed top_left 65→85 %);
+never raise the cap without re-screening J4 at the raised value.
+SIM cannot price the wrist joints — the REAL ladder decides J5–J7
+under H63.
+
+### 10.3 The r ≥ 25 freeze hazard is EVERYWHERE on dense task geometry
+
+top_left r=25 at cap 0.6 spent **22.5 s of its 60 s in nine >1 s freezes**
+(two >5 s); r=50: seven freezes, 12.8 s; **r=10: zero**. Same spots at
+every cap (near point1/14/8/5/6/2/4/7, 4–32 mm off-waypoint) —
+deterministic, geometry-linked, the point13/hinge family generalized.
+Raising the cap shrinks but does not remove them (r25: 9→8→4 freezes).
+Forensics: the arm goes IDLE mid-freeze (arm_status 1→0→1) — planner
+chain-refill starvation between queued trajectories, not dynamics — and
+the sites sit adjacent to SHORT segments (37–88 mm).
+**Operating guidance until the mechanism is characterized: r=10 on dense
+task paths; big radii only on sparse padded geometry (toplid_left_002
+style), or arcs instead of blends.** This elevates EMULATOR_ROADMAP gap 3
+(the freeze matrix) to first priority — top_left is a ready probe corpus.

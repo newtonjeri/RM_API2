@@ -99,10 +99,10 @@ def main():
         zdrift = np.abs(T[idx, 2] - A[2])
         # angular span visited
         ang = np.arctan2(T[idx, 1] - ctr[1], T[idx, 0] - ctr[0])
-        a0 = math.atan2(A[1] - ctr[1], A[0] - ctr[0])
-        a1 = math.atan2(B[1] - ctr[1], B[0] - ctr[0])
         span = abs((a1 - a0 + math.pi) % (2 * math.pi) - math.pi)
-        visited = np.ptp(np.unwrap(np.sort(ang)))
+        # unwrap in TIME order — sorting first inflates arcs that cross the
+        # ±180° branch cut to ~354° (seen on 006 arc 2, which passes 180°)
+        visited = float(np.ptp(np.unwrap(ang)))
         vmin_entry = np.nanmin(sp[max(0, idx[0] - 10):idx[0] + 10]) \
             if idx[0] > 10 else float("nan")
         vmin_exit = np.nanmin(sp[idx[-1] - 10:idx[-1] + 10])
