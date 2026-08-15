@@ -844,3 +844,23 @@ the sites sit adjacent to SHORT segments (37–88 mm).
 task paths; big radii only on sparse padded geometry (toplid_left_002
 style), or arcs instead of blends.** This elevates EMULATOR_ROADMAP gap 3
 (the freeze matrix) to first priority — top_left is a ready probe corpus.
+
+### 10.4 REAL confirmations (2026-08-15 evening, hardware)
+
+* **Arcs on hardware**: radial error med 0.37–0.43 mm, p95 ≤1.30, max
+  2.23 mm — within UDP aliasing noise; z-drift ≤1.6 mm; junctions
+  93–212 mm/s, no stops. The movec wiping primitive is production-real.
+* **Cap raise is SAFE to 1.0 on this task (the go/no-go): H63 dwell = 0 ms
+  on every joint at every cap; all peaks ≤86 %.** The cap-aware screen
+  predicted J4 85 % at raised caps; measured 78–80 % (r10) — the screen's
+  calibration holds. J6 rose 61→79 %, J5 ≤25 %, J7 ≤55 % — wrist cost
+  modest. J1 runs 83–86 % but FLAT across caps (not cap-driven — it is
+  this task's standing near-limit joint, no dwell). The
+  re-screen-J4-at-the-new-cap rule from §10.2 is now hardware-validated.
+* **The freezes reproduce on REAL exactly**: same nine sites, same
+  waypoints, 22.0 s total vs SIM's 22.5 s. Planner chain-refill
+  starvation is deterministic controller behaviour and SIM-faithful —
+  the freeze matrix (EMULATOR_ROADMAP gap 3) can be mapped almost
+  entirely in SIM, and the r=10 rule for dense geometry stands on
+  hardware evidence.
+* SIM↔REAL duration agreement within 0.5 s on all ten runs.

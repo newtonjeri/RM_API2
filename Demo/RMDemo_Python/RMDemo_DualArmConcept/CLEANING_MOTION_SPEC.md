@@ -9,6 +9,55 @@ under 4 minutes. Task-config structure may change if speed is not lost.*
 
 ---
 
+## 0. DESIGN CONTRACT (agreed with Newton, 2026-08-16)
+
+**Design speeds: 0.8 m/s linear / 1.0 rad/s angular — applied under law,
+never as globals.**
+
+1. LINEAR 0.8 m/s is the per-move design target. A move may carry it only
+   where its family's cap-aware J4 screen passes at <=90 %. Everything
+   else runs at its family ceiling (table in section 2) via per-move v.
+   The vendor 1.8 m/s is a hard maximum, never a target. The four
+   over-limit families (front, side, seat_ring, deep) stay <=0.19 m/s
+   until their redesigns land.
+2. ANGULAR 1.0 rad/s is the working cap. Every task is re-screened for J4
+   AT the raised cap before running there (raising the cap removes the
+   protective throttle — hardware-verified). First hardware run per
+   family gets a J5-J7 H63 review.
+3. LAWS, always in force: line_acc = max(default 1.6, 3 x line_speed) —
+   the default is the FLOOR; angular_acc stays 4.0; limits are verified
+   by readback, never trusted; limits RATCHET — reset_limits.py after
+   every session.
+
+**Wiping action:** serpentine strokes with padded turnarounds; movec arcs
+at direction changes and for annular regions (hardware-verified: 0.4 mm
+tracking, no stops, 2x junction speed vs blends); scrubbing = exact-180
+retraces (~2.5 Hz, coverage-safe); entries chained so the unblendable
+first corner and its stop land at the touchdown, outside the area. No
+stops except touchdown and physically-required reversals (r=0).
+
+**Blend radius:** per move. r=10 on dense geometry (the freeze rule —
+hardware-confirmed deterministic planner freezes at r>=25 near short
+segments); large r only on sparse padded geometry; arcs preferred over
+blends wherever a turn can be an arc.
+
+**Coverage:** stroke spacing <= effective glove band (footprint width
+minus the 1.5 cm tolerance: 20 mm for frames 1/2); every generated path
+numerically verified >=99 % of its area hull before first run. Contact
+rule for frame selection (proximal surfaces allowed): keep the pad's
+LONG axis within 30 deg of the surface (26.7 deg frames 3/4), i.e.
+f = t/(D sin theta) >= 0.5, with the convex-curvature check below
+R ~ 40 mm.
+
+**Budget:** whole activity < 4 minutes; ~65 m per arm; requires
+>=0.36 m/s sustained average — delivered by the speed program + cap 1.0
++ slow-family redesigns + task chaining + arc regeneration together.
+
+**Process:** every change goes screen (offline, cap- and V_LIST-aware)
+-> SIM -> REAL; H63 dwell rule everywhere; final-waypoint arrival
+verified per run; E-stop in hand on REAL.
+
+
 ## 1. The budget arithmetic — what 4 minutes actually requires
 
 Parsed from every commode_c cleaning config: **64.3 m (left) / 65.4 m
