@@ -1,11 +1,12 @@
-# Cleaning-motion design spec — 0.8 m/s program, wiping action, 4-minute activity
+# Cleaning-motion design spec — 0.8 m/s program, wiping action, 4-minute cleaning inside a 6-minute activity
 
 *2026-08-15. Research basis: commode_c fixture configs (32 task YAMLs, 20
 regions, meshes + region annotations), glove_frames.yaml, the measured motion
 laws in MOTION_FINDINGS §9, and a J4 screen of every task family. Targets set
 by Newton: line speed toward 0.8 m/s, human-like wiping action, proximal
 glove surfaces where primary contact degrades below half, whole activity
-under 4 minutes. Task-config structure may change if speed is not lost.*
+cleaning under 4 minutes, inside a whole activity under 6 (Newton,
+2026-08-17). Task-config structure may change if speed is not lost.*
 
 ---
 
@@ -49,16 +50,130 @@ LONG axis within 30 deg of the surface (26.7 deg frames 3/4), i.e.
 f = t/(D sin theta) >= 0.5, with the convex-curvature check below
 R ~ 40 mm.
 
-**Budget:** whole activity < 4 minutes; ~65 m per arm; requires
->=0.36 m/s sustained average — delivered by the speed program + cap 1.0
-+ slow-family redesigns + task chaining + arc regeneration together.
+**Budget — TWO numbers, do not conflate them** (Newton, 2026-08-17):
+
+* **CLEANING < 4 minutes.** ~65 m per arm; 240 s less in-cleaning
+  overheads (task entries, lid/seat articulation, UGV standoff) leaves
+  ~180 s of motion -> requires **>=0.36 m/s sustained average**. Best
+  measured today is 0.21 m/s, a **x1.7 gap**. It cannot be closed by one
+  knob: the speed program + cap 1.0 + slow-family redesigns + task
+  chaining + arc regeneration must move TOGETHER. This is the number
+  every section below is written against.
+* **WHOLE ACTIVITY < 6 minutes.** Cleaning plus the peripheral
+  operations — bin drop/raise, and the glove wear/removal instances.
+  The extra ~120 s is the allowance for those. **Not measured:** no
+  glove or bin task has a recorded duration
+  (`alix_tasks/Reports/task_metrics.csv` holds only `lid_close_left`
+  and `toplid_right`), so 120 s is a design envelope, not a
+  measurement. First measured glove/bin cycle should be checked
+  against it.
+
+The four over-limit families stay <=0.19 m/s under item 1 for SAFETY,
+independent of either clock.
 
 **Process:** every change goes screen (offline, cap- and V_LIST-aware)
 -> SIM -> REAL; H63 dwell rule everywhere; final-waypoint arrival
 verified per run; E-stop in hand on REAL.
 
+> **READING NOTE on item 1 — how to read the J4 screen. No contract term
+> changed.** *Rewritten 2026-08-17; the previous note argued the screen was
+> "necessary, not sufficient" and proposed adding a criterion. Withdrawn —
+> see §0b for the production-form measurements that refuted it.*
+>
+> The J4 screen is the gate, and on the production motion form it is
+> **correct**: per-move mixed radius and speed with the cap applied puts J4
+> at 60 % / 87 % / 44 % on the three REAL runs, worst joint every time, zero
+> H63 dwell (§0b).
+>
+> Two things it does not do, both handled by the Process line above rather
+> than by a new criterion:
+> * It bounds **J4 only**, so the §2 ceilings are upper bounds on J4, not
+>   task ceilings. `top` is held at ≤ 0.25 for that reason.
+> * It says nothing about the other six joints. **SIM does, for free** — it
+>   matches REAL's binding joint on 31 of 31 comparable production
+>   configurations. Run SIM before REAL, as item 3 of Process already
+>   requires; that is where all seven joints get seen.
+>
+> `toplid_left` @0.80 put four joints over limit at once — but 0.80 is far
+> above any family ceiling in §2, so item 1 already forbids it. The screen
+> was never the thing that would have caught it.
 
-## 1. The budget arithmetic — what 4 minutes actually requires
+
+### 0b. GATE NOTE — the J4 screen, tested against the production motion form
+
+*Rewritten 2026-08-17 on Newton's instruction, replacing a 148-line
+amendment proposal and its correction history. That material argued the J4
+screen of §0 item 1 was "necessary but not sufficient" and proposed adding a
+mandatory seven-joint REAL audit. **The proposal is withdrawn.** It rested on
+two paths, and neither is a production motion:*
+
+* ***`hinge_area`*** *— archived. It survives only in
+  `alix_tasks/config/archive/reference/`, is not a live commode_c config, and
+  was used for a handful of blend characterisation runs. Newton, 2026-08-17:
+  "I never used hinge area recently, that is a pre-existing motion, I used for
+  some few blend tests."*
+* ***`top_left`*** *— every REAL run of it is `blend_r10/r25/r50`, a
+  FIXED-radius characterisation sweep. §0 mandates blend radius **per move**.
+  There is no production-form `top_left` run in the corpus.*
+
+**What the production motion form actually shows.** The runs that implement
+§0's blend policy — per-move mixed radius, per-move mixed speed, angular cap
+applied, on `toplid_left_002` — were recorded 2026-08-15. REAL, reported
+channel, all seven joints:
+
+| run | v | worst joint | % of limit | H63 dwell ≥98 % |
+|---|---|---|---|---|
+| `20260815T153752` chain_rmix_vmix_capp | 0.25 | **J4** | 60 % | **0 ms** |
+| `20260815T154329` chain_rmix_vmix_capp | 0.45 | **J4** | 87 % | **0 ms** |
+| `20260815T201624` chain_arc_r25 | 0.25 | **J4** | 44 % | **0 ms** |
+
+**J4 binds on all three. All seven joints under limit. Zero dwell.** At
+0.45 J4 reads 87 %, inside the 90 % screen threshold, and the full audit
+confirms J4 is genuinely the worst joint. **On the contract's own motion form
+the J4 screen names the right joint and is sufficient.** §0 item 1 stands
+unchanged.
+
+**SIM corroborates, and it is free.** With the same estimator forced on both
+sides (`survey_binding.py --pairs`, logic stamp `186b743034bb`), SIM predicts
+REAL's binding joint on **31 of 31 comparable production configurations** —
+including both production-form pairs above. The only disagreements anywhere
+in the corpus are `hinge_area`, the archived path. This is the evidence for
+§0's Process line (screen → SIM → REAL): SIM screens all seven joints for
+nothing, and it tracks REAL wherever a stable binding joint exists.
+
+**What remains true, and is a note rather than a gate.** The §2 ceiling table
+is a J4 screen, so it bounds J4 only. On `top` at a fixed r=10 sweep, J1
+measured 85–86 % against J4 65–80 % — which is why that row is held at
+≤ 0.25 (see §2). Treat J1-heavy rows as upper bounds on J4 rather than as
+task ceilings, and prefer a SIM run over an assumption before raising any of
+them. That is guidance for reading §2, not an additional gate on §0.
+
+**Two measured facts worth keeping from the withdrawn material:**
+
+* **The only H63 exposures in the REAL corpus are speed, not radius.**
+  `20260811T184109_toplid_left` (v=0.8, J4 105.9 %, 330 ms) and
+  `20260811T222451_toplid_right` (v=0.6, J4 99.8 %, 110 ms) — both at r=10,
+  both above any production cap, and both the runs H63 was calibrated on. No
+  r=10 REAL run at or below 0.5 m/s carries any dwell.
+* **The binding joint is a property of the task and does not move with
+  speed** at fixed radius (H73). `toplid` → J4 at every speed and radius
+  tested; `top` → J1 on the fixed-radius sweeps.
+
+*Method rules that produced this section, kept because they were each paid
+for: read a run's own `run.json` config before quoting it; never cite a
+single run where siblings exist; resolve a run's family from `path_file`, not
+its label, and state n; a dead CHANNEL is not a dead RUN (SIM's speed channel
+is dead, its position channel is not); and quote the tool's `logic stamp`
+with any figure, because a number can be correct when computed and go stale
+when the code beneath it changes.*
+
+## 1. The budget arithmetic — what 4 minutes of CLEANING actually requires
+
+*Scope note, 2026-08-17: this section is about the **cleaning** budget, 4
+minutes. The 6-minute figure in §0 is the WHOLE ACTIVITY and additionally
+covers bin drop/raise and the glove wear/removal instances. Nothing in §1–§7
+is written against the 6-minute number, and the ×1.7 gap below is not
+relieved by it.*
 
 Parsed from every commode_c cleaning config: **64.3 m (left) / 65.4 m
 (right) of commanded cleaning path**, split across 16 tasks per arm, mostly
@@ -91,13 +206,19 @@ J4 screen (exact, redundancy-invariant) of every left task at 0.25 m/s;
 | bottomlid | glove_2 | 50 % | 0.45 | 35/45 | mixed |
 | lid_side | glove_1 | 50 % | 0.45 | 9/13 | mixed |
 | bowl_inside_rim | glove_3 | 59 % | 0.38 | 22/23 | cap-bound |
-| top | glove_2 | 65 % | 0.35 | 38/42 | cap-bound |
-| hinge_area | glove_4 | 64 % | 0.35 | 5/43 | J4-bound |
+| top | glove_2 | 65 % | **<=0.25** | 38/42 | **J1-bound (measured)** |
 | toplid | glove_2 | 70 % | 0.32 | 7/27 | J4-bound |
 | **deep** | glove_1 | **118 %** | **0.19** | 41/44 | OVER at 0.25 |
 | **side** | glove_1 | **142 %** | **0.16** | 18/45 | OVER at 0.25 |
 | **seat_ring** | glove_2 | **162 %** | **0.14** | 35/52 | OVER at 0.25 |
 | **front** | glove_1 | **293 %** | **0.08** | 17/40 | OVER at 0.25 |
+
+**`top` row corrected 2026-08-16.** Its J4-derived ceiling of 0.35 does not
+hold: nine REAL runs at a commanded **0.25** put J1 above J4 on every one
+(J1 86 % reported / 90 % house window, against J4 61–95 %), so `top` is
+J1-bound at or below 0.25 and must not be raised (H73). Every other J1-heavy row is suspect for the same reason — the
+column screens J4 only — and none of them has been run. Ceilings here are
+upper bounds on J4 alone, not task ceilings.
 
 Three consequences:
 
@@ -106,7 +227,7 @@ Three consequences:
   surgically. A global 0.8 would abort exactly like the old 0.45 toplid did.
 * **Four families are illegal at today's 0.25** — `front`, `seat_ring`,
   `side`, `deep` (23.5 m, ~36 % of the path). These, not toplid, decide the
-  4-minute question. Their J4 blowups are pose-family problems (frame_1
+  4-minute cleaning question. Their J4 blowups are pose-family problems (frame_1
   X-press at low/awkward reach), fixable in order of preference: stroke
   DIRECTION change (J4/m is direction-dependent), ik_frame change with the
   §4 contact rule, UGV standoff change (the F49 lesson), pose-family
@@ -272,10 +393,15 @@ Efficiency factor measured (avg TCP / commanded cap): 0.70 at 0.25,
 **Over budget at today's angular cap — by design honesty.** The two
 closures: (a) the angular-cap raise (§2b) plausibly moves the medium group
 0.22 → 0.30+ (−45 s) and slow group similarly (−30 s); (b) task chaining
-recovers 60–90 s of overhead that the 240 s must also contain. With both,
-the activity lands at ≈ 210–240 s. **The 4-minute target is reachable,
-and it is reachable ONLY with the angular-cap program and the slow-family
-redesigns — not with line speed alone.**
+recovers 60–90 s of overhead that the activity budget must also contain.
+With both, the cleaning phase lands at ≈ 210–240 s. **The 4-minute CLEANING target is
+reachable, and it is reachable ONLY with the angular-cap program and the
+slow-family redesigns — not with line speed alone.**
+
+*This is the cleaning budget and the 6-minute whole-activity figure does not
+relieve it (§0). At ≈ 210–240 s of cleaning, the remaining ~120–150 s of the
+6-minute envelope is what bin drop/raise and the glove instances must fit
+into — untested, since no glove or bin task has a measured duration yet.*
 
 ### 7b. Measured caution — the r ≥ 25 freeze hazard on dense geometry
 

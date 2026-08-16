@@ -91,6 +91,51 @@ Already fixed this session: the process-global algo toolframe trap
 (`_set_algo_toolframe` asserted at every IK/FK entry) — see the memory note
 in project-emulator-cannot-predict-movel.
 
+## A2. Cross-tree note — the alix port, and why it is NOT auto-syncable
+
+*Recorded 2026-08-17 after coordinating with the alix session.*
+
+A second copy of this emulator lives at
+`~/alix_ws/src/alix/core/python/src/alix_emulator/rm_emulator.py`
+(62,275 B, 2026-08-11) against this one (112,902 B, 2026-08-15). The port
+predates BOTH the measured-law work and the controller-frame pose boundary,
+so it still returns ALGO-frame poses from `current_pose` while taking
+CONTROLLER-frame `movel` targets — a 90° round-trip error for any consumer
+that reads a pose and commands from it.
+
+**Measured exposure over there: ZERO frame-exposed call sites** (12 files
+import it; the only live `rm_movel` call asserts the joints do NOT move, so
+it never round-trips). The defect is latent — a trap for the next consumer,
+not a live bug.
+
+**Why a re-sync is a decision, not a chore.** That one live call is a
+deliberate tripwire for their F20: *"if anyone ever makes `movel` kinematic,
+it fails loudly and the change gets the hardware review it needs."* Our
+`movel` IS now kinematic (`_plan_chain` solves IK per sample and drives the
+joints). Replayed here, their assertion fails exactly as designed:
+
+    ret=0, joints MOVED, max joint delta 154.98°   → `assert after == before` FAILS
+
+So adopting this file over there is not "take the newer version", it is
+"should emulator `movel` become kinematic" — a behaviour change their D4 rule
+assigns to Newton, awake, and it would necessarily retire F20's timer
+behaviour (their test rewritten from "movel must not move" to "movel must
+move, within this fidelity bound"). **Nothing here should be pushed into that
+tree without that decision.**
+
+Alix recorded an interim option, and it is an OPTION AWAITING NEWTON, not an
+agreement — `alix/plan/FINDINGS.md:722-725`, verbatim:
+
+> **Newton's call.** The cheap middle option, if the hold continues: pin the
+> port's consumers to the algo-frame convention explicitly, so the trap is
+> documented at the point of use rather than discovered by whoever writes
+> the next one.
+
+It sits beside two others alix also left open — re-sync, or do nothing. An
+earlier revision of this section said "agreed", which converted a
+flagged-for-decision option into a settled action and attributed the
+agreement to a side that never gave it. Corrected 2026-08-17.
+
 ## B. Data gaps, and how to collect each
 
 | # | Gap | Why it matters | Collection recipe (cheapest first) |

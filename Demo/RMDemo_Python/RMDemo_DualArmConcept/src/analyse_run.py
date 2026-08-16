@@ -4,6 +4,42 @@
     python3 analyse_run.py ../runs/<run_dir> --plot
     python3 analyse_run.py ../runs/A ../runs/B ../runs/C        # compare
     python3 analyse_run.py ../runs/*_v350_left --plot --quiet
+    python3 analyse_run.py ../runs/SIM ../runs/REAL --rates derived
+
+`--rates auto | derived | reported` picks the joint-rate estimator.
+`auto` (default) reads the reported `speed{n}` channel and falls back to
+d(position)/dt when that channel is dead, which it is in SIM. **Force
+`derived` whenever comparing SIM against REAL** — the two estimators differ
+by ~20 % (H78), so an auto/auto comparison prices the estimator, not the
+mode.
+
+⚠ **DO NOT RUN AN H63 SAFETY VERDICT OFF `derived` ON A REAL RUN.** The two
+estimators do not merely differ, they differ WITH A SIGN: derived runs HIGH.
+Measured on REAL `20260815T201708`, reported vs derived as % of limit —
+J1 84.6/90.3, J2 34.4/35.4, J3 52.0/55.5, J4 65.1/64.2, J5 18.3/18.3,
+J6 60.6/62.8, J7 42.4/44.4 (rm-api2 session, 2026-08-17). Up to **5.7 points
+high**, and H63 keys on dwell at **>=98 %** of a limit — so a derived verdict
+false-positives exactly in the band where the rule decides something.
+
+**AND THE DIVERGENCE IS LARGEST ON J1** — the joint most likely to be near a
+limit in the first place. J1 is the measured binding joint on `top_left` at
+0.25 m/s (84.6-86.3 % reported, flat across angular caps), so on that family
+the estimator choice moves the number in the band where H63 decides something.
+
+*(An earlier version of this note cited `hinge_area` at "99.6 % with 30 ms
+dwell" as the example. That was withdrawn 2026-08-17: the run is
+`blend_r25_v250_right`, a blend-characterisation run at r=25 — a radius §0
+forbids on dense geometry — and its same-configuration twin reads J1 at 71 %.
+Five of the six runs on that path carry zero dwell. The estimator point stands
+on `top_left`; the hinge_area example did not survive re-measurement.)*
+
+The rule that follows:
+  * REAL run, safety/dwell verdict  -> `reported`. It is the controller's own
+    number, and it is what H63 was calibrated on.
+  * SIM run                         -> `derived`. The reported channel is dead;
+    there is nothing else.
+  * SIM vs REAL comparison          -> `derived` on both, and read the result
+    as a mode comparison, not as an absolute utilisation.
 
 OFFLINE AND READ-ONLY. It opens `stream.csv` and `run.json` and nothing
 else — no arm, no controller, no emulator. Any run ever recorded can be
@@ -123,6 +159,49 @@ def windowed_speed(t, p, k=SPEED_WINDOW):
         dt = t[b] - t[a]
         out.append(math.dist(p[b], p[a]) / dt if dt > 1e-6 else 0.0)
     return out
+
+
+def derive_joint_rates(t, qs, k=SPEED_WINDOW):
+    """|dq|/dt per joint, over the same k-sample window as `windowed_speed`
+    so every rate in this report comes from one estimator."""
+    half, out = k // 2, []
+    for j in range(7):
+        c = []
+        for i in range(len(t)):
+            a, b = max(0, i - half), min(len(t) - 1, i + half)
+            dt = t[b] - t[a]
+            c.append(abs(qs[j][b] - qs[j][a]) / dt if dt > 1e-6 else 0.0)
+        out.append(c)
+    return out
+
+
+def resolve_joint_rates(t, qs, qds):
+    """(rates, source) — fall back to d(position)/dt when `speed{n}` is dead.
+
+    SIM populates `speed{n}` with 0.1-0.5 deg/s while the arm moves hundreds
+    of degrees, so an `any(nonzero)` test does NOT detect it: one cap-ladder
+    run carried 16 nonzero samples out of 27237 and the old guard passed it
+    straight through. The report then read every joint at 0 % of its limit
+    with an H63 dwell of 0 ms — the most reassuring possible answer, on the
+    mode we use precisely BECAUSE it is a free pre-flight check
+    (MODE_CHARACTERIZATION 1: SIM's position channel is faithful, so
+    differentiate it — that is the way through).
+
+    The test is therefore whether the reported peak is CONSISTENT WITH THE
+    POSITION TRAVEL, not whether it is nonzero. The two estimators differ by
+    ~20 % where both are live (H78), so the source is reported with the
+    numbers rather than left to be guessed.
+    """
+    if not qs:
+        return qds, "reported speed{n}"
+    derived = derive_joint_rates(t, qs)
+    der_pk = max((max(c) for c in derived), default=0.0)
+    if not qds:
+        return derived, "d(position)/dt"
+    rep_pk = max((max(abs(v) for v in c) for c in qds), default=0.0)
+    if der_pk > 1.0 and rep_pk < 0.05 * der_pk:
+        return derived, "d(position)/dt — REPORTED CHANNEL DEAD (SIM)"
+    return qds, "reported speed{n}"
 
 
 def constant_channel(vals):
@@ -311,8 +390,9 @@ def section_tcp(meta, spd):
 
 
 # ── E. joints ──────────────────────────────────────────────────────────────
-def section_joints(meta, rows, t, p, qs, qds):
+def section_joints(meta, rows, t, p, qs, qds, qd_src="reported speed{n}"):
     print("E. JOINTS — travel, rate against the limit, and DWELL near it")
+    print("   rate estimator: %s" % qd_src)
     lim = ((meta.get("limits_in_force") or {}).get("joint_speed")
            or FALLBACK_JOINT_LIMIT)
     arc = sum(math.dist(p[i], p[i - 1]) for i in range(1, len(p)))
@@ -993,7 +1073,7 @@ def trend(summaries):
 
 
 # ── one run ────────────────────────────────────────────────────────────────
-def analyse(run_dir, plot=False, payload=None, quiet=False):
+def analyse(run_dir, plot=False, payload=None, quiet=False, rates="auto"):
     d, meta, rows = load(run_dir)
     if len(rows) < 2:
         print("%s: fewer than 2 samples, nothing to analyse" % d.name)
@@ -1006,6 +1086,20 @@ def analyse(run_dir, plot=False, payload=None, quiet=False):
     p = list(zip(px, py, pz))
     qs = joints(rows, "position")
     qds = joints(rows, "speed")
+    # A DEAD `speed{n}` CHANNEL MUST NOT READ AS A SAFE RUN — see
+    # `resolve_joint_rates`. Resolved once, here, so section_joints,
+    # section_electrical, summarise and the plot all use the same rates.
+    #
+    # COMPARING SIM AGAINST REAL: pass `--rates derived`. Left on `auto` a
+    # SIM run falls back to d(position)/dt while its REAL twin keeps the
+    # reported channel, and the two estimators differ by ~20 % (H78) — so an
+    # auto/auto comparison prices the estimator, not the mode.
+    if rates == "derived" and qs:
+        qds, qd_src = derive_joint_rates(t, qs), "d(position)/dt — forced"
+    elif rates == "reported":
+        qd_src = "reported speed{n} — forced"
+    else:
+        qds, qd_src = resolve_joint_rates(t, qs, qds)
     spd = windowed_speed(t, p)
 
     if not quiet:
@@ -1020,7 +1114,7 @@ def analyse(run_dir, plot=False, payload=None, quiet=False):
     if not quiet:
         section_tcp(meta, spd)
     if qs and not quiet:
-        section_joints(meta, rows, t, p, qs, qds)
+        section_joints(meta, rows, t, p, qs, qds, qd_src)
         section_jacobian(meta, p, qs)
     sig = None
     if qs:
@@ -1072,10 +1166,17 @@ def main() -> int:
         i = sys.argv.index("--json")
         js = (sys.argv[i + 1] if i + 1 < len(sys.argv)
               and not sys.argv[i + 1].startswith("--") else "-")
+    rates = "auto"
+    if "--rates" in sys.argv:
+        i = sys.argv.index("--rates")
+        rates = sys.argv[i + 1] if i + 1 < len(sys.argv) else "auto"
+        if rates not in ("auto", "derived", "reported"):
+            print("--rates wants auto | derived | reported")
+            return 1
     # Flags that take a value must have that value removed from the
     # directory list, or it gets opened as a run and reported as missing.
     taken = set()
-    for f in ("--json", "--payload"):
+    for f in ("--json", "--payload", "--rates"):
         if f in sys.argv and sys.argv.index(f) + 1 < len(sys.argv):
             nxt = sys.argv[sys.argv.index(f) + 1]
             if not nxt.startswith("--"):
@@ -1087,7 +1188,8 @@ def main() -> int:
         if i and not quiet:
             print()
         try:
-            s = analyse(dd, plot=plot, payload=payload, quiet=quiet)
+            s = analyse(dd, plot=plot, payload=payload, quiet=quiet,
+                        rates=rates)
         except (OSError, KeyError) as exc:
             print("%s: %s" % (dd, exc))
             continue

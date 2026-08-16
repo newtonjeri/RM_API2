@@ -94,6 +94,18 @@ The "J4 problem" is a `toplid` characteristic. **J1 binds on 11 of 24 tasks and 
 — unsurprising, since J1 and J2 have the lower limit (180 °/s against 225 for
 J3–J7).
 
+QUALIFIED 2026-08-16 — see `BINDING_JOINT_RESOLUTION.md`. This table is what
+**MoveIt's** redundancy resolution does, and the cleaning path never plays the
+plan back (`execute_path` is chained `movel`, stage_runner.py:333-400), so the
+controller re-solves it. Against hardware the claim splits: **J1 confirmed on
+`top_left`** — the highest joint at a commanded 0.25 m/s at every cap, under
+every estimator (86 % reported / 90 % house window) — so J1 binding is real,
+not a planning artifact. But **`hinge_area_left`
+measures J5, not the J1 this table names**, and the plan's overall record is
+**11/13, not 13/13**. Read the row as a ranking with a wide-margin caveat, and
+note the header claim is too strong: the binding joint is per task, and three
+different ones have been measured (H73).
+
 ### 3. PREDICTION: the saturated tasks cannot run at our current settings
 
 Now calibrated over all 13 REAL recordings rather than the single task this
@@ -122,6 +134,16 @@ plan up to the joint limits and does. Nothing about the geometry forces
 179.9 °/s on J1 — the scaling permits it. Lowering `max_velocity_scaling`
 for the saturated tasks buys margin directly, at the cost of stroke time, and
 needs no controller change and no vendor answer.
+
+RETRACTED 2026-08-16 (H76). The remedy is inert. `max_velocity_scaling`
+appears only in the task-config YAMLs, **no runtime code reads it**, and the
+cleaning path is executed as chained `rm_movel` at `cleaning_speed_pct` of the
+controller's `line_speed` cap — the plan's time parameterisation is used for
+named `movej` poses only. Lowering it changes the saved plan and changes
+nothing about how the task runs. The levers that do exist are
+`cleaning_speed_pct` / `line_speed`, `line_acc`, the angular cap, blend radius,
+and the path geometry. The first two sentences stand as a description of the
+plan; only the remedy is withdrawn.
 
 ### 5. Orientation cost is universal; its magnitude is not
 
@@ -169,6 +191,10 @@ motion (H46).
   the planner saturates by permission, not necessity.
 * **H49** — **J1 is the binding joint on 11 of 24 tasks**; J4 on only 4. The
   J4 saturation behind H44/H46 is specific to `toplid`.
+  *Superseded in scope by H73 (2026-08-16): this counts MoveIt's resolution,
+  not the controller's. J1 binding is confirmed on hardware for `top_left`,
+  but the binding joint is per task — J4 on `toplid`, J1 on `top_left`, J5 on
+  `hinge_area_left` — and no single-joint screen clears a task.*
 * **H50** — orientation cost median **2.5×** across tasks, range **1.4×–9.2×**;
   the bowl-interior tasks are the expensive end.
 * **H51** — **20 of 24 cleaning tasks have never been executed**, and 8 of the

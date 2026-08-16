@@ -11,17 +11,36 @@ Three modes produce recordings that LOOK identical — same 62 columns, same
 MEASURED CHANNEL FIDELITY (this tool's `--channels` report):
 
     channel              emulator      SIM              REAL
-    joint position       NOT MOVED*    faithful         yes
+    joint position       MODELLED*     faithful         yes
     joint speed field    zero          DEAD (~0.4 °/s)  yes
     joint current        idle          idle only        yes
-    tool pose            not modelled  faithful         yes
-    stage timing         formula       within 2 %       yes
+    tool pose            modelled*     faithful         yes
+    stage timing         measured law  within 2 %       yes
 
-    * `rm_emulator.movel_chain` states it plainly: "Cartesian geometry is
+    * CORRECTED 2026-08-17. This table read "NOT MOVED / not modelled /
+      formula" and quoted `movel_chain` as saying "Cartesian geometry is
       not modelled — the emulator has no IK — so the joints are left
-      alone." A cleaning stroke on the emulator therefore exercises the
-      DISPATCH (queue depth, chain semantics, one arrival event) and
-      nothing about the motion.
+      alone." THAT WAS TRUE UNTIL 2026-08-12 AND IS NOW STALE. The same
+      docstring today opens "CARTESIAN GEOMETRY IS MODELLED (added
+      2026-08-12)": it seeds from the current joints, walks the queued
+      poses as a Cartesian polyline, solves seeded IK per sample with
+      RealMan's own offline solver, times each segment on a trapezoidal
+      profile from the arm's own limits, and drives the joints.
+      Verified by replay 2026-08-17: `rm_movel` returns 0 and moves the
+      arm 154.98 deg on the worst joint.
+
+      Two limits to carry, because they decide what this tool may claim:
+      the emulator DELIBERATELY does not enforce joint SPEED limits (see
+      `movel_chain`), and IK does not always solve — the replay above
+      printed "57 of 297 samples had no IK solution — joint rates are an
+      UNDER-estimate". So emulator joint rates are a floor, not a
+      measurement, and no H63 dwell verdict may be taken from them.
+
+      Note this is the UPSTREAM emulator. The alix port
+      (`core/python/src/alix_emulator/rm_emulator.py`) is the 2026-08-11
+      file and still has the timer behaviour this table used to describe —
+      alix FINDINGS F20/F42. Which copy you are reading decides which row
+      of this table is true.
 
 So SIM's `speed{n}` column cannot be used, but its `position{n}` column
 can — differentiate it and you recover joint rates. This tool measures how

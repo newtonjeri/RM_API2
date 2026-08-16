@@ -31,8 +31,16 @@ That bench ran on fw < 1.7.3 and its own note says handState needs >=
 ## Provenance
 
 `run.json` records `sdk: "hardware"` or `"emulated"` and `sim: true/false`.
-Check it before drawing conclusions — an emulated run has no IK and models
-the movel chain as a timed no-op.
+Check it before drawing conclusions — but note WHAT is untrustworthy has
+changed (corrected 2026-08-17; flagged for Newton, D4 file). This used to say
+an emulated run "has no IK and models the movel chain as a timed no-op",
+false since 2026-08-12: `movel_chain` now solves seeded IK along the
+Cartesian polyline and drives the joints, and since 2026-08-16 carries the
+measured blend/corner/arc laws (durations within ~8 % on held-out runs).
+Still NOT trustworthy in an emulated run: **joint rates** — the controller's
+redundancy scheme is unknowable offline — and, per the same rule that applies
+to controller SIM, the `speed{n}` channel is dead; derive rates from
+`position{n}` over a >=70 ms window instead.
 
 ## Size
 
