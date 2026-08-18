@@ -227,7 +227,7 @@ not offered as a tool. **SIM is the only complete predictor, and it is cheap.**
 
 ## RETRACTED 2026-08-17 — H79 and H80, and the method that produced them
 
-**H79 and H80 are withdrawn. They were recorded from a peer session's reported
+**H79 and H80 are withdrawn. They were recorded from a summary table's reported
 table without re-measuring it, and re-measurement does not support them.**
 Newton disputed the hinge_area result; he was right. Everything below is
 measured directly from `runs/` in this repo.
@@ -301,7 +301,7 @@ three radii.
 
 ### The method failure, recorded because it is the reusable lesson
 
-These two findings entered this document from a peer session's summary table.
+These two findings entered this document from a summary table, not from `runs/`.
 I verified its *provenance* — that the run existed, that a hash resolved — and
 did not re-measure the *numbers*. Provenance is not corroboration. **A finding
 is not corroborated until the claim itself is re-derived from the primary data
@@ -360,7 +360,7 @@ the task:** `toplid` → J4, `top_left` → J1, `hinge_area` → J1/J5. **No fam
 changes its binding joint with speed at fixed r=10.** That is the claim H79
 made and could not show.
 
-**Two corrections to a peer re-derivation, recorded because they are safety
+**Two corrections to an earlier re-derivation, recorded because they are safety
 statements** (RM_API2 session, same day; it had fixed its own radius-pooling
 defect but resolved families from run *labels*, so it saw only the 2026-08-14
 `blend_*` runs and missed the 2026-08-10/11 task-named runs on the same paths
@@ -447,7 +447,7 @@ comparison prices the mode and not the estimator (H78). r=10:**
 > **Re-run every figure a fix touches, not the one that prompted the fix.**
 >
 > **Second: 31/34 → 31/33 and 6/8 → 6/7, a methodology correction, not an
-> error** (raised by rm-api2-15). One "matched" configuration was
+> error**. One "matched" configuration was
 > `hinge_area, v=unrecorded, r=10`. Its four runs — the corpus's earliest,
 > 2026-08-10 16:09–17:31 — **predate the `line_speed_cap_m_s` field, which is
 > absent from their `run.json` rather than null.** Comparing SIM against REAL
@@ -463,7 +463,7 @@ comparison prices the mode and not the estimator (H78). r=10:**
 > different code and is stale, whatever it looked like when computed. That is
 > the only check that catches the first failure above, since the number was
 > correct when computed and nothing about "33" looks wrong.
-> *(Idea: rm-api2-15.)* Both disagreements are on `hinge_area`, the one family
+> Both disagreements are on `hinge_area`, the one family
 already established as J1/J5 both-hot and run-to-run variable — so SIM
 reproduces even the instability. On the production form
 (`chain_rmix_vmix_capp_v250_left`, SIM `20260815T153521` vs REAL

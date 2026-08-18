@@ -550,7 +550,7 @@ def main() -> int:
              "   THE ARM, ITS POLE AND ITS HAND WILL MOVE"))
     print("=" * 72)
 
-    plan = load_plan(resolve_plan(f"{task}_ruckig_pro_only.json"))
+    plan = load_plan(resolve_plan(f"{task}_totg_ruckig.json"))
     pref = "R_" if cfg.side == "right" else "L_"
     print(f"  plan arm stages: "
           f"{[s['stage_name'] for s in arm_stages(plan, prefix=f'{pref}joint')]}")

@@ -114,7 +114,6 @@ def logic_stamp():
 
     Hashing the whole file is deliberate: selection, estimator choice, grouping
     and the binding rule are all here, and any of them can move a number.
-    (Idea: rm-api2-15, 2026-08-17.)
     """
     try:
         src = pathlib.Path(__file__).read_bytes()

@@ -63,13 +63,40 @@ LOCAL_CONFIG_DIR = pathlib.Path(__file__).resolve().parent.parent / "task_config
 
 
 def config_category_dir(category: str) -> pathlib.Path:
-    """Directory holding the fixtures and defaults for `category`."""
+    """Directory holding the fixtures and defaults for `category`.
+
+    `RM_TASK_CONFIG_DIR` may point at ONE category dir (the original
+    contract) or at the config ROOT holding several category dirs
+    (commode_cleaning/, mechanism_tasks/, bin_tasks/, glove_tasks/ — the
+    alix_tasks layout). Root-or-category is decided by whether
+    `<env>/<category>` exists, so both existing usages keep working
+    (contract C11-4b, 2026-08-18).
+    """
     env = os.environ.get("RM_TASK_CONFIG_DIR")
     if env:
-        return pathlib.Path(env)
+        env_path = pathlib.Path(env)
+        if (env_path / category).is_dir():
+            return env_path / category
+        return env_path
     if (LOCAL_CONFIG_DIR / "task_parameters_defaults.yaml").exists():
         return LOCAL_CONFIG_DIR
     return CONFIG_ROOT / category
+
+
+def contact_links_path(category: str = "commode_cleaning") -> pathlib.Path:
+    """`contact_links.yaml` for the ACTIVE config tree.
+
+    It lives one level above the category dirs. Resolving it from the
+    butterfli WS while `RM_TASK_CONFIG_DIR` points at the alix tree would
+    silently mix two contact contracts — the category dir's parent is
+    checked first for exactly that reason.
+    """
+    cat = config_category_dir(category)
+    for cand in (cat.parent / "contact_links.yaml",
+                 cat / "contact_links.yaml"):
+        if cand.exists():
+            return cand
+    return CONTACT_LINKS
 
 
 def config_source(category: str = "commode_cleaning") -> str:
@@ -147,11 +174,16 @@ class TaskConfig:
 
         # Which arm? The task may name its planning group; otherwise the
         # task NAME carries the side (toplid_left / hinge_area_right).
+        # Bin/glove ship dual-arm variants (bin_raise_retract_dual_joint) and
+        # compound mechanism tasks (`compound: true`, flush_press) that drive
+        # BOTH arms — those get side "dual" and no single-arm defaults merge.
         group = merged.get("primary_planning_group", "")
         if group.endswith("_left") or task.endswith("_left"):
             self.side = "left"
         elif group.endswith("_right") or task.endswith("_right"):
             self.side = "right"
+        elif "_dual" in task or merged.get("compound"):
+            self.side = "dual"
         else:
             raise SystemExit(f"cannot determine the arm for task {task!r}")
 
@@ -162,13 +194,36 @@ class TaskConfig:
 
         self.doc = task_doc or {}
         self.stage_sequence = self.doc.get("stage_sequence", [])
-        self.cleaning_points = self.doc.get("cleaning_points", {})
-        self.cleaning_sequence = self.doc.get("cleaning_sequence", [])
         self.cartesian_poses = self.doc.get("cartesian_poses", {})
+
+        # TWO point/sequence schemas exist (contract C11-4b port, 2026-08-18):
+        #   cleaning:  `cleaning_points` + one `cleaning_sequence`
+        #              (mechanism tasks use this schema too)
+        #   bin/glove: `path_waypoints` + `waypoint_sequence1`/`_sequence2`,
+        #              two path phases separated by grasp/actuation stages.
+        # Points unify under one name; the sequences stay SEPARATE — the
+        # phases are not one path, so concatenating them would invent a
+        # stroke the task never commands. `cleaning_sequence` keeps its
+        # meaning as "the single-sequence form" and is left empty for the
+        # two-phase schema.
+        self.cleaning_points = (self.doc.get("cleaning_points")
+                                or self.doc.get("path_waypoints") or {})
+        self.cleaning_sequence = self.doc.get("cleaning_sequence", [])
+        self.waypoint_sequences = [
+            self.doc[key] for key in ("waypoint_sequence1",
+                                      "waypoint_sequence2")
+            if self.doc.get(key)
+        ] or ([self.cleaning_sequence] if self.cleaning_sequence else [])
 
     # ── the parameters the dispatcher needs ──
     @property
     def ik_frame(self):
+        # Compound (dual) tasks carry per-arm frames inside their stage
+        # definitions rather than one task-level ik_frame — None, not a
+        # KeyError, is the honest answer for them. Single-arm tasks keep
+        # the strict lookup: a missing frame there is a config defect.
+        if self.side == "dual":
+            return self.params.get("ik_frame")
         return self.params["ik_frame"]
 
     @property
@@ -329,15 +384,28 @@ class TaskConfig:
     # ── loading ──
     @classmethod
     def load(cls, task, fixture="commode_c", category="commode_cleaning"):
+        """Load `task` from `category`, whatever its layout.
+
+        Three layouts exist in the alix tree (contract C11-4b):
+          commode_cleaning/<fixture>/<task>_cleaning_points.yaml
+          mechanism_tasks/<fixture>/<task>.yaml
+          bin_tasks/<task>.yaml, glove_tasks/<task>.yaml   (flat, no fixture)
+        The candidates are tried in that order; the error names them all.
+        """
         cat = config_category_dir(category)
         defaults = yaml.safe_load(
             (cat / "task_parameters_defaults.yaml").read_text())
-        tpath = cat / fixture / f"{task}_cleaning_points.yaml"
-        if not tpath.exists():
-            raise SystemExit(f"no task config: {tpath}")
+        candidates = (cat / fixture / f"{task}_cleaning_points.yaml",
+                      cat / fixture / f"{task}.yaml",
+                      cat / f"{task}.yaml")
+        tpath = next((p for p in candidates if p.exists()), None)
+        if tpath is None:
+            raise SystemExit("no task config; tried:\n  "
+                             + "\n  ".join(str(p) for p in candidates))
         task_doc = yaml.safe_load(tpath.read_text())
-        contact = (yaml.safe_load(CONTACT_LINKS.read_text())
-                   if CONTACT_LINKS.exists() else {})
+        clpath = contact_links_path(category)
+        contact = (yaml.safe_load(clpath.read_text())
+                   if clpath.exists() else {})
         return cls(task, fixture, category, defaults, task_doc, contact)
 
 
@@ -353,8 +421,12 @@ def _describe(cfg):
           + ("" if SPEED_DERATE == 1.0 else
              f"   [DERATED x{SPEED_DERATE:g}; the task asks for "
              f"{cfg.arm_speed_intended_pct}%]"))
+    seqs = cfg.waypoint_sequences
     print(f"  path            {len(cfg.cleaning_points)} points, "
-          f"{len(cfg.cleaning_sequence)} strokes")
+          + (f"{len(cfg.cleaning_sequence)} strokes"
+             if len(seqs) <= 1 else
+             f"{'+'.join(str(len(s)) for s in seqs)} strokes "
+             f"({len(seqs)} phases)"))
     ok, order, problems = cfg.enforce_serialization()
     print(f"  contact         {len(cfg.contact_links())} links may touch "
           f"the declared surface")
