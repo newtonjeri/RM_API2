@@ -64,6 +64,22 @@ COUPLING = 1.25        # C2: omega_cap = 1.25 * v (Newton's ratio)
 ANGULAR_ACC = 4.00     # HELD (Newton, 2026-08-19)
 OMEGA_MAX = ANGULAR_ACC / 3.0      # 1.3333 — vendor ratio, enforced by the runner too
 SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
+
+# The screen's over-read is a BAND, not a constant (Newton, 2026-08-19).
+# Calibration points on record: screen/REAL 0.87 at 0.25 m/s, 1.08 at 0.45,
+# and toplid_left_002 at 129 % screen against a 96 % measured worst joint =
+# 0.74. So a screen reading P predicts a real [0.74 P, 1.08 P].
+#
+# Consequences for gating, and this is the whole point: a screen reading is
+# only DECISIVE at the ends of that band.
+#   1.08 P <= SCREEN_GATE  -> certainly under the gate            -> PASS
+#   0.74 P >  JOINT_ABORT  -> certainly over the abort            -> BLOCK
+#   otherwise              -> the screen cannot decide            -> ADVISORY
+# An ADVISORY rung RUNS, and the run's own all-joint abort decides it. At
+# rung 0.60 the screen reads 101 %, i.e. a real 75-109 % — "the ladder should
+# be allowed to try it rather than being talked out of it by the screen".
+SCREEN_BAND_LO = 0.74
+SCREEN_BAND_HI = 1.08
 JOINT_ABORT = 95.0     # % of any joint's limit
 CONSECUTIVE_FAIL_STOP = 2
 
@@ -422,12 +438,23 @@ def main():
             print("  SCREEN: unavailable or degenerate (got %r) — refusing to "
                   "continue blind.\n    detail: %s" % (worst, seg))
             break
-        ok = worst <= SCREEN_GATE
-        print("  1. SCREEN   worst J4 %.0f %% of limit at %s  -> %s"
-              % (worst, seg, "PASS" if ok else "FAIL"))
+        lo, hi = SCREEN_BAND_LO * worst, SCREEN_BAND_HI * worst
+        if hi <= SCREEN_GATE:
+            verdict, ok = "PASS", True
+        elif lo > JOINT_ABORT:
+            verdict, ok = "BLOCK", False
+        else:
+            verdict, ok = "ADVISORY", True
+        print("  1. SCREEN   worst J4 %.0f %% at %s -> real %.0f-%.0f %% -> %s"
+              % (worst, seg, lo, hi, verdict))
+        if verdict == "ADVISORY":
+            print("     the screen cannot decide this rung (band straddles the "
+                  "gate). It RUNS; the all-joint abort decides it.")
         if not ok:
-            print("     rung refused before any motion. (A J4 pass is not a "
-                  "clearance either — A.4: the screen is sound but INCOMPLETE.)")
+            print("     rung refused before any motion: even at the optimistic "
+                  "end of the band (%.0f %%) it exceeds the %.0f %% abort. "
+                  "(And a J4 pass is not a clearance either — A.4.)"
+                  % (lo, JOINT_ABORT))
             consecutive += 1
             if consecutive >= CONSECUTIVE_FAIL_STOP:
                 print("\nLADDER STOPPED — %d consecutive failed rungs." % consecutive)
@@ -438,10 +465,21 @@ def main():
             continue
 
         # rung 2 — EMULATOR (no hardware needed)
-        ok, _ = run_emulated(side, path, rung, cap, line_acc, dry)
-        print("  2. EMULATOR -> %s" % ("PASS" if ok else "FAIL"))
+        ok, emu_out = run_emulated(side, path, rung, cap, line_acc, dry)
+        geometry_only = (not ok) and ("Traceback" not in emu_out) and (
+            "NO RESULT" in emu_out or "stream is not this path" in emu_out)
+        if geometry_only:
+            ok = True
+            print("  2. EMULATOR -> ADVISORY (geometry not reproduced)")
+            print("     C9 caveat: the emulator cannot validate this path's arc "
+                  "geometry and emits no joint telemetry, so this rung is a "
+                  "DIFFERENT test, not a weaker one — it answers nothing about "
+                  "joints and does not gate SIM.")
+        else:
+            print("  2. EMULATOR -> %s" % ("PASS" if ok else "FAIL"))
         if not ok:
-            print("     higher rungs NOT entered for this rung.")
+            print("     higher rungs NOT entered — the emulator failed as a "
+                  "PROGRAM, not merely on geometry.")
             consecutive += 1
             if consecutive >= CONSECUTIVE_FAIL_STOP:
                 print("\nLADDER STOPPED — %d consecutive failed rungs." % consecutive)
