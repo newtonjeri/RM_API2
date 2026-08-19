@@ -2054,8 +2054,22 @@ class RoboticArm:
         self._movel_queue = []
         return self._ctrl.movel_chain(chain, v, block)
 
-    def rm_change_tool_frame(self, name):
+    @staticmethod
+    def _tool_name10(name):
+        """Controller tool-frame names truncate to 10 chars in STORAGE.
+
+        Measured, not assumed (test_frame_alignment.log, REAL): create
+        with the 11-char 'R_index_tip' returned ret=0 and the LIST then
+        showed 'R_index_ti'; a later create with the same full name
+        returned ret=1 (taken); reads and updates with the full name
+        resolve to the stored frame. Store and resolve on the truncated
+        form so offline runs hit the same collision the hardware produces.
+        """
         name = name.decode() if isinstance(name, bytes) else str(name)
+        return name[:10]
+
+    def rm_change_tool_frame(self, name):
+        name = self._tool_name10(name)
         if name not in self._ctrl.tool_frames:
             return 1
         self._ctrl.active_tool = name
@@ -2075,7 +2089,7 @@ class RoboticArm:
                 "len": len(self._ctrl.tool_frames)}
 
     def rm_get_given_tool_frame(self, name):
-        name = name.decode() if isinstance(name, bytes) else str(name)
+        name = self._tool_name10(name)
         f = self._ctrl.tool_frames.get(name)
         if f is None:
             return 1, {}
@@ -2089,6 +2103,7 @@ class RoboticArm:
             frame.frame_name, bytes) else str(frame.frame_name)
         if not name or len(name) > 11:
             return 1
+        name = self._tool_name10(name)  # hardware stores 10 chars
         if name in self._ctrl.tool_frames:
             return 1                # CREATE only — the real ret=1 (F17)
         if len(self._ctrl.tool_frames) >= 10:
@@ -2101,8 +2116,7 @@ class RoboticArm:
         return 0
 
     def rm_update_tool_frame(self, frame):
-        name = frame.frame_name.decode() if isinstance(
-            frame.frame_name, bytes) else str(frame.frame_name)
+        name = self._tool_name10(frame.frame_name)
         if name not in self._ctrl.tool_frames:
             return 1
         p, e = frame.pose.position, frame.pose.euler
@@ -2113,7 +2127,7 @@ class RoboticArm:
         return 0
 
     def rm_delete_tool_frame(self, name):
-        name = name.decode() if isinstance(name, bytes) else str(name)
+        name = self._tool_name10(name)
         if name == self._ctrl.active_tool or name not in \
                 self._ctrl.tool_frames:
             return 1

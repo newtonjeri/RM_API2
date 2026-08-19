@@ -75,6 +75,39 @@ Arm_Tip → ConnectorLink offset is hardware-confirmed: Kabsch fit of
 emulator FK to recorded controller TCP, residuals 0.008 mm (R) / 0.019 mm
 (L) at +2.8 mm over the URDF's 12.5 (alix-ws-54, 2026-08-20).
 
+## Pending controller update — APPROVED (Newton, 2026-08-20)
+
+The controllers hold the PRE-recut left values (`L_glove_1` at 155.3 z,
+`L_glove_2` at −20.0 x). Newton approved the update pass and the right-arm
+payload correction. Rehearsed against the emulator 2026-08-20, two full
+passes, both arms: update routing correct, `*_index_tip` 10-char collision
+resolved, match tables 0.00, restores verified.
+
+**Left arm — ready to run as-is** (values come from the corrected table):
+
+```bash
+cd Demo/RMDemo_Python/RMDemo_DualArmConcept/src
+RM_ARM=left python3 test_frame_alignment.py --mode REAL --create-frames
+```
+
+All six frames must print `update … ret=0` (a `create` on the left pass
+means the name list changed — stop and look). The MATCH TABLE must be all
+OK **including payload/centroid**; an "exactly 1000x" flag is a unit
+mismatch — do not select any frame or run any movel until it is resolved.
+Left payload stays 0.706 kg copied from `Hand` (unchanged).
+
+**Right arm — parked on ONE input:** the frames carry payload 0.0 kg
+(copied from `Arm_Tip`), so right-side force compensation runs unloaded.
+Needs the TRUE right hand+glove mass and centroid from Newton — if the
+right assembly mirrors the left `Hand` (0.706 kg at (−12, 44, 128) mm),
+the mirrored centroid is (+12, 44, 128) mm, but that is a HYPOTHESIS to
+confirm, not a value to write. Then:
+
+```bash
+RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames \
+        --payload <KG> --com <X,Y,Z in mm>
+```
+
 ## Verification
 
 `test_frame_alignment.py --create-frames` writes these frames, then reads
