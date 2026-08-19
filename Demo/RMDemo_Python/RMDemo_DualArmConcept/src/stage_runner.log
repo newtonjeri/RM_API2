@@ -4226,3 +4226,98 @@ Phase 2 stage runner — toplid_left  [left]
   [PASS] stage sequence completed  (7 stages ran)
 
   Summary: 2 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-19 10:13:59
+========================================================================
+========================================================================
+Phase 2 stage runner — lid_close_left  [left]
+    arm=192.168.1.10   ik=L_tip_frame
+    speeds: cleaning=70%  transit=35%  approach=35%  pole=50%   (task asks 70% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+no bundled plan for task 'lid_close_left_totg_ruckig.json'.
+  looked for : /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/lid_close_left_totg_ruckig.json
+  bundled    : 24 task(s) — bottomlid_left, bottomlid_right, bowl_inside_back_left, bowl_inside_front_right, bowl_inside_rim_left, bowl_inside_rim_right …
+  Plans are versioned artifacts of THIS repo (see resolve_plan);
+  copy the one you want in deliberately, e.g.
+    cp <ws>/cleaning_tasks/plans/commode_c/hardware/lid_close_left_totg_ruckig.json /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-19 10:14:18
+========================================================================
+========================================================================
+Phase 2 stage runner — lid_open  [dual]
+    arm=192.168.1.10   ik=None
+    speeds: cleaning=70%  transit=35%  approach=35%  pole=50%   (task asks 70% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+no bundled plan for task 'lid_open_totg_ruckig.json'.
+  looked for : /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/lid_open_totg_ruckig.json
+  bundled    : 24 task(s) — bottomlid_left, bottomlid_right, bowl_inside_back_left, bowl_inside_front_right, bowl_inside_rim_left, bowl_inside_rim_right …
+  Plans are versioned artifacts of THIS repo (see resolve_plan);
+  copy the one you want in deliberately, e.g.
+    cp <ws>/cleaning_tasks/plans/commode_c/hardware/lid_open_totg_ruckig.json /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-19 10:14:18
+========================================================================
+========================================================================
+Phase 2 stage runner — bin_raise_retract_dual_joint  [dual]
+    arm=192.168.1.10   ik=None
+    speeds: cleaning=50%  transit=25%  approach=25%  pole=50%   (task asks 50% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+no bundled plan for task 'bin_raise_retract_dual_joint_totg_ruckig.json'.
+  looked for : /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/bin_raise_retract_dual_joint_totg_ruckig.json
+  bundled    : 24 task(s) — bottomlid_left, bottomlid_right, bowl_inside_back_left, bowl_inside_front_right, bowl_inside_rim_left, bowl_inside_rim_right …
+  Plans are versioned artifacts of THIS repo (see resolve_plan);
+  copy the one you want in deliberately, e.g.
+    cp <ws>/cleaning_tasks/plans/commode_c/hardware/bin_raise_retract_dual_joint_totg_ruckig.json /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-19 10:51:35
+========================================================================
+========================================================================
+Phase 2 stage runner — hinge_area_right  [right]
+    arm=192.168.1.103   ik=R_glove_frame_4
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+no bundled plan for task 'hinge_area_right_totg_ruckig.json'.
+  looked for : /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/hinge_area_right_totg_ruckig.json
+  bundled    : 24 task(s) — bottomlid_left, bottomlid_right, bowl_inside_back_left, bowl_inside_front_right, bowl_inside_rim_left, bowl_inside_rim_right …
+  Plans are versioned artifacts of THIS repo (see resolve_plan);
+  copy the one you want in deliberately, e.g.
+    cp <ws>/cleaning_tasks/plans/commode_c/hardware/hinge_area_right_totg_ruckig.json /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/
+
+========================================================================
+  Script : stage_runner.py
+  Log    : stage_runner.log
+  Started: 2026-08-19 10:55:52
+========================================================================
+========================================================================
+Phase 2 stage runner — toplid_left  [left]
+    arm=192.168.1.10   ik=L_glove_frame_2
+    speeds: cleaning=100%  transit=50%  approach=50%  pole=50%   (task asks 100% before the transit/derate policy)
+    serialization: ENFORCED   (RM_SERIALIZE=0 to relax)
+    mode: as-found   DRY RUN — no commands are sent
+========================================================================
+no bundled plan for task 'toplid_left_totg_ruckig.json'.
+  looked for : /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/toplid_left_totg_ruckig.json
+  bundled    : 24 task(s) — bottomlid_left, bottomlid_right, bowl_inside_back_left, bowl_inside_front_right, bowl_inside_rim_left, bowl_inside_rim_right …
+  Plans are versioned artifacts of THIS repo (see resolve_plan);
+  copy the one you want in deliberately, e.g.
+    cp <ws>/cleaning_tasks/plans/commode_c/hardware/toplid_left_totg_ruckig.json /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/plans/
