@@ -50,7 +50,9 @@ because it is the only rung that cannot move an arm.
 """
 from __future__ import annotations
 
+import csv
 import importlib.util
+import json
 import math
 import time
 import os
@@ -412,6 +414,52 @@ def run_emulated(side, path, rung, cap, line_acc, dry):
     return (p.returncode == 0 and not bad), out
 
 
+def check_recording(out):
+    """Apply the ABORT CRITERIA to the recording a rung just wrote.
+
+    ADDED 2026-08-19 AFTER THE LADDER WALKED STRAIGHT PAST THEM. The two
+    criteria at the top of this file were printed in the header and never
+    enforced: `run()` judged a rung on `test_blend_corner`'s exit code and a
+    blacklist of strings, and never opened the stream. So rung 0.90 recorded
+    J4 at 223.3 deg/s (99 % of 225) with 10 ms at or above 98 %, both of
+    which are abort conditions, and the ladder advanced to 1.00 — where three
+    joints reversed inside 20 ms and J4 drew 26.4 A, the highest current this
+    project has recorded. No joint error bit was set and `arm_status` read 0
+    (IDLE) throughout, so nothing else was going to catch it either.
+
+    Returns (ok, reason). Reads the run directory the runner prints.
+    """
+    m = re.search(r"recorded .*? -> (\S+)", out)
+    if not m:
+        return True, "no recording path in the output — criteria NOT applied"
+    d = m.group(1)
+    try:
+        meta = json.loads(open(os.path.join(d, "run.json")).read())
+        rows = list(csv.DictReader(open(os.path.join(d, "stream.csv"))))
+    except Exception as exc:                                  # noqa: BLE001
+        return True, "recording unreadable (%s) — criteria NOT applied" % exc
+    if meta.get("sim") or len(rows) < 60:
+        return True, ""                    # SIM's speed channel is dead
+    lim = [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0]
+    peak = [max(abs(float(r["speed%d" % j])) for r in rows)
+            for j in range(1, 8)]
+    util = [100.0 * peak[j] / lim[j] for j in range(7)]
+    worst = max(util)
+    wj = util.index(worst) + 1
+    dwell_ms = 10 * sum(1 for r in rows
+                        if any(abs(float(r["speed%d" % j])) >= 0.98 * lim[j - 1]
+                               for j in range(1, 8)))
+    cur = max(max(abs(float(r["current%d" % j])) for j in range(1, 8))
+              for r in rows) / 1000.0
+    note = ("worst J%d %.0f %% of limit, dwell>=98%% %d ms, peak current %.1f A"
+            % (wj, worst, dwell_ms, cur))
+    if worst > JOINT_ABORT:
+        return False, "ABORT — %s (any joint over %.0f %%)" % (note, JOINT_ABORT)
+    if dwell_ms > 0:
+        return False, "ABORT — %s (any dwell at >=98 %%, any duration)" % note
+    return True, note
+
+
 def run(mode, side, path, rung, cap, line_acc, dry):
     cmd = [sys.executable, os.path.join(HERE, "test_blend_corner.py"),
            "--side", side, "--mode", mode, "--path", path,
@@ -434,7 +482,14 @@ def run(mode, side, path, rung, cap, line_acc, dry):
                                  "Traceback", "ABORT", "over limit",
                                  "NO RESULT", "stream is not this path",
                                  "would be fiction"))
-    return (p.returncode == 0 and not bad), tail
+    ok = (p.returncode == 0 and not bad)
+    # THE ABORT CRITERIA, applied to what was actually recorded — not to the
+    # exit code. A dispatch can complete cleanly with a joint at 99 %.
+    if ok:
+        ok, why = check_recording(out)
+        if why:
+            print("    criteria: %s" % why, flush=True)
+    return ok, tail
 
 
 def main():
