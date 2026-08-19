@@ -973,3 +973,39 @@ current c api version:  1.1.6
   [PASS] pre-check complete  (no motion was commanded)
 
   Summary: 9 PASS, 0 FAIL, 0 SKIP
+
+========================================================================
+  Script : test_dual_connect.py
+  Log    : test_dual_connect.log
+  Started: 2026-08-19 18:22:29
+========================================================================
+====================================================================
+C1  Dual-arm connectivity pre-check  (no motion is commanded)
+    left=192.168.1.10  right=192.168.1.103
+====================================================================
+current c api version:  1.1.6
+  [PASS] left: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] left: arm state clean  (err codes ['0'], all joints enabled)
+  [PASS] left: lift state  (pos=74 of 315 (1to1))
+  [INFO] left: run mode = REAL
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision             True
+    endeff_collision           True
+    collision_stage               3
+    static_collision              0
+    collision_remove          False
+  [PASS] right: robot info  (RM_75 7-DOF, controller gen 3)
+  [PASS] right: arm state clean  (err codes ['0'], all joints enabled)
+  [PASS] right: lift state  (pos=75 of 315 (1to1))
+  [INFO] right: run mode = REAL
+    avoid_singularity             0  <-- OFF, Phase 2 wants it ON
+    self_collision             True
+    endeff_collision           True
+    collision_stage               0
+    static_collision              0
+    collision_remove          False
+  [PASS] handles distinct  (left id=1 right id=2)
+  [PASS] event callback registered  (process-global, demuxed by handle_id)
+  [PASS] pre-check complete  (no motion was commanded)
+
+  Summary: 9 PASS, 0 FAIL, 0 SKIP
