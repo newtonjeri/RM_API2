@@ -41,6 +41,8 @@ USAGE
     python3 run_speed_ramp.py --side left --mode REAL     # the whole ladder
     python3 run_speed_ramp.py --side left --mode SIM --rungs 0.45,0.50
     python3 run_speed_ramp.py --side left --mode REAL --dry   # print, run nothing
+    python3 run_speed_ramp.py --side left --coupling 1.86     # omega = path demand
+    python3 run_speed_ramp.py --side left --angular-acc 6.0   # pin the acc instead
 
 --mode names the HIGHEST rung the ladder may reach; every rung below it still
 runs in order, and a failure stops the ladder there. SCREEN is the default
@@ -60,9 +62,40 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PATH = os.path.join(HERE, "..", "paths", "planar_speed_ramp_001.py")
 
-COUPLING = 1.25        # C2: omega_cap = 1.25 * v (Newton's ratio)
-ANGULAR_ACC = 4.00     # HELD (Newton, 2026-08-19)
-OMEGA_MAX = ANGULAR_ACC / 3.0      # 1.3333 — vendor ratio, enforced by the runner too
+COUPLING = 1.25        # C2: omega_cap = COUPLING * v (Newton's ratio)
+# Settable with --coupling, and this is the knob that makes the angular_acc
+# cap removal MATTER. Under C2 = 1.25 even rung 1.00 needs only
+# angular_acc 3.75, i.e. under the shipped 4.00 — so the ratio ceiling never
+# fired in this ladder and lifting it alone changes nothing.
+#
+# What the PATH demands is different and larger: the conditioning tilt is
+# kappa = 1.86 rad/m, so a segment needs omega = 1.86 * v. At --coupling 1.86
+# the commanded cap finally matches the demand, and THEN the ratio asks for
+# angular_acc = 3 * 1.86 * v, which passes 4.00 at rung 0.72 and reaches
+# 5.58 at rung 1.00 — exactly the ">= 5.6" the module docstring predicted.
+
+# ANGULAR ACCELERATION: THE CAP IS REMOVED (Newton, 2026-08-19).
+# It was HELD at 4.00, which made `omega <= angular_acc/3 = 1.3333` a hard
+# ceiling and stopped the ladder at 0.80 m/s before any arm moved. Newton has
+# lifted it for this test, so 4.00 is now a FLOOR and the vendor ratio is
+# satisfied by RAISING the acceleration to match the rung:
+#       angular_acc(rung) = max(4.00, 3 * omega_cap) = max(4.00, 3.75 * rung)
+# Override with --angular-acc to pin it at a value instead.
+#
+# WHAT THIS GIVES UP, once, so it is on the record: RealMan hold the shipped
+# 4.0 because it preserves the ability to stop immediately (H62) — a higher
+# value lengthens the stop. Nothing else is relaxed. The all-joint 95 % abort
+# and the 98 % dwell abort still decide every rung, and those are what
+# actually protect the arm; the ratio ceiling never did.
+ANGULAR_ACC_FLOOR = 4.00
+ANGULAR_ACC_PINNED = None          # set by --angular-acc
+
+
+def angular_acc_for(cap):
+    """Angular acceleration for a rung whose angular cap is `cap`."""
+    if ANGULAR_ACC_PINNED is not None:
+        return ANGULAR_ACC_PINNED
+    return max(ANGULAR_ACC_FLOOR, 3.0 * cap * (1 + 1e-9))
 SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
 
 # The screen's over-read is a BAND, not a constant (Newton, 2026-08-19).
@@ -101,6 +134,11 @@ CONSECUTIVE_FAIL_STOP = 2
 # as pressing below it — not silently prevented.
 PAD_T = 0.020      # frame 2 compliance depth [m]
 PAD_L = 0.080      # frame 2 long edge [m]
+# Contract A.3 gate, moved 0.5 -> 0.40 by Newton on 2026-08-19 because at 0.5
+# the contact clause and the arm's kinematics could not both be satisfied: the
+# tilt needed to keep the elbow off a singularity (theta_k ~ 30.9 deg) exceeded
+# the tilt the gate allowed (theta_c = 30.0 deg). At 0.40 the ceiling is 38.7.
+CONTACT_GATE = 0.40
 
 
 def _tool_press_axis(rx, ry, rz):
@@ -379,9 +417,15 @@ def run(mode, side, path, rung, cap, line_acc, dry):
 def main():
     from dual_arm_common import handle_cli
     handle_cli(__doc__, extra_flags=("--dry", "--prepare-only", "--no-prepare"),
-               value_flags=("--side", "--path", "--rungs"),
+               value_flags=("--side", "--path", "--rungs", "--angular-acc",
+                            "--coupling"),
                allow_common=True)
     mode = parse_ladder_mode()
+    global ANGULAR_ACC_PINNED, COUPLING
+    if "--angular-acc" in sys.argv:
+        ANGULAR_ACC_PINNED = float(sys.argv[sys.argv.index("--angular-acc") + 1])
+    if "--coupling" in sys.argv:
+        COUPLING = float(sys.argv[sys.argv.index("--coupling") + 1])
     side = "left"
     if "--side" in sys.argv:
         side = sys.argv[sys.argv.index("--side") + 1]
@@ -402,13 +446,22 @@ def main():
     top = LADDER.index(mode)
     print("SPEED RAMP  path=%s  side=%s  mode=%s (rungs run: %s)"
           % (os.path.basename(path), side, mode, " -> ".join(LADDER[:top + 1])))
-    print("  coupling omega = %.2f * v ; angular_acc HELD at %.2f -> omega_max %.4f rad/s"
-          % (COUPLING, ANGULAR_ACC, OMEGA_MAX))
+    if ANGULAR_ACC_PINNED is not None:
+        print("  coupling omega = %.2f * v ; angular_acc PINNED at %.2f "
+              "(--angular-acc) -> omega ceiling %.4f rad/s"
+              % (COUPLING, ANGULAR_ACC_PINNED, ANGULAR_ACC_PINNED / 3.0))
+    else:
+        print("  coupling omega = %.2f * v ; angular_acc UNCAPPED, floor %.2f, "
+              "raised to 3x the rung's cap -> NO omega ceiling"
+              % (COUPLING, ANGULAR_ACC_FLOOR))
+        print("  (the 1.3333 rad/s ratio ceiling that stopped this ladder at "
+              "0.80 is removed; H62 stop-distance caveat accepted)")
     print("  abort: ANY joint > %.0f %% of limit, or ANY dwell >= 98 %%" % JOINT_ABORT)
     f_min, f_at, f_th = contact_profile(mod)
     print("  contact (A.3, applied not capped): min f = %.3f at %s (theta %.1f deg)%s\n"
           % (f_min, f_at, f_th,
-             "   <-- BELOW the 0.5 gate; recorded, not prevented" if f_min < 0.5 else ""))
+             "   <-- BELOW the %.2f gate; recorded, not prevented" % CONTACT_GATE
+             if f_min < CONTACT_GATE else "   (gate %.2f)" % CONTACT_GATE))
 
     # Devices first, once, before ANY arm motion.
     if mode != "SCREEN" and "--no-prepare" not in sys.argv:
@@ -422,14 +475,16 @@ def main():
     for rung in rungs:
         cap = COUPLING * rung
         line_acc = max(1.60, 3.0 * rung)
+        ang_acc = angular_acc_for(cap)
         print("=" * 72)
-        print("RUNG %.2f m/s   omega_cap %.4f rad/s   line_acc %.2f m/s^2"
-              % (rung, cap, line_acc))
-        if cap > OMEGA_MAX + 1e-9:
-            print("  STOP — omega_cap %.4f exceeds the vendor ratio ceiling %.4f "
-                  "(angular_acc/3). Raising it needs angular_acc >= %.2f, which is "
-                  "untested and which RealMan advise against (H62)."
-                  % (cap, OMEGA_MAX, 3 * cap))
+        print("RUNG %.2f m/s   omega_cap %.4f rad/s   line_acc %.2f m/s^2   "
+              "angular_acc %.2f rad/s^2%s"
+              % (rung, cap, line_acc, ang_acc,
+                 "  <-- above the shipped 4.00" if ang_acc > 4.0 + 1e-9 else ""))
+        if ANGULAR_ACC_PINNED is not None and cap > ANGULAR_ACC_PINNED / 3.0 + 1e-9:
+            print("  STOP — omega_cap %.4f exceeds the PINNED angular_acc/3 "
+                  "(%.4f). Raise --angular-acc to >= %.2f or drop the pin."
+                  % (cap, ANGULAR_ACC_PINNED / 3.0, 3 * cap))
             break
 
         # rung 1 — SCREEN, always, whatever --mode says

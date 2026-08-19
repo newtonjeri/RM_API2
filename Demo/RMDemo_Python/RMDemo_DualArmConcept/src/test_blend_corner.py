@@ -956,18 +956,30 @@ def main() -> int:
     # THE ANGULAR-CAP LADDER (CLEANING_MOTION_SPEC 2b). The 0.6 rad/s cap
     # throttles more of the cleaning path than J4 does; this flag raises it
     # for ONE run, with the same floor-at-default rule the linear pair uses:
-    # angular_acc = max(shipped 4.0, 3 x cap). Above 1.33 rad/s the 3x law
-    # would push the acc past the shipped 4.0 — unexplored, refused here.
+    # angular_acc = max(shipped 4.0, 3 x cap).
+    #
+    # THE 1.33 rad/s CEILING IS REMOVED (Newton, 2026-08-19). It existed
+    # because beyond 1.33 the 3x ratio pushes angular_acc past the shipped
+    # 4.0, which nothing had tested. Newton has lifted that restriction for
+    # this test explicitly, so `angular_acc` now follows the ratio wherever
+    # the requested cap goes. What this gives up is H62: RealMan hold the
+    # shipped acceleration because it preserves the ability to stop
+    # immediately, so a higher value lengthens the stop. Nothing else is
+    # relaxed — the all-joint 95 % abort and the 98 % dwell abort still
+    # decide every run, and they are what actually protects the arm.
     # Limits RATCHET (H62): run reset_limits.py afterwards.
     req_ang = None
     if "--angular-speed" in sys.argv:
         req_ang = float(sys.argv[sys.argv.index("--angular-speed") + 1])
-        if not (0 < req_ang <= 1.33):
-            raise SystemExit(
-                "--angular-speed %.3f out of the screened range (0, 1.33] "
-                "rad/s — beyond 1.33 the 3x ratio needs angular_acc above "
-                "the shipped 4.0 rad/s^2, which nothing has tested."
-                % req_ang)
+        if req_ang <= 0:
+            raise SystemExit("--angular-speed must be positive, got %.3f"
+                             % req_ang)
+        if req_ang > 1.33:
+            print("  [WARN] angular cap %.3f rad/s is above the previously "
+                  "screened 1.33; angular_acc will be raised to %.2f rad/s^2, "
+                  "past the shipped 4.0. Untested territory, and it lengthens "
+                  "the stop (H62). Cap removal was requested explicitly."
+                  % (req_ang, max(4.0, 3.0 * req_ang)))
     # THE LADDER. Every rung runs in turn, ASCENDING, each recorded on its
     # own, and the climb STOPS at the first rung that fails — continuing past
     # a stall is how the 0.80 run that reversed four joints in 80 ms happened.
