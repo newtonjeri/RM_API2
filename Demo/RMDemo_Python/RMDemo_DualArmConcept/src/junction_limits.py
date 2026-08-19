@@ -20,27 +20,38 @@ this check can, because it asks a question about one junction.
 
 `r` IS A PERCENTAGE 0–100, NOT MILLIMETRES (vendor: 交融半径百分比系数).
 
-⚠ CALIBRATION AGAINST THE RAMP — THIS CHECK DOES NOT YET GATE. Run over
-`planar_speed_ramp_001` on the commanded speeds, A.2.2 flags **19 of 19**
-junctions at rung 0.45 — a rung that completed on hardware with J4 at 47.8 %
-and 0 ms of dwell. Worse, it ranks the one junction that DID fail (`r01_in`,
-the 145.6 mm arc into a full-speed stroke) as the LEAST severe of the nine
-arc→stroke entries at every rung, because its longer approach raises
-`min(L_in, L_out)` and therefore the cut it is credited with:
+⚠ A.2.2 IS BINDING, AND THERE IS AN OPEN CALIBRATION DISPUTE (for Newton).
+An earlier revision of this module printed A.2.2 as ADVISORY on the strength
+of one peer result (rm-api2-b4). That was a unilateral suspension of a
+frozen clause on an unratified finding — reversed 2026-08-19 (alix-ws-61's
+argument): A.4's withdrawal handed the gating job to A.2.1 + A.2.2 ("the
+screen ranks, geometry gates"), so with A.2.2 advisory NOTHING gated a
+junction offline. A clause that over-flags costs speed; a clause that is
+absent costs an arm. A.2.2 gates until Newton rules otherwise.
+
+THE DISPUTE, recorded verbatim so the refusals below are not mistaken for a
+clean bill: run over `planar_speed_ramp_001` on the commanded speeds, A.2.2
+flags **19 of 19** junctions at rung 0.45 — a rung that completed on
+hardware with J4 at 47.8 % and 0 ms of dwell — so THIS GATE REFUSES RUNGS
+C2 RECORDS AS COMPLETED. It also ranks the one junction that DID fail
+(`r01_in`, the 145.6 mm arc into a full-speed stroke) as the LEAST severe of
+the nine arc→stroke entries at every rung, because its longer approach
+raises `min(L_in, L_out)` and therefore the cut it is credited with:
 
     rung 0.90   r01_in   deficit 115.0 mm   implied  15.1 m/s²  ( 5.6× cmd)
                 r02_in   deficit 129.4 mm   implied  35.5 m/s²  (13.1× cmd)
                 r09_in   deficit 129.4 mm   implied  35.5 m/s²  (13.1× cmd)
 
 A.7 records the opposite: `r01_in` is "the SOLE source of all J4 load above
-51 %" and the eight 56.6 mm entries "never passed 51 %". So on this path the
-clause is anti-correlated with the measured outcome. Until Newton rules on
-it, `report()` prints the A.2.2 column as ADVISORY and this module returns
-the verdict WITHOUT gating a rung — the contract forbids a code default from
-settling a clause ("not something a code default may settle"), and inventing
-a threshold here would repeat exactly the mistake A.4's withdrawn prediction
-band made. A.2.1 is unaffected: it is per-arc, needs no speed pairing, and
-nothing in the corpus contradicts it.
+51 %" and the eight 56.6 mm entries "never passed 51 %". Whether that
+anti-correlation is real or an artifact of comparing WHOLE-PATH outcomes to
+PER-JUNCTION verdicts (J4 passed 80 % only inside a 40 mm window at ONE
+junction — a path statistic averages the event away, exactly how A.4's band
+failed) is under independent verification (alix-ws-54, 2026-08-19). The
+verdict goes to Newton; neither outcome is a code default's to settle. Do
+not quietly re-tune this module either way — the contradiction is loud on
+purpose. A.2.1 is undisputed: per-arc, needs no speed pairing, and nothing
+in the corpus contradicts it.
 
 THE RULE WHEN A JUNCTION IS INFEASIBLE AT EVERY r (A.2.2, verbatim): **the
 LOWER SPEED binds — never a larger r, and never "run it anyway".** This
@@ -66,12 +77,12 @@ R_MEASURED_MAX = 50.0
 def c_of_r(r_pct):
     """Cut coefficient c(r). Declines with r — it is NOT the flat 1.4.
 
-    The refuted form (`c` a function of turn ANGLE, flat in r: 0 / 0.70 / 1.4)
-    still lives in `rm_emulator.py:_corner_model` and in the PREDICTED
-    SIGNATURE headers of `paths/chain_semantics_00{1,3,4}.py`. At r = 10 —
-    the radius the freeze rule mandates on dense geometry — the true 1.70 is
-    ABOVE the old band, so the old form UNDERSTATES the cut exactly where
-    this project operates.
+    The refuted flat-in-r form (0 / 0.70 / 1.4 by turn angle) was retired
+    from `rm_emulator.py:_corner_model` in 2fbc9f4; the PREDICTED SIGNATURE
+    headers of `paths/chain_semantics_00{1,3,4}.py` keep it as annotated
+    history. At r = 10 — the radius the freeze rule mandates on dense
+    geometry — the true 1.70 is ABOVE the old band, so the old form
+    UNDERSTATED the cut exactly where this project operates.
     """
     if r_pct <= _C_OF_R[0][0]:
         return _C_OF_R[0][1]
@@ -287,14 +298,21 @@ def report(mod, rung, line_acc, name=""):
     else:
         L.append("  VERDICT (A.2.1, BINDING): arcs bind this rung to %.3f m/s."
                  % a_bind)
-    L.append("  VERDICT (A.2.2, ADVISORY ONLY — see the calibration note in "
-             "this module's docstring):")
-    L.append("      %d/%d junctions short on commanded speeds; this check "
-             "flags 19/19 on a" % (len(bad_j), len(junctions)))
-    L.append("      rung that completed on hardware, and ranks the junction "
-             "that DID fail as the")
-    L.append("      least severe. It does NOT gate. Pending Newton's ruling.")
-    return "\n".join(L), a_bind
+    j_bind = min([j["v_bind"] for j in junctions if not j["ok"]], default=None)
+    if j_bind is None:
+        L.append("  VERDICT (A.2.2, BINDING): junctions clear this rung.")
+    else:
+        L.append("  VERDICT (A.2.2, BINDING): %d/%d junctions short on "
+                 "commanded speeds; the" % (len(bad_j), len(junctions)))
+        L.append("      LOWER SPEED binds this rung to %.3f m/s." % j_bind)
+        L.append("      ⚠ OPEN DISPUTE (for Newton — this module's docstring): "
+                 "run verbatim, A.2.2")
+        L.append("      refuses rungs C2 records as completed on hardware. It "
+                 "gates anyway: a frozen")
+        L.append("      clause is not a peer result's to suspend, and with it "
+                 "advisory nothing gates")
+        L.append("      a junction offline. Loud on purpose.")
+    return "\n".join(L), worst
 
 
 if __name__ == "__main__":

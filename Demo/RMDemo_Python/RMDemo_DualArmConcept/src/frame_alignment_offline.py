@@ -50,13 +50,34 @@ if str(RM_PY) not in sys.path:
 
 URDF = WS / "butterfli_workspace" / "urdf" / "butterfli.urdf"
 
+# THE LIVE SOURCE of the ik-frame offsets. The robot's codebase moved to
+# alix_ws and the frames were RE-CUT there so LEFT mirrors RIGHT exactly
+# (x negated, y/z identical, rpy zero). The butterfli_ws copies — including
+# the compiled URDF above — predate the re-cut and are STALE for the frames
+# the re-cut moved. The URDF stays in use for the FK half only (the arm
+# tree itself did not move); the OFFSETS verify against this xacro.
+XACRO = (pathlib.Path.home() / "alix_ws" / "src" / "alix" / "ros" /
+         "description" / "alix_description" / "urdf" / "ik_frames.xacro")
+
 # ConnectorLink -> ik frames, keyed by the URDF LINK NAME and verbatim from
-# butterfli_description/urdf/ik_frames.xacro. Keying by the URDF name (not an
-# invented label) is the whole point: these frames exist to let a cleaning
-# point expressed in `R_glove_frame_4` be commanded directly on the
-# controller, and that only works if both sides call it the same thing.
-# `verify_against_urdf()` below re-derives every offset from the live URDF so
-# this table cannot drift silently.
+# alix_description/urdf/ik_frames.xacro (the LIVE file — see XACRO above).
+# Keying by the URDF name (not an invented label) is the whole point: these
+# frames exist to let a cleaning point expressed in `R_glove_frame_4` be
+# commanded directly on the controller, and that only works if both sides
+# call it the same thing. `verify_against_xacro()` below re-parses the live
+# xacro so this table cannot drift silently.
+#
+# DRIFT POST-MORTEM (2026-08-20, found by alix-ws-54, both fixes verified
+# here against the live xacro): two LEFT entries went stale at the mirror
+# re-cut — L_glove_frame_2 x -0.02 -> -0.0135 (the -0.02 was the DEAD
+# commented-out line's X, a 6.5 mm error) and L_glove_frame_1 z
+# 0.14 -> 0.145 (5 mm, missed by the reporter, caught by the re-check).
+# The old verifier re-derived from butterfli_ws's compiled URDF, which was
+# itself stale, so the guard "passed" against the wrong truth. The parser
+# below strips XML comments FIRST because ik_frames.xacro keeps superseded
+# origins commented directly above the live ones — that is the exact trap.
+# Do NOT back-fit L_glove_frame_2 from the 2026-08-10/11 REAL logs: those
+# runs predate the re-cut, so the controller held the OLD value then.
 IK_FRAMES = {
     "right": {
         "R_glove_frame_1": ((0.05, 0.0, 0.145), (0.0, 0.0, 0.0)),
@@ -67,8 +88,8 @@ IK_FRAMES = {
         "R_index_tip_frame": ((0.0242, 0.0288, 0.225), (0.0, 0.0, 0.0)),
     },
     "left": {
-        "L_glove_frame_1": ((-0.05, 0.0, 0.14), (0.0, 0.0, 0.0)),
-        "L_glove_frame_2": ((-0.02, 0.0, 0.165), (0.0, 0.0, 0.0)),
+        "L_glove_frame_1": ((-0.05, 0.0, 0.145), (0.0, 0.0, 0.0)),
+        "L_glove_frame_2": ((-0.0135, 0.0, 0.165), (0.0, 0.0, 0.0)),
         "L_glove_frame_3": ((-0.075, 0.007, 0.17), (0.0, 0.0, 0.0)),
         "L_glove_frame_4": ((-0.055, 0.007, 0.205), (0.0, 0.0, 0.0)),
         "L_tip_frame": ((-0.015, 0.005, 0.23), (0.0, 0.0, 0.0)),
@@ -140,28 +161,57 @@ def print_frame_map(side, indent="  "):
           f"{ARM_TIP_TO_CONNECTOR_M * 1000:.1f} mm on Z, zero rotation")
 
 
-def verify_against_urdf(model, side):
-    """Re-derive every IK_FRAMES offset from the URDF; report disagreements.
+def _live_xacro_frames():
+    """{child_link: ((x,y,z), (r,p,y))} for every *_ConnectorLink child,
+    parsed from the LIVE ik_frames.xacro.
 
-    Returns a list of (link, dx_mm) for frames that differ, empty when the
-    table matches. Guards against ik_frames.xacro moving without this table
-    moving with it — which would put the controller and MoveIt on different
-    definitions of the same named frame, the exact failure C14 exists to
-    prevent.
+    XML comments are stripped FIRST: the xacro keeps superseded origins
+    commented directly above the live ones, and a naive line-match
+    resurrects dead values — exactly how IK_FRAMES went stale (see the
+    post-mortem above the table).
     """
+    import re
+    text = re.sub(r"<!--.*?-->", "", XACRO.read_text(), flags=re.S)
+    frames = {}
+    for jm in re.finditer(r"<joint\b.*?</joint>", text, flags=re.S):
+        blk = jm.group(0)
+        par = re.search(r'<parent\s+link="([^"]+)"', blk)
+        chi = re.search(r'<child\s+link="([^"]+)"', blk)
+        org = re.search(r'<origin\s+xyz="([^"]+)"\s+rpy="([^"]+)"', blk)
+        if not (par and chi and org):
+            continue
+        if not par.group(1).endswith("ConnectorLink"):
+            continue
+        frames[chi.group(1)] = (
+            tuple(float(v) for v in org.group(1).split()),
+            tuple(float(v) for v in org.group(2).split()))
+    return frames
+
+
+def verify_against_xacro(side):
+    """Compare IK_FRAMES against the live xacro; report disagreements.
+
+    Returns a list of (link, dx_mm) for frames that differ — NaN when a
+    link is missing on either side, because a frame added to the xacro but
+    absent here is drift too. Empty when the table matches the live source.
+    Guards against ik_frames.xacro moving without this table moving with
+    it — which would put the controller and MoveIt on different definitions
+    of the same named frame, the exact failure C14 exists to prevent.
+    """
+    live = _live_xacro_frames()
     pref = "R_" if side == "right" else "L_"
-    jm = {f"{pref}joint{i + 1}": 0.0 for i in range(7)}
-    tw = model.link_world_transforms(jm)
-    conn = tw[f"{pref}ConnectorLink"]
     bad = []
-    for link, (xyz, _rpy) in IK_FRAMES[side].items():
-        if link not in tw:
+    for link, (xyz, rpy) in IK_FRAMES[side].items():
+        if link not in live:
             bad.append((link, float("nan")))
             continue
-        actual = (np.linalg.inv(conn) @ tw[link])[:3, 3]
-        d = np.linalg.norm(actual - np.asarray(xyz)) * 1000.0
-        if d > 0.01:
-            bad.append((link, float(d)))
+        lxyz, lrpy = live[link]
+        d = math.dist(xyz, lxyz) * 1000.0
+        if d > 0.01 or any(abs(a - b) > 1e-6 for a, b in zip(rpy, lrpy)):
+            bad.append((link, d))
+    for link in live:
+        if link.startswith(pref) and link not in IK_FRAMES[side]:
+            bad.append((link, float("nan")))
     return bad
 
 # Joint test set (degrees): named states + exercising every joint
@@ -285,15 +335,16 @@ def main() -> int:
               "\nCompose it into the tool frames (already done below):")
         residual = base
 
-    # the table above is only trustworthy if it still matches the URDF
-    drift = verify_against_urdf(model, side)
+    # the table above is only trustworthy if it still matches the LIVE
+    # xacro (NOT the butterfli URDF — that copy predates the mirror re-cut)
+    drift = verify_against_xacro(side)
     if drift:
         print("\nWARNING: IK_FRAMES disagrees with ik_frames.xacro:")
         for link, d in drift:
             print(f"    {link:20s} off by {d:.2f} mm")
         print("  Update IK_FRAMES before writing anything to a controller.")
         return 1
-    print(f"\n  IK_FRAMES verified against the URDF "
+    print(f"\n  IK_FRAMES verified against the live xacro "
           f"({len(IK_FRAMES[side])} frames, all within 0.01 mm)")
 
     print(f"\nTool frames to create on the {side.upper()} controller "

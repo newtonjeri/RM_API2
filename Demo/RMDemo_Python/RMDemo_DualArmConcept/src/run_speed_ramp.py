@@ -687,9 +687,14 @@ def main():
                     mod, rung, line_acc, os.path.basename(path))
                 print("\n".join("  " + ln for ln in jtxt.splitlines()))
                 if jbind is not None and jbind < rung - 1e-9:
-                    print("     rung refused: A.2.1 binds this geometry to "
-                          "%.3f m/s, below the commanded %.2f. Per A.2.2 the "
-                          "LOWER SPEED binds — do NOT raise r." % (jbind, rung))
+                    print("     rung refused: A.2.1/A.2.2 bind this geometry "
+                          "to %.3f m/s, below the commanded %.2f. Per A.2.2 "
+                          "the LOWER SPEED binds — do NOT raise r."
+                          % (jbind, rung))
+                    print("     NOTE: A.2.2 run verbatim refuses rungs C2 "
+                          "records as completed on hardware — open calibration "
+                          "dispute, pending Newton (junction_limits docstring). "
+                          "It gates until he rules.")
                     ok = False
             except Exception as exc:                          # noqa: BLE001
                 print("  1b. GEOMETRY  check UNAVAILABLE (%s) — NOT gated. "

@@ -56,8 +56,8 @@ RIGHT arm — URDF frame <-> controller tool frame
 LEFT arm — URDF frame <-> controller tool frame
   URDF link (MoveIt / TF)  controller frame    from ConnectorLink (mm)        from Arm_Tip (mm)
   --------------------------------------------------------------------------------------------
-  L_glove_frame_1          L_glove_1            -50.0     0.0   140.0     -50.0    0.0  155.3
-  L_glove_frame_2          L_glove_2            -20.0     0.0   165.0     -20.0    0.0  180.3
+  L_glove_frame_1          L_glove_1            -50.0     0.0   145.0     -50.0    0.0  160.3
+  L_glove_frame_2          L_glove_2            -13.5     0.0   165.0     -13.5    0.0  180.3
   L_glove_frame_3          L_glove_3            -75.0     7.0   170.0     -75.0    7.0  185.3
   L_glove_frame_4          L_glove_4            -55.0     7.0   205.0     -55.0    7.0  220.3
   L_tip_frame              L_tip                -15.0     5.0   230.0     -15.0    5.0  245.3
@@ -65,6 +65,15 @@ LEFT arm — URDF frame <-> controller tool frame
   --------------------------------------------------------------------------------------------
   rule: controller name = URDF link with '_frame' removed  |  Arm_Tip -> ConnectorLink = 15.3 mm on Z, zero rotation
 ```
+
+**Left-arm values re-cut to MIRROR the right (alix_ws, corrected here
+2026-08-20):** `L_glove_1` z 140 → 145, `L_glove_2` x −20 → −13.5. REAL
+logs from 2026-08-10/11 predate the re-cut — the controller held the OLD
+values then, so do **not** back-fit those two frames from those logs
+(`L_glove_4` did not move, which is why it validates). The 15.3 mm
+Arm_Tip → ConnectorLink offset is hardware-confirmed: Kabsch fit of
+emulator FK to recorded controller TCP, residuals 0.008 mm (R) / 0.019 mm
+(L) at +2.8 mm over the URDF's 12.5 (alix-ws-54, 2026-08-20).
 
 ## Verification
 

@@ -295,7 +295,18 @@ def _create_glove_frames(robot):
 
     wanted = {controller_frame_name(link): (link, xyz, rpy)
               for link, (xyz, rpy) in IK_FRAMES[ARM_SIDE].items()}
-    new_count = len([n for n in wanted if n not in existing])
+
+    # The controller's frame LIST truncates names to 10 chars —
+    # `R_index_tip` (11) comes back as `R_index_ti` — so an 11-char name
+    # never matches `existing` verbatim, the writer routes to CREATE on a
+    # frame that exists, and gets ret=1 forever (both arms' logged runs
+    # FAIL on exactly the two *_index_tip frames this way). Reads and
+    # updates DO resolve the full name (the MATCH TABLE read them back at
+    # 0.00 mm), so match existence on the 10-char form and route to update.
+    def _held(fname):
+        return any(e[:10] == fname[:10] for e in existing)
+
+    new_count = len([n for n in wanted if not _held(n)])
     if len(existing) + new_count > capacity:
         return ("FAIL", "glove tool frames created",
                 f"{len(existing)} frames on the controller + {new_count} new "
@@ -321,7 +332,7 @@ def _create_glove_frames(robot):
         # com is in mm; the setter takes the getter's unit — see
         # com_from_mm(). The read-back below is what verifies it.
         frame.x, frame.y, frame.z = com_from_mm(com)
-        update = fname in existing
+        update = _held(fname)
         try:
             ret = (robot.rm_update_tool_frame(frame) if update
                    else robot.rm_set_manual_tool_frame(frame))

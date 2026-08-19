@@ -140,7 +140,7 @@ agreement to a side that never gave it. Corrected 2026-08-17.
 
 | # | Gap | Why it matters | Collection recipe (cheapest first) |
 |---|-----|----------------|------------------------------------|
-| 1 | Cut coefficient c(θ) between 90° and 165° | the blend model interpolates blindly there | one synthetic SIM path: fixed 150 mm segments, corners at 100/115/130/145/160°, r=25/50 — two runs |
+| 1 | Cut coefficient c(θ) at 90–165° AND at >165° reversals | the blend model interpolates blindly there — and contract A.2's c(r) is POOLED over the angle mix while 90°-class is separately 0.70, so reversal-class c(10) likely sits ABOVE the pooled 1.70 (d9, 2026-08-19); 82/533 corpus corners (15.4 %) are >165° | **READY 2026-08-19** — `c_theta_sweep_001` (100/115/130/145/160°, 90 mm segments) + `c_theta_reversal_001` (166/170/173/176°, 120 mm), both in the proven box, screened (worst J4 45 % / 40 % at 0.25) and A.2.1/A.2.2-clean; `BLEND_SWEEP` r = 10/25/50 (r = 10 is the freeze-rule radius — mandatory, the old r=25/50 recipe missed it); two SIM invocations of `test_blend_corner.py --path …`, six recorded runs |
 | 2 | Chain semantics at a 0.45 baseline | everything above 0.35 is extrapolation | `chain_semantics_004/005` — READY, two SIM runs |
 | 3 | Root cause of the r=25 freeze / early termination | silent coverage loss in production | SIM matrix: spur length {10,20,30,50 mm} × r {20,25,30,35,50} × adjacent-segment length; SIM reproduces both faithfully |
 | 4 | r > 50 behaviour | never tested; the cut law may saturate | add r=75 to one blend_corner SIM sweep |
