@@ -91,6 +91,29 @@ ANGULAR_ACC_FLOOR = 4.00
 ANGULAR_ACC_PINNED = None          # set by --angular-acc
 
 
+# LINE ACCELERATION: KEEP A MARGIN THE 2-DECIMAL WIRE FORMAT CAN CARRY.
+# `speed_limits` requires acc >= 3 * speed * (1 + 1e-9) and rejects anything
+# under it, because a pair on the exact boundary is answered by the
+# controller with a bare ret=1 and the run then proceeds at whatever was
+# already configured. This driver used to compute `3.0 * rung` exactly, which
+# is BY CONSTRUCTION below that threshold, and then formatted it with "%.2f"
+# — so even a 1e-9 nudge was rounded away. Measured 2026-08-19: rungs 0.45
+# and 0.50 ran (their acc is floored at 1.60, well clear) and EVERY rung from
+# 0.60 up was refused with
+#   "line_acc 1.800 is below 3 x line_speed 0.600 = 1.800"
+# — two numbers that print identically, which is what made it look like a
+# controller quirk rather than a rounding boundary.
+#
+# 0.01 is the smallest margin "%.2f" can express. At rung 0.60 it raises the
+# ratio from 3.000 to 3.017; the cost is under 1 % of acceleration.
+LINE_ACC_MARGIN = 0.01
+
+
+def line_acc_for(rung):
+    """Linear acceleration for a rung, clear of the ratio boundary."""
+    return max(1.60, 3.0 * rung + LINE_ACC_MARGIN)
+
+
 def angular_acc_for(cap):
     """Angular acceleration for a rung whose angular cap is `cap`."""
     if ANGULAR_ACC_PINNED is not None:
@@ -474,7 +497,7 @@ def main():
     consecutive = 0
     for rung in rungs:
         cap = COUPLING * rung
-        line_acc = max(1.60, 3.0 * rung)
+        line_acc = line_acc_for(rung)
         ang_acc = angular_acc_for(cap)
         print("=" * 72)
         print("RUNG %.2f m/s   omega_cap %.4f rad/s   line_acc %.2f m/s^2   "
