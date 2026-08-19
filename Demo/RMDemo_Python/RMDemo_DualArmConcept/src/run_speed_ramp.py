@@ -23,16 +23,39 @@ ABORT CRITERIA (agreed with Newton, 2026-08-19), applied to the REAL rung:
   * ANY dwell at >=98 % of a limit, for any duration at all (the H63 metric —
     0 ms at 0.45, 330 ms on the 0.8 run that did not finish).
 
-WHAT THIS RAMP IS EXPECTED TO SHOW (a prediction, recorded before the run so
-it can be wrong): the conditioning tilt this arm needs to keep the elbow out
-of a singularity is ~40.5 deg over a 380 mm stroke, i.e. kappa = 1.86 rad/m.
-A segment demands omega = kappa * v, so under the C2 coupling every stroke
-runs at v_eff = 1.25 v / 1.86 = 0.67 * v at EVERY rung, and the absolute
-vendor ceiling omega <= angular_acc/3 = 1.333 pins the stroke at
-1.333 / 1.86 = 0.72 m/s no matter how high the linear cap goes. If that holds,
-the contract's 1.0 m/s target is unreachable without raising angular_acc to
->= 5.6 rad/s^2 — which is untested, and which RealMan advise against because
-the shipped values preserve the ability to stop immediately (H62).
+WHAT THIS RAMP SHOWED, and the law that explains it (contract A.6, and the
+ladder ran 2026-08-19). The prediction recorded here before the run used
+kappa = 1.86 rad/m and was WRONG — it divided the rotation across the 420 mm
+PADDED span by the 380 mm STROKE, and read the pose in the wrong convention.
+rx/ry/rz in a controller pose are Euler RPY (Rz*Ry*Rx), NOT a rotation
+vector. Measured: 36.03 deg over 380 mm, so
+
+    kappa = 1.655 rad/m,  omega = kappa * v
+
+The C2 coupling COMMANDS omega = 1.25 * v while the path DEMANDS 1.655 * v,
+so the demand exceeds the cap at every rung — and the commanded cap itself
+reaches 1.25 rad/s at v = 0.755 m/s, above which the far-reach end of the
+stroke, where the tilt is steepest, is asking for more angular rate than it
+is allowed. That is where J4 failed. The shipped angular_acc 4.0 supports
+the true demand only up to
+
+    v = angular_acc / (3 * kappa) = 4.0 / 4.965 = 0.806 m/s
+
+which is why 0.80 is the design speed and 0.90 was not survivable.
+
+MEASURED, left arm, REAL (all three confirmed against the recordings):
+    0.80  J4 87.6 %, 0 ms dwell, 6.8 A  -> completed, margin
+    0.90  J4 99.3 %, 10 ms dwell, 7.7 A -> completed, BOTH abort criteria met
+    1.00  stopped at 55 % of the path, 26.4 A, three joints reversed in 20 ms
+          controller reported "Out Of Reach, reason: Joint4overspeed"
+          (4103 / 0x1007) — GUI-ONLY. err1..err7 and lift_err are ZERO in all
+          23 recordings and arm_status read 0 (IDLE) through the event, so the
+          only machine-readable evidence is truncated traced distance plus
+          non-arrival at the final waypoint.
+
+DESIGN SPEED IS 0.80 m/s / 1.25 rad/s (contract C2), superseding the earlier
+1.0 m/s target. Raising the cap buys 8.9 s across the whole commode_c corpus
+(3.4 %) and is not worth the joint margin.
 
 USAGE
     python3 run_speed_ramp.py --side left --mode SCREEN   # offline only (default)
@@ -41,7 +64,7 @@ USAGE
     python3 run_speed_ramp.py --side left --mode REAL     # the whole ladder
     python3 run_speed_ramp.py --side left --mode SIM --rungs 0.45,0.50
     python3 run_speed_ramp.py --side left --mode REAL --dry   # print, run nothing
-    python3 run_speed_ramp.py --side left --coupling 1.86     # omega = path demand
+    python3 run_speed_ramp.py --side left --coupling 1.655    # omega = path demand (A.6)
     python3 run_speed_ramp.py --side left --angular-acc 6.0   # pin the acc instead
 
 --mode names the HIGHEST rung the ladder may reach; every rung below it still
@@ -71,9 +94,10 @@ COUPLING = 1.25        # C2: omega_cap = COUPLING * v (Newton's ratio)
 # fired in this ladder and lifting it alone changes nothing.
 #
 # What the PATH demands is different and larger: the conditioning tilt is
-# kappa = 1.86 rad/m, so a segment needs omega = 1.86 * v. At --coupling 1.86
+# kappa = 1.655 rad/m (contract A.6), so a segment needs omega = 1.655 * v.
+# At --coupling 1.655
 # the commanded cap finally matches the demand, and THEN the ratio asks for
-# angular_acc = 3 * 1.86 * v, which passes 4.00 at rung 0.72 and reaches
+# angular_acc = 3 * 1.655 * v, which passes 4.00 at rung 0.806 and reaches
 # 5.58 at rung 1.00 — exactly the ">= 5.6" the module docstring predicted.
 
 # ANGULAR ACCELERATION: THE CAP IS REMOVED (Newton, 2026-08-19).
@@ -123,22 +147,35 @@ def angular_acc_for(cap):
     return max(ANGULAR_ACC_FLOOR, 3.0 * cap * (1 + 1e-9))
 SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
 
-# The screen's over-read is a BAND, not a constant (Newton, 2026-08-19).
-# Calibration points on record: screen/REAL 0.87 at 0.25 m/s, 1.08 at 0.45,
-# and toplid_left_002 at 129 % screen against a 96 % measured worst joint =
-# 0.74. So a screen reading P predicts a real [0.74 P, 1.08 P].
+# THE PREDICTION BAND [0.74 P, 1.08 P] IS WITHDRAWN — contract A.4, refuted
+# on the 2026-08-19 hardware ramp. It is gone in BOTH its value and its shape:
 #
-# Consequences for gating, and this is the whole point: a screen reading is
-# only DECISIVE at the ends of that band.
-#   1.08 P <= SCREEN_GATE  -> certainly under the gate            -> PASS
-#   0.74 P >  JOINT_ABORT  -> certainly over the abort            -> BLOCK
-#   otherwise              -> the screen cannot decide            -> ADVISORY
-# An ADVISORY rung RUNS, and the run's own all-joint abort decides it. At
-# rung 0.60 the screen reads 101 %, i.e. a real 75-109 % — "the ladder should
-# be allowed to try it rather than being talked out of it by the screen".
-SCREEN_BAND_LO = 0.74
-SCREEN_BAND_HI = 1.08
+#   * Value, in the UNSAFE direction. Offline screen against the REAL worst
+#     joint on this very path, v = 0.45 … 0.90, ran 1.12 1.13 1.10 1.10 1.14
+#     1.15 — outside the old band and OPTIMISTIC. The screen reads 10-15 %
+#     LOW. The old band's 0.74 low end licensed exactly the wrong call.
+#   * Shape, which matters more. A whole-path ratio is the wrong statistic:
+#     J4 passed 80 % only inside a 40 mm window at ONE junction and never
+#     passed 51 % anywhere else. A scalar over 1220 samples cannot gate a
+#     3-sample event, it can only average it away.
+#
+# WHAT REPLACES IT (A.4, verbatim): "the screen ranks, geometry gates."
+#   * The screen may REJECT a speed. It may NEVER certify one — a J4 pass is
+#     not a clearance, because J4 is screened for being redundancy-invariant
+#     (hence offline-computable), NOT for being the binding joint. Measured:
+#     J1 binds on 11 of 24 tasks, and at 0.8 m/s on toplid_left four joints
+#     were over limit at once.
+#   * Rejection uses the LOWEST measured under-read, 1.10, so a rung is
+#     refused only when even the most optimistic reading clears the abort.
+#   * The decision belongs to the junction carrying the screen's maximum and
+#     is taken there with A.2.1/A.2.2 (src/junction_limits.py) — geometry,
+#     exact, offline — not with this statistic.
+SCREEN_UNDERREAD_MIN = 1.10
 JOINT_ABORT = 95.0     # % of any joint's limit
+FINAL_WAYPOINT_TOL_M = 0.020   # completed rungs land within 1 mm; the
+                               # 2026-08-19 v1.00 failure ended 350 mm out
+TRACED_FLOOR = 0.90            # SIM traces 101 % of commanded, REAL 104 %;
+                               # the failure traced 53 % (SIM) / 57 % (REAL)
 CONSECUTIVE_FAIL_STOP = 2
 
 
@@ -408,10 +445,53 @@ def run_emulated(side, path, rung, cap, line_acc, dry):
     # tool traced 10.300 m against a commanded 4.330 m (238 %)", and an
     # earlier version of this driver called that PASS.
     bad = any(k in out for k in ("DID NOT FINISH", "did not finish",
+                                 "did not complete", "arrival event reports "
+                                 "failure",
                                  "Traceback", "ABORT", "over limit",
                                  "NO RESULT", "stream is not this path",
                                  "would be fiction"))
     return (p.returncode == 0 and not bad), out
+
+
+def check_completion(meta, rows):
+    """Did the tool actually traverse the program? Works in SIM and REAL.
+
+    Two independent signatures, both from the recording alone:
+      * the LAST sample sits at the LAST commanded waypoint;
+      * the traced length is not far short of the commanded length.
+    `test_blend_corner` prints "[STOP] ... did not complete" for this and
+    then EXITS 0, so neither the exit code nor the string blacklist catches
+    it — this does.
+    """
+    cmd = meta.get("commanded") or {}
+    poses = cmd.get("poses") or []
+    if len(poses) < 2:
+        return True, "no commanded poses in run.json — completion NOT checked"
+
+    def d3(a, b):
+        return math.sqrt(sum((a[i] - b[i]) ** 2 for i in range(3)))
+
+    end = [float(rows[-1]["tcp_%s" % k]) for k in ("x", "y", "z")]
+    miss = d3(end, poses[-1])
+    if miss > FINAL_WAYPOINT_TOL_M:
+        return False, ("DID NOT COMPLETE — ended %.0f mm from the final "
+                       "waypoint (tol %.0f mm)"
+                       % (miss * 1000, FINAL_WAYPOINT_TOL_M * 1000))
+
+    vias = cmd.get("arc_vias") or []
+    want = 0.0
+    for i in range(len(poses) - 1):
+        via = vias[i] if i < len(vias) else None
+        want += (d3(poses[i], via) + d3(via, poses[i + 1])) if via \
+            else d3(poses[i], poses[i + 1])
+    got = sum(d3([float(a["tcp_%s" % k]) for k in ("x", "y", "z")],
+                 [float(b["tcp_%s" % k]) for k in ("x", "y", "z")])
+              for a, b in zip(rows, rows[1:]))
+    if want > 0 and got < TRACED_FLOOR * want:
+        return False, ("DID NOT COMPLETE — traced %.3f m against a commanded "
+                       "%.3f m (%.0f %%)" % (got, want, 100.0 * got / want))
+    return True, ("completed: %.3f m traced / %.3f m commanded, %.0f mm from "
+                  "the final waypoint" % (got, want, miss * 1000))
 
 
 def check_recording(out):
@@ -438,8 +518,18 @@ def check_recording(out):
         rows = list(csv.DictReader(open(os.path.join(d, "stream.csv"))))
     except Exception as exc:                                  # noqa: BLE001
         return True, "recording unreadable (%s) — criteria NOT applied" % exc
-    if meta.get("sim") or len(rows) < 60:
-        return True, ""                    # SIM's speed channel is dead
+    if len(rows) < 60:
+        return True, "recording too short to judge"
+    # PATH COMPLETION FIRST — it is the ONLY check SIM can make, and on the
+    # 2026-08-19 ladder it was the one that mattered: SIM traced 2.372 m of a
+    # 4.468 m program at v=1.00 and ended 350 mm from the last waypoint,
+    # reproducing the REAL failure offline. Contract C9 makes this mandatory
+    # in SIM; A.4 explains why the offline JOINT screen could not do it.
+    ok, why = check_completion(meta, rows)
+    if not ok:
+        return False, why
+    if meta.get("sim"):
+        return True, why + " (SIM: joint channel is dead, joint criteria NOT applied)"
     lim = [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0]
     peak = [max(abs(float(r["speed%d" % j])) for r in rows)
             for j in range(1, 8)]
@@ -479,6 +569,8 @@ def run(mode, side, path, rung, cap, line_acc, dry):
     # tool traced 10.300 m against a commanded 4.330 m (238 %)", and an
     # earlier version of this driver called that PASS.
     bad = any(k in out for k in ("DID NOT FINISH", "did not finish",
+                                 "did not complete", "arrival event reports "
+                                 "failure",
                                  "Traceback", "ABORT", "over limit",
                                  "NO RESULT", "stream is not this path",
                                  "would be fiction"))
@@ -571,23 +663,40 @@ def main():
             print("  SCREEN: unavailable or degenerate (got %r) — refusing to "
                   "continue blind.\n    detail: %s" % (worst, seg))
             break
-        lo, hi = SCREEN_BAND_LO * worst, SCREEN_BAND_HI * worst
-        if hi <= SCREEN_GATE:
-            verdict, ok = "PASS", True
-        elif lo > JOINT_ABORT:
+        # A.4: the screen RANKS — it names the junction. It never certifies.
+        optimistic = SCREEN_UNDERREAD_MIN * worst
+        if optimistic > JOINT_ABORT:
             verdict, ok = "BLOCK", False
         else:
-            verdict, ok = "ADVISORY", True
-        print("  1. SCREEN   worst J4 %.0f %% at %s -> real %.0f-%.0f %% -> %s"
-              % (worst, seg, lo, hi, verdict))
-        if verdict == "ADVISORY":
-            print("     the screen cannot decide this rung (band straddles the "
-                  "gate). It RUNS; the all-joint abort decides it.")
+            verdict, ok = "RANKED", True
+        print("  1. SCREEN   worst J4 %.0f %% at %s -> real >= %.0f %% -> %s"
+              % (worst, seg, optimistic, verdict))
+        if verdict == "RANKED":
+            print("     NOT a clearance (A.4). The screen has done its whole "
+                  "job: it named the junction. Geometry gates below.")
         if not ok:
-            print("     rung refused before any motion: even at the optimistic "
-                  "end of the band (%.0f %%) it exceeds the %.0f %% abort. "
-                  "(And a J4 pass is not a clearance either — A.4.)"
-                  % (lo, JOINT_ABORT))
+            print("     rung refused before any motion: even at the lowest "
+                  "measured under-read (x%.2f -> %.0f %%) it exceeds the %.0f %% "
+                  "abort." % (SCREEN_UNDERREAD_MIN, optimistic, JOINT_ABORT))
+
+        # rung 1b — GEOMETRY GATE (A.2.1/A.2.2), which is what actually decides.
+        if ok:
+            try:
+                import junction_limits
+                jtxt, jbind = junction_limits.report(
+                    mod, rung, line_acc, os.path.basename(path))
+                print("\n".join("  " + ln for ln in jtxt.splitlines()))
+                if jbind is not None and jbind < rung - 1e-9:
+                    print("     rung refused: A.2.1 binds this geometry to "
+                          "%.3f m/s, below the commanded %.2f. Per A.2.2 the "
+                          "LOWER SPEED binds — do NOT raise r." % (jbind, rung))
+                    ok = False
+            except Exception as exc:                          # noqa: BLE001
+                print("  1b. GEOMETRY  check UNAVAILABLE (%s) — NOT gated. "
+                      "A.2.1/A.2.2 were the only offline signal that saw the "
+                      "1.00 failure; treat an unscreened rung as unscreened."
+                      % exc)
+        if not ok:
             consecutive += 1
             if consecutive >= CONSECUTIVE_FAIL_STOP:
                 print("\nLADDER STOPPED — %d consecutive failed rungs." % consecutive)

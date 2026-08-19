@@ -43,8 +43,18 @@
 # track X exactly as toplid's do.
 #
 # THE CONSEQUENCE, which is the finding this test exists to confirm:
-#   the conditioning tilt is 40.5 deg over 380 mm, i.e. kappa = 1.86 rad/m.
-#   A segment demands omega = kappa * v, so at 1.0 m/s it demands 1.86 rad/s.
+#   the conditioning tilt is 36.03 deg over 380 mm, i.e. kappa = 1.655 rad/m.
+#   CORRECTED 2026-08-19 (contract A.6). This block previously read 40.5 deg
+#   / 1.86 rad/m: that divided the rotation across the 420 mm PADDED span
+#   (39.82 deg) by the 380 mm STROKE. Measured on these poses, read in the
+#   Euler-RPY convention the controller actually uses (Rz*Ry*Rx,
+#   orientation_cost._Rmat -- NOT a rotation vector, which would give 23.5
+#   deg / 1.08): theta runs 2.33 deg at x=445 to 37.92 deg at x=825, geodesic
+#   sweep 36.03 deg, f = 0.407 at theta_max.
+#   A segment demands omega = kappa * v, so at 1.0 m/s it demands 1.655 rad/s
+#   -- ABOVE the 1.25 this ladder commanded. omega hits 1.25 at v = 0.755 m/s,
+#   so every rung above that was asking for more angular rate than allowed,
+#   at the far-reach end where the tilt is steepest. That is where J4 failed.
 #   With angular_acc held at 4.0 the vendor 3x ratio caps omega at 1.333, so
 #       v_stroke(max) = 1.333 / 1.86 = 0.72 m/s   -- REGARDLESS of the linear cap
 #   and under C2's ratio coupling (omega_cap = 1.25 v) every stroke runs at

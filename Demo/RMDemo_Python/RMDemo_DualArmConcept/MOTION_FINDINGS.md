@@ -479,6 +479,15 @@ within 2–22 % — **the loss is entirely at corners**. Its distribution:
 
       cut(entry+exit) ≈ 1.3–1.5 × (r/100) × min(L_in, L_out)
 
+> ⚠ **Superseded by COMMODE_C_CLEANING_CONTRACT A.2** (frozen 2026-08-19).
+> The `1.3–1.5` band below is wrong: `c` is **not constant in r**, it
+> declines — `c(10)=1.70`, `c(25)=1.57`, `c(50)=1.33`, re-measured over
+> 1454 corners / 43 runs. At `r = 10`, which the freeze rule mandates
+> everywhere, **1.70 lies ABOVE the old band**, so this text understates
+> the cut exactly where the project operates. Where this file and the
+> contract disagree, the contract wins.
+
+
   (SIM medians 1.46–1.52 across r = 10/25/50; corr(L, cut) = 0.81–0.86.
   Per side ≈ 0.7 × (r/100) × L.) Angle does not enter beyond a threshold:
   from ~90° up to 179° the normalised cut is flat.

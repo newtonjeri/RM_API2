@@ -22,6 +22,17 @@
 # polyline in run.json starts there too — the approach is measured, on
 # purpose.
 #
+# ⚠ SUPERSEDED by COMMODE_C_CLEANING_CONTRACT A.2 (frozen 2026-08-19).
+# The predictions below use cut = 1.4*(r/100)*minL — a single flat
+# coefficient. A.2 re-measured c over 1454 corners / 43 runs and it
+# DECLINES with r: c(10)=1.70, c(25)=1.57, c(50)=1.33. At r=10 — the
+# radius the freeze rule mandates everywhere — 1.70 lies ABOVE the old
+# 1.3-1.5 band, so everything below UNDERSTATES the cut, i.e. errs
+# toward predicting the tool passes closer to the commanded polyline
+# than it does. Kept as the historical prediction record; do not read
+# these numbers as current. A.2 also adds two junction terms nothing
+# here accounts for: A.2.1 v_arc <= sqrt(a_lat*R) and A.2.2
+# cut >= |v_out^2 - v_in^2|/(2a).
 # PREDICTED SIGNATURES (cut ~= 1.4*(r/100)*minL; corner A minL = 45 mm step,
 # corner P0 minL = 50 mm approach):
 #

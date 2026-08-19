@@ -538,14 +538,21 @@ def _corner_model(theta_deg, r_pct, min_l_m):
     if r_pct <= 0 or min_l_m < BLEND_FLOOR_M:
         return 0.0, 0.0, True            # no blend: dead stop [§2 / §9.3f]
     r = r_pct / 100.0
-    # cut coefficient c(θ): ~0 below 60°, 0.70 at 90°-class, 1.2–1.5 sharp
-    # [§9.2 bivariate + §9.3d exact 0.70 at 90°]
+    # cut coefficient: ~0 below 60° [§9.2], 0.70 at 90°-class [§9.3d exact].
+    # Sharp corners/reversals: contract A.2 (re-measured 2026-08-19 over 1454
+    # corners) — c is NOT flat: c(10)=1.70, c(25)=1.57, c(50)=1.33. The old
+    # flat 1.4 UNDERSTATED the cut at the mandated r=10 (was here until
+    # 2026-08-19; clamped to [10,50], the measured r domain).
     if theta_deg < 60.0:
         c = 0.0
     elif theta_deg < 120.0:
         c = 0.70
     else:
-        c = 1.4
+        rp = min(max(float(r_pct), 10.0), 50.0)
+        if rp <= 25.0:
+            c = 1.70 + (rp - 10.0) * (1.57 - 1.70) / 15.0
+        else:
+            c = 1.57 + (rp - 25.0) * (1.33 - 1.57) / 25.0
     cut = c * r * min_l_m
     # bilinear-ish interpolation of the retention table
     angs = sorted(_RETENTION)
