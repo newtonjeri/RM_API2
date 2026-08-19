@@ -76,7 +76,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from log_utils import wants_help  # noqa: E402
 
-sys.path.insert(0, "/home/newtonjeri/realman_API/RM_API2/Python")
+# THE SDK, RELATIVE TO THIS FILE. A hardcoded home directory here
+# broke the speed-ramp screen on the lab machine with
+# "ModuleNotFoundError: No module named 'Robotic_Arm'" — and because
+# `run_speed_ramp.screen()` runs this as a SUBPROCESS, the failure
+# surfaced as "SCREEN: unavailable" rather than as a path problem.
+# `parents[4]` is RM_API2; every other module in this tree resolves it
+# the same way (dual_arm_common.py:44, rm_emulator.py:86).
+import pathlib  # noqa: E402
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 from Robotic_Arm.rm_robot_interface import (  # noqa: E402
     Algo, rm_robot_arm_model_e, rm_force_type_e)
 from Robotic_Arm.rm_ctypes_wrap import (  # noqa: E402

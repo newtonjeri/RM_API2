@@ -110,7 +110,9 @@ def _solve_joints(cfg, prog, seed):
     assert FK of the seed reproduces waypoint 0 before trusting a single
     number (this exact trap invalidated an entire analysis on 2026-08-08).
     """
-    sys.path.insert(0, "/home/newtonjeri/realman_API/RM_API2/Python")
+    import pathlib as _pl   # SDK relative to this file, not a home dir
+    sys.path.insert(0, str(_pl.Path(__file__).resolve().parents[4]
+                           / "Python"))
     from Robotic_Arm.rm_robot_interface import (
         Algo, rm_robot_arm_model_e, rm_force_type_e,
         rm_inverse_kinematics_params_t)
@@ -168,7 +170,9 @@ def verify(cfg, unique, seed):
     it is the difference between "accurate" as an assurance and as a
     measurement.
     """
-    sys.path.insert(0, "/home/newtonjeri/realman_API/RM_API2/Python")
+    import pathlib as _pl   # SDK relative to this file, not a home dir
+    sys.path.insert(0, str(_pl.Path(__file__).resolve().parents[4]
+                           / "Python"))
     from Robotic_Arm.rm_robot_interface import (
         Algo, rm_robot_arm_model_e, rm_force_type_e)
     from Robotic_Arm.rm_ctypes_wrap import (

@@ -140,7 +140,9 @@ def movel_joint_timeline(cfg, prog, seed_joints_deg, step_mm=10.0,
     (segment_index, fraction) for samples with no solution.
     """
     import numpy as _np
-    sys_path_marker = "/home/newtonjeri/realman_API/RM_API2/Python"
+    import pathlib as _pl   # SDK relative to this file, not a home dir
+    sys_path_marker = str(_pl.Path(__file__).resolve().parents[4]
+                          / "Python")
     if sys_path_marker not in sys.path:
         sys.path.insert(0, sys_path_marker)
     from Robotic_Arm.rm_robot_interface import (
