@@ -79,6 +79,77 @@ import threading
 import time
 from types import ModuleType, SimpleNamespace
 
+# ── Tool-frame seeding: the LIVE source, not a hard-coded table ─────────
+# Two hard-coded copies of the ik-frame geometry went stale at the alix
+# mirror re-cut (frame_alignment_offline.IK_FRAMES and
+# orientation_cost.TOOL_OFFSETS, both fixed 2026-08-20). The xacro is the
+# thing that actually changes, so the emulator seeds from it directly.
+_IK_XACRO = (pathlib.Path.home() / "alix_ws" / "src" / "alix" / "ros" /
+             "description" / "alix_description" / "urdf" / "ik_frames.xacro")
+_CONNECTOR_TO_ARM_TIP_Z = 0.0153   # measured: Kabsch fit of emulator FK to
+#                                    recorded TCP, 0.008/0.019 mm residual
+
+
+def _seed_tool_frames(side):
+    """{stored_name: pose6} for one arm's glove/ik frames.
+
+    Primary source is the LIVE ik_frames.xacro, parsed with XML comments
+    stripped FIRST — the file keeps superseded origins commented directly
+    above the live ones, which is exactly how the hard-coded tables went
+    stale. Controller name = URDF link with the `_frame` token removed
+    (FRAME_MAP rule), truncated to the 10 chars the controller stores.
+    A frame with non-zero rpy is SKIPPED with a warning rather than
+    silently flattened. Fallback is orientation_cost.TOOL_OFFSETS, and
+    failure is always LOUD: the `except: pass` this replaces seeded no
+    frames at all when the import failed, so rm_change_tool_frame on a
+    glove frame "succeeded" onto Arm_Tip and every commanded waypoint ran
+    ~180 mm short with no error anywhere (measured, alix tree, 2026-08-20).
+    """
+    import re
+    pre = "L_" if side == "left" else "R_"
+    frames = {}
+    try:
+        text = re.sub(r"<!--.*?-->", "", _IK_XACRO.read_text(), flags=re.S)
+        for jm in re.finditer(r"<joint\b.*?</joint>", text, flags=re.S):
+            blk = jm.group(0)
+            par = re.search(r'<parent\s+link="([^"]+)"', blk)
+            chi = re.search(r'<child\s+link="([^"]+)"', blk)
+            org = re.search(r'<origin\s+xyz="([^"]+)"\s+rpy="([^"]+)"', blk)
+            if not (par and chi and org):
+                continue
+            if not par.group(1).endswith("ConnectorLink"):
+                continue
+            link = chi.group(1)
+            if not link.startswith(pre):
+                continue
+            rpy = [float(v) for v in org.group(2).split()]
+            if any(abs(v) > 1e-9 for v in rpy):
+                print("[rm_emulator] WARNING: %s has non-zero rpy %s — "
+                      "SKIPPED, not silently flattened" % (link, rpy))
+                continue
+            x, y, z = (float(v) for v in org.group(1).split())
+            name = link.replace("_frame", "")[:10]
+            frames[name] = [x, y, z + _CONNECTOR_TO_ARM_TIP_Z,
+                            0.0, 0.0, 0.0]
+        if frames:
+            return frames
+        print("[rm_emulator] WARNING: no %s* ConnectorLink frames parsed "
+              "from %s — falling back to TOOL_OFFSETS" % (pre, _IK_XACRO))
+    except Exception as exc:                                # noqa: BLE001
+        print("[rm_emulator] WARNING: live xacro unreadable (%r) — falling "
+              "back to orientation_cost.TOOL_OFFSETS" % (exc,))
+    try:
+        from orientation_cost import TOOL_OFFSETS
+        return {nm[:10]: [off[0], off[1], off[2], 0.0, 0.0, 0.0]
+                for nm, off in TOOL_OFFSETS.items() if nm.startswith(pre)}
+    except Exception as exc:                                # noqa: BLE001
+        print("[rm_emulator] WARNING: tool-frame seeding FAILED (%r) — "
+              "only Arm_Tip%s will exist and rm_change_tool_frame on a "
+              "glove frame will return 1"
+              % (exc, "/Hand" if side == "left" else ""))
+        return {}
+
+
 # ── RealMan's REAL offline solver (same algo family as the controller;
 #    local lib v1.6.0 vs controller 1.5.5). Loaded at import time, BEFORE
 #    install() replaces the Robotic_Arm modules with the emulated ones —
@@ -786,22 +857,27 @@ class EmuController:
         # task selects one. Without them `rm_change_tool_frame("L_glove_2")`
         # returns 1 here and 0 on the arm, so the emulator refuses a run the
         # hardware would accept — and any test that guards on the tool frame
-        # becomes unrunnable offline. Same principle as the comment above:
-        # an emulator that cannot hold the state cannot exercise the code
-        # that depends on it. Offsets come from `orientation_cost.TOOL_OFFSETS`,
-        # which is the frame table verified against recorded poses to 29 um.
-        try:
-            from orientation_cost import TOOL_OFFSETS
-            pre = "L_" if side == "left" else "R_"
-            for nm, off in TOOL_OFFSETS.items():
-                if not nm.startswith(pre):
-                    continue
-                self.tool_frames[nm] = {
-                    "pose": [off[0], off[1], off[2], 0.0, 0.0, 0.0],
-                    "payload": 0.706 if side == "left" else 0.711,
-                    "com": [0.0, 0.0, 0.0]}
-        except Exception:                                   # noqa: BLE001
-            pass                    # never let frame seeding break the emulator
+        # becomes unrunnable offline. Offsets come from the LIVE
+        # ik_frames.xacro (fallback: orientation_cost.TOOL_OFFSETS) — see
+        # _seed_tool_frames for why a hard-coded table is no longer trusted
+        # and why failure here is LOUD: an earlier `except: pass` seeded
+        # nothing when the import failed, and rm_change_tool_frame then
+        # "succeeded" onto Arm_Tip — every waypoint ran ~180 mm short with
+        # no error anywhere (measured, alix tree, 2026-08-20).
+        #
+        # Payload/centroid: each arm's own MEASURED consensus
+        # (payload_audit, calibrated 2026-08-10/11; flange-relative,
+        # stored in METRES like the hardware getter). The centroid does
+        # NOT mirror between arms — measured, refuting the mirror rule —
+        # and the arms genuinely differ: the right carries a D435 distal
+        # of J7, 25 % heavier, CoM 59 mm closer to the flange.
+        if side == "left":
+            _pay, _com = 0.567, [-0.0252, 0.0412, 0.2240]
+        else:
+            _pay, _com = 0.711, [-0.0236, 0.0254, 0.1648]
+        for nm, pose in _seed_tool_frames(side).items():
+            self.tool_frames[nm] = {
+                "pose": pose, "payload": _pay, "com": list(_com)}
         self.active_tool = "Hand" if side == "left" else "Arm_Tip"
         # F10: read from both arms 2026-08-07.
         self.limits = {"line_speed": 0.250, "line_acc": 1.600,

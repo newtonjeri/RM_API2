@@ -83,30 +83,35 @@ payload correction. Rehearsed against the emulator 2026-08-20, two full
 passes, both arms: update routing correct, `*_index_tip` 10-char collision
 resolved, match tables 0.00, restores verified.
 
-**Left arm — ready to run as-is** (values come from the corrected table):
+**Payloads are NOT copied — pass them explicitly on BOTH arms.** The
+writer's default copies the ACTIVE frame's payload/centroid onto every
+frame it writes; on the left the active frame is `Hand` (0.706 kg at
+(−12, 44, 128)), which would overwrite the glove frames' **calibrated
+consensus** (`payload_audit.py`, measured per-arm 2026-08-10/11,
+flange-relative — the earlier "mirror the left" idea in this section is
+REFUTED by that measurement: centroids do not mirror, CX is negative on
+both arms, and the right is 25 % heavier because a D435 rides distal of
+J7):
+
+    left   0.567 kg at (−25.2, 41.2, 224.0) mm    (4 of 6 frames agreed)
+    right  0.711 kg at (−23.6, 25.4, 164.8) mm    (5 of 6 frames agreed)
 
 ```bash
 cd Demo/RMDemo_Python/RMDemo_DualArmConcept/src
-RM_ARM=left python3 test_frame_alignment.py --mode REAL --create-frames
-```
-
-All six frames must print `update … ret=0` (a `create` on the left pass
-means the name list changed — stop and look). The MATCH TABLE must be all
-OK **including payload/centroid**; an "exactly 1000x" flag is a unit
-mismatch — do not select any frame or run any movel until it is resolved.
-Left payload stays 0.706 kg copied from `Hand` (unchanged).
-
-**Right arm — parked on ONE input:** the frames carry payload 0.0 kg
-(copied from `Arm_Tip`), so right-side force compensation runs unloaded.
-Needs the TRUE right hand+glove mass and centroid from Newton — if the
-right assembly mirrors the left `Hand` (0.706 kg at (−12, 44, 128) mm),
-the mirrored centroid is (+12, 44, 128) mm, but that is a HYPOTHESIS to
-confirm, not a value to write. Then:
-
-```bash
+RM_ARM=left  python3 test_frame_alignment.py --mode REAL --create-frames \
+        --payload 0.567 --com "-25.2,41.2,224.0"
 RM_ARM=right python3 test_frame_alignment.py --mode REAL --create-frames \
-        --payload <KG> --com <X,Y,Z in mm>
+        --payload 0.711 --com "-23.6,25.4,164.8"
 ```
+
+All six frames must print `update … ret=0` (a `create` means the name
+list changed — stop and look). The MATCH TABLE must be all OK **including
+payload/centroid**; an "exactly 1000x" flag is a unit mismatch — do not
+select any frame or run any movel until it is resolved. After both
+passes, `python3 payload_audit.py` re-reads both arms and must report the
+same consensus back. (The right side's payload state was MIXED at the
+last audit read — 5 of 6 frames at 0.711, and a later frame write stamped
+0.0 from `Arm_Tip` — the explicit values above normalize it either way.)
 
 ## Verification
 

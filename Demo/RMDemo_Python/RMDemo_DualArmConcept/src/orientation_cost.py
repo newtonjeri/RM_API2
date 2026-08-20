@@ -271,13 +271,50 @@ def analyse(path, stride):
 
 # Controller tool frames, offset from Arm_Tip in metres, zero rotation
 # (FRAME_MAP.md; Arm_Tip -> ConnectorLink is a further 15.3 mm on Z).
+# CORRECTED 2026-08-20: the ik frames were re-cut in alix_ws so LEFT
+# mirrors RIGHT exactly; L_glove_1 z 0.1553 -> 0.1603 and L_glove_2 x
+# -0.020 -> -0.0135 were pre-recut values that survived here (the third
+# stale copy of this geometry, after IK_FRAMES and the controllers).
 TOOL_OFFSETS = {
-    "L_glove_1": (-0.050, 0.000, 0.1553), "R_glove_1": (0.050, 0.000, 0.1603),
-    "L_glove_2": (-0.020, 0.000, 0.1803), "R_glove_2": (0.0135, 0.000, 0.1803),
+    "L_glove_1": (-0.050, 0.000, 0.1603), "R_glove_1": (0.050, 0.000, 0.1603),
+    "L_glove_2": (-0.0135, 0.000, 0.1803), "R_glove_2": (0.0135, 0.000, 0.1803),
     "L_glove_3": (-0.075, 0.007, 0.1853), "R_glove_3": (0.075, 0.007, 0.1853),
     "L_glove_4": (-0.055, 0.007, 0.2203), "R_glove_4": (0.055, 0.007, 0.2203),
     "L_tip": (-0.015, 0.005, 0.2453), "R_tip": (0.015, 0.005, 0.2453),
 }
+
+# PRE-RECUT left values — the controller's state BEFORE the approved
+# 2026-08-20 update pass. Recordings made while it held these (everything
+# through 2026-08-19) are SELF-CONSISTENT in them: the commanded polyline
+# and the traced TCP both lived in the frame the controller held at the
+# time. Analysing such a run offline must use THESE values, not the live
+# table — selfcheck() pins its 2026-08-11 reference recording this way.
+PRE_RECUT_TOOL_OFFSETS = {
+    "L_glove_1": (-0.050, 0.000, 0.1553),
+    "L_glove_2": (-0.020, 0.000, 0.1803),
+}
+
+
+def _assert_mirror():
+    """Left/right frames mirror EXACTLY in the live ik_frames.xacro —
+    x negated, y/z identical, rpy zero (all pairs verified 2026-08-20).
+    Any asymmetry in this table is therefore a defect by construction:
+    that is precisely how the pre-recut values above hid here while the
+    R_ side stayed correct. This guard needs no external file, so it
+    cannot go stale the way verifying against a compiled URDF did.
+    """
+    for ln, lo in TOOL_OFFSETS.items():
+        if not ln.startswith("L_"):
+            continue
+        ro = TOOL_OFFSETS["R_" + ln[2:]]
+        if lo[0] != -ro[0] or lo[1:] != ro[1:]:
+            raise AssertionError(
+                "TOOL_OFFSETS %s %r is not the mirror of %r — the live "
+                "ik_frames.xacro mirrors exactly; fix this table"
+                % (ln, lo, ro))
+
+
+_assert_mirror()
 MOUNT_RY_DEG = 90.0          # both arms; controller World = base rotated Ry(+90)
 ANGULAR_CAP = 0.600          # rad/s, rm_set_arm_max_angular_speed default
 MAX_STEP_DEG = 8.0           # per IK sample; larger is a solver branch flip
@@ -587,7 +624,12 @@ def selfcheck(tool):
            if s.get("stage_name") == "execute_path"][0]["waypoints"]
     tip = fk([math.degrees(v) for v in wps[0]["positions"]])
     R = _Rmat(*tip[3:6])
-    t = TOOL_OFFSETS[tf or tool]
+    # The reference recording is 2026-08-11 — PRE-RECUT, and it used
+    # L_glove_2, one of the two frames the re-cut moved. The run is
+    # self-consistent in the value the controller held THEN; checking it
+    # against the live table would fail by the 6.5 mm the re-cut moved,
+    # which is history, not a transform error.
+    t = PRE_RECUT_TOOL_OFFSETS.get(tf or tool) or TOOL_OFFSETS[tf or tool]
     tcp_b = [tip[i] + sum(R[i][k] * t[k] for k in range(3)) for i in range(3)]
     Rm = _Ry(math.radians(MOUNT_RY_DEG))
     tcp_w = [sum(Rm[i][k] * tcp_b[k] for k in range(3)) for i in range(3)]
