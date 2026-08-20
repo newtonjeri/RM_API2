@@ -37,3 +37,60 @@ current c api version:  1.1.6
     measured vs predicted: 0.1 mm, 0.145 kg  ->  the mirror law does NOT hold here — trust the measurement, not the prediction
 
   read-only. --apply writes the consensus onto every frame (each write is read back and verified).
+
+========================================================================
+  Script : payload_audit.py
+  Log    : payload_audit.log
+  Started: 2026-08-20 18:46:16
+========================================================================
+unknown argument: '-s'
+
+Usage: python3 payload_audit.py [--side left|right|both] [--predict]
+       [--check CX,CY,CZ,KG] [--apply] [--from left|right] [-h|--help]
+  --side S        which arm to read (default: both)
+  --predict       mirror the OTHER arm's consensus onto this one
+  --check V       compare a freshly measured record against the
+                  prediction, e.g. --check 25.2,41.2,224.0,0.567
+  --apply         WRITE the consensus onto every frame that deviates
+  --from S        which side to take the consensus from (default: the
+                  side with the tighter agreement)
+  -h, --help      show this documentation and exit
+
+========================================================================
+  Script : payload_audit.py
+  Log    : payload_audit.log
+  Started: 2026-08-20 18:46:47
+========================================================================
+========================================================================
+Payload + centroid audit — is one hand described consistently?
+========================================================================
+current c api version:  1.1.6
+
+  LEFT arm — payload record per tool frame
+    frame               kg        CX      CY      CZ   note
+    L_glove_1        0.567     -25.0    41.0   224.0   
+    L_glove_2        0.567     -25.0    41.0   224.0   
+    L_glove_3        0.567     -25.0    41.0   224.0   
+    L_glove_4        0.567     -25.0    41.0   224.0   
+    L_tip            0.567     -25.0    41.0   224.0   
+    L_index_tip      0.567     -25.0    41.0   224.0   
+    consensus from 6 of 6 agreeing frames: 0.567 kg at (-25.0, 41.0, 224.0) mm   they agree to 0.0 mm
+current c api version:  1.1.6
+
+  RIGHT arm — payload record per tool frame
+    frame               kg        CX      CY      CZ   note
+    R_glove_1        0.711     -24.0    25.0   165.0   
+    R_glove_2        0.711     -24.0    25.0   165.0   
+    R_glove_3        0.711     -24.0    25.0   165.0   
+    R_glove_4        0.711     -24.0    25.0   165.0   
+    R_tip            0.711     -24.0    25.0   165.0   
+    R_index_tip      0.711     -24.0    25.0   165.0   
+    consensus from 6 of 6 agreeing frames: 0.711 kg at (-24.0, 25.0, 165.0) mm   they agree to 0.0 mm
+
+  MIRROR LAW — negate X, keep Y and Z (exact for glove_3, glove_4, tip, index_tip)
+    left consensus   0.567 kg at (-25.0, 41.0, 224.0) mm
+    -> right predicted 0.567 kg at (25.0, 41.0, 224.0) mm
+    right MEASURED  0.711 kg at (-24.0, 25.0, 165.0) mm (from 6 of 6 frames)
+    measured vs predicted: 78.3 mm, 0.144 kg  ->  the mirror law does NOT hold here — trust the measurement, not the prediction
+
+  read-only. --apply writes the consensus onto every frame (each write is read back and verified).
