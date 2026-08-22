@@ -12,18 +12,18 @@
 # a clean planar rectangle of the same size in the same proven volume, so a
 # failure is attributable to speed.
 #
-# GEOMETRY (contract C4 / C4b / A.1 / A.2 / A.3)
+# GEOMETRY
 #   surface   planar, Z = -272 mm (toplid measures 17 mm of z-span over
 #             413 x 361 mm -- this is that surface, idealised)
 #   extent    380 x 180 mm, against toplid_left's own 408 x 194 mm, inside the
 #             measured reach of toplid_left_002 (X 421..849, Y -137.8..+56.2)
 #   glove     L_glove_frame_2 -- 35 x 80 mm pad, t = 20 mm, presses +Z
 #   spacing   20 mm rows = 35 mm brush - 15 mm dimensional tolerance
-#   strokes   380 mm. A.1: L_min(1.0 m/s) = v/3 = 333 mm, so EVERY stroke can
+#   strokes   380 mm. L_min(1.0 m/s) = v/3 = 333 mm, so EVERY stroke can
 #             reach the top rung -- on toplid only 14 of 39 moves clear that.
 #   turns     rm_movec semicircles, R = 20 mm, vias at the apex, bulging into
 #             the padding OUTSIDE the cleaned band. An arc is geometry, not a
-#             blended corner, so it takes no A.2 cut at all.
+#             blended corner, so it takes no blend cut at all.
 #   two-pass  odd rows then even rows (toplid_left_002 rev 3's fix) so the turn
 #             hop is 40 mm, ABOVE the blend floor. A one-pass 20 mm serpentine
 #             would full-stop at every turn and measure nothing.
@@ -44,7 +44,7 @@
 #
 # THE CONSEQUENCE, which is the finding this test exists to confirm:
 #   the conditioning tilt is 36.03 deg over 380 mm, i.e. kappa = 1.655 rad/m.
-#   CORRECTED 2026-08-19 (contract A.6). This block previously read 40.5 deg
+#   CORRECTED 2026-08-19. This block previously read 40.5 deg
 #   / 1.86 rad/m: that divided the rotation across the 420 mm PADDED span
 #   (39.82 deg) by the 380 mm STROKE. Measured on these poses, read in the
 #   Euler-RPY convention the controller actually uses (Rz*Ry*Rx,
@@ -69,13 +69,13 @@
 #   11 of 24 tasks. Only the all-joint abort in SIM/REAL settles it.
 #
 # PER-MOVE PROGRAM
-#   strokes  v 100 % of the rung, r 10 (A.2 freeze rule)
+#   strokes  v 100 % of the rung, r 10 (the working radius on dense geometry)
 #   arcs     v 25 % -- lateral accel on a 20 mm radius is v^2/R; at the top rung
 #            25 % is 0.25 m/s = 3.1 m/s^2, about the linear accel. The arcs are
 #            not under test; the straights are.
 #   entry    r 0 at touchdown in the padding -- CHAIN_APPROACH spends the
-#            first-corner exemption there (A.2: the first corner never blends).
-#   blend    at a stroke/arc junction A.2 takes min(L_in, L_out) = the 40 mm arc
+#            first-corner exemption there (the first corner never blends).
+#   blend    at a stroke/arc junction the cut takes min(L_in, L_out) = the 40 mm arc
 #            chord, so at r=10 the cut is 1.70*0.10*40 = 6.8 mm, inside the
 #            25 mm padding. Nothing lands in the cleaned band.
 #

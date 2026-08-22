@@ -1,9 +1,9 @@
 # =============================================================================
 # CUT-COEFFICIENT ANGLE SWEEP, 100-160 deg  (c_theta_sweep_001)
 # =============================================================================
-# QUESTION (EMULATOR_ROADMAP gap 1; contract A.2): what is c(theta) between
-# the two measured anchors? A.2's c(r) — c(10)=1.70, c(25)=1.57, c(50)=1.33,
-# re-measured 2026-08-19 over 1454 corners — is POOLED over the corpus angle
+# QUESTION (EMULATOR_ROADMAP gap 1): what is c(theta) between the two
+# measured anchors? The pooled c(r) — c(10)=1.70, c(25)=1.57, c(50)=1.33,
+# fitted 2026-08-19 over 1454 corners — is POOLED over the corpus angle
 # mix, while 90-deg-class corners are separately measured at c ~= 0.70
 # (MOTION_FINDINGS 9.3d, exact). Between 90 and 165 deg the blend model
 # interpolates blindly; this path measures five points on that curve.
@@ -22,13 +22,13 @@
 #   segment, so nothing angular-throttles (H67) and any speed dip at a
 #   corner IS the corner.
 #   SPEED IS THE FACTORY 0.25 m/s — blend geometry is speed-independent
-#   (A.2: identical cuts 0.10-0.35 m/s in SIM), so one rung suffices, needs
+#   (identical cuts 0.10-0.35 m/s in SIM), so one rung suffices, needs
 #   no limit changes, and keeps J4 in the proven range on this box.
 #
 # PREDICTED SIGNATURES per corner and r (cut = c * (r/100) * 90 mm;
 # measurement resolution ~4 mm, analyse_coverage.py):
 #
-#   if A.2's POOLED c(r) held at every angle:
+#   if the POOLED c(r) held at every angle:
 #       r=10 -> 15.3 mm   r=25 -> 35.3 mm   r=50 -> 59.9 mm   (all corners)
 #   if the OLD angle model held (0.70 at 90-120, 1.4 above 120):
 #       100 deg: r=10 ->  6.3 mm | 115 deg: same 0.70 class
@@ -61,7 +61,7 @@ BLEND_SWEEP = [10, 25, 50]
 
 TOOL_FRAME = "L_glove_4"
 
-# ONE rung: blend geometry is speed-independent (A.2), and 0.25 keeps J4 in
+# ONE rung: blend geometry is speed-independent, and 0.25 keeps J4 in
 # the proven range on this box (J4 crosses its limit near 0.385 m/s here).
 SPEED_LADDER = [0.25]
 

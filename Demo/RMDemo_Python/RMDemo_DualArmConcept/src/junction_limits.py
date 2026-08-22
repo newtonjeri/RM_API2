@@ -1,71 +1,70 @@
-"""A.2.1 / A.2.2 — arc speed and junction speed-step feasibility, offline.
+"""Arc speed and junction speed-step feasibility, offline. ADVISORY.
 
-Contract: `COMMODE_C_CLEANING_CONTRACT.md` (frozen 2026-08-19, sha256
-09c20c2a…f1e3), Appendix A.2, A.2.1, A.2.2. Where this module and the
-contract disagree, THE CONTRACT WINS and this file is the defect.
+Two geometric checks on a path's corners, computable with no hardware:
 
-WHY THIS MODULE EXISTS. The 2026-08-19 hardware ramp failed at v = 1.00 with
-`Out Of Reach, reason: Joint4overspeed`, and C9 records that the code was on
-the GUI only — `err1..err7` and `lift_err` were zero in all 23 recordings and
-`arm_status` read IDLE straight through the event. Nothing in-band saw it.
-A.2.2 is the contract's answer: the failure was a GEOMETRY defect, exact and
-computable with no hardware at all. A.4's J4 screen could not have caught it
-(it reads 10–15 % LOW, and it averages a 3-sample event across 1220 samples);
-this check can, because it asks a question about one junction.
+    ARC   v_arc <= sqrt(a_lat * R)            R = (c^2/4 + s^2) / (2s)
+    STEP  cut   >= |v_out^2 - v_in^2| / (2a)
+    cut    = c(r) * (r/100) * min(L_in, L_out)
+             c(10) = 1.70   c(25) = 1.57   c(50) = 1.33   [1454-corner fit]
 
-    A.2.1  v_arc  <= sqrt(a_lat * R)          R = (c²/4 + s²) / (2s)
-    A.2.2  cut    >= |v_out² - v_in²| / (2a)
-    A.2    cut     = c(r) * (r/100) * min(L_in, L_out)
-           c(10) = 1.70   c(25) = 1.57   c(50) = 1.33     [M, 1454 corners]
+`r` IS A PERCENTAGE 0-100, NOT MILLIMETRES (vendor: jiao rong ban jing bai fen bi).
 
-`r` IS A PERCENTAGE 0–100, NOT MILLIMETRES (vendor: 交融半径百分比系数).
+*** NOTHING HERE GATES. *** This module PREDICTS; it never refuses a rung.
+Every verdict it prints is a hypothesis to be scored against what the arm
+actually does, and the ladder runs every rung regardless of what it says.
+That is deliberate — see WHY ADVISORY below.
 
-⚠ A.2.2 IS BINDING, AND THERE IS AN OPEN CALIBRATION DISPUTE (for Newton).
-An earlier revision of this module printed A.2.2 as ADVISORY on the strength
-of one peer result (rm-api2-b4). That was a unilateral suspension of a
-frozen clause on an unratified finding — reversed 2026-08-19 (alix-ws-61's
-argument): A.4's withdrawal handed the gating job to A.2.1 + A.2.2 ("the
-screen ranks, geometry gates"), so with A.2.2 advisory NOTHING gated a
-junction offline. A clause that over-flags costs speed; a clause that is
-absent costs an arm. A.2.2 gates until Newton rules otherwise.
+WHY THESE CHECKS EXIST. The 2026-08-19 hardware ramp failed at v = 1.00 with
+`Out Of Reach, reason: Joint4overspeed`, and the code was on the GUI only:
+`err1..err7` and `lift_err` were zero in all 23 recordings and `arm_status`
+read IDLE straight through the event. Nothing in-band saw it. STEP is one
+candidate explanation — that the failure was a GEOMETRY defect, exact and
+computable offline. The J4 screen could not have caught it (it reads 10-15 %
+LOW, and averages a 3-sample event across 1220 samples); a question asked
+about a single junction can.
 
-THE DISPUTE, recorded verbatim so the refusals below are not mistaken for a
-clean bill: run over `planar_speed_ramp_001` on the commanded speeds, A.2.2
-flags **19 of 19** junctions at rung 0.45 — a rung that completed on
-hardware with J4 at 47.8 % and 0 ms of dwell — so THIS GATE REFUSES RUNGS
-C2 RECORDS AS COMPLETED. It also ranks the one junction that DID fail
-(`r01_in`, the 145.6 mm arc into a full-speed stroke) as the LEAST severe of
-the nine arc→stroke entries at every rung, because its longer approach
-raises `min(L_in, L_out)` and therefore the cut it is credited with:
+WHAT HARDWARE HAS SAID SO FAR — and it points both ways:
 
-    rung 0.90   r01_in   deficit 115.0 mm   implied  15.1 m/s²  ( 5.6× cmd)
-                r02_in   deficit 129.4 mm   implied  35.5 m/s²  (13.1× cmd)
-                r09_in   deficit 129.4 mm   implied  35.5 m/s²  (13.1× cmd)
+  * FOR the STEP mechanism (2026-08-21). The controller REFUSES a chain
+    outright (`ret=1`) when a blend cut cannot carry its speed step: the arm
+    stopped 12.3 mm short of `point15` against a 12.8 mm cut that needed
+    90.2 mm. The mechanism is real and the controller enforces it itself.
+  * AGAINST this module's CALIBRATION. Run over `planar_speed_ramp_001` on
+    the commanded speeds, STEP flags 19 of 19 junctions at rung 0.45 — a rung
+    that completed on hardware with J4 at 47.8 % and 0 ms of dwell. It also
+    ranks the one junction that DID fail (`r01_in`, the 145.6 mm arc into a
+    full-speed stroke) as the LEAST severe of the nine arc->stroke entries at
+    every rung, because its longer approach raises `min(L_in, L_out)` and so
+    credits it with more cut:
 
-A.7 records the opposite: `r01_in` is "the SOLE source of all J4 load above
-51 %" and the eight 56.6 mm entries "never passed 51 %". Whether that
-anti-correlation is real or an artifact of comparing WHOLE-PATH outcomes to
-PER-JUNCTION verdicts (J4 passed 80 % only inside a 40 mm window at ONE
-junction — a path statistic averages the event away, exactly how A.4's band
-failed) is under independent verification (alix-ws-54, 2026-08-19). The
-verdict goes to Newton; neither outcome is a code default's to settle. Do
-not quietly re-tune this module either way — the contradiction is loud on
-purpose. A.2.1 is undisputed: per-arc, needs no speed pairing, and nothing
-in the corpus contradicts it.
+        rung 0.90   r01_in   deficit 115.0 mm   implied 15.1 m/s^2 ( 5.6x cmd)
+                    r02_in   deficit 129.4 mm   implied 35.5 m/s^2 (13.1x cmd)
+                    r09_in   deficit 129.4 mm   implied 35.5 m/s^2 (13.1x cmd)
 
-THE RULE WHEN A JUNCTION IS INFEASIBLE AT EVERY r (A.2.2, verbatim): **the
-LOWER SPEED binds — never a larger r, and never "run it anyway".** This
-module therefore reports a speed to drop to; it never reports an r to raise.
+    Measurement says the opposite: `r01_in` was the SOLE source of all J4 load
+    above 51 %, and the eight 56.6 mm entries never passed 51 %.
 
-A.2.1 AND A.2.2 ARE CHECKED TOGETHER OR NOT AT ALL — "neither alone is
-sufficient". The contract's own fix for the ramp failure is compositional:
-raise the arc to its own A.2.1 limit first, and the residual step is one
-A.2.2 can afford.
+WHY ADVISORY. A right mechanism with a wrong calibration must not be allowed
+to decide, and the two bullets above are exactly that. Gating on it would
+refuse rungs the arm demonstrably completes — which would suppress the very
+measurements that could fix the calibration. So: the ladder runs, this module
+predicts, the recordings judge. Do NOT re-tune the coefficients to make the
+flags come out right; measure c(theta) directly (the sweep paths are built)
+and let the measurement land.
+
+WHERE A FLAG DOES POINT SOMEWHERE. When a junction is infeasible at every r,
+the resolution is to LOWER THE SPEED, never to raise r — a bigger blend on
+dense geometry cuts the corner further off the commanded polyline. So this
+module reports a speed to drop to and never an r to raise, as a suggestion.
+
+The two checks belong together: the composite fix for the ramp failure is to
+lift the approach arc to its own ARC limit first, which shrinks the residual
+step to one STEP can afford. Neither alone is sufficient.
 """
 
 import math
 
-# --- A.2 blend-cut law ------------------------------------------------------
+# --- blend-cut law ------------------------------------------------------
 # Measured domain is r ∈ {10, 25, 50} ONLY (72 runs, 2026-08-14, two
 # geometries, both arms, both directions, 0.25 m/s baseline). Blend geometry
 # is speed-independent, so this table transfers across rungs; it does NOT
@@ -77,12 +76,18 @@ R_MEASURED_MAX = 50.0
 def c_of_r(r_pct):
     """Cut coefficient c(r). Declines with r — it is NOT the flat 1.4.
 
-    The refuted flat-in-r form (0 / 0.70 / 1.4 by turn angle) was retired
-    from `rm_emulator.py:_corner_model` in 2fbc9f4; the PREDICTED SIGNATURE
-    headers of `paths/chain_semantics_00{1,3,4}.py` keep it as annotated
-    history. At r = 10 — the radius the freeze rule mandates on dense
-    geometry — the true 1.70 is ABOVE the old band, so the old form
-    UNDERSTATED the cut exactly where this project operates.
+    The flat-in-r form (0 / 0.70 / 1.4 by turn angle) was retired from
+    `rm_emulator.py:_corner_model` in 2fbc9f4; the PREDICTED SIGNATURE headers
+    of `paths/chain_semantics_00{1,3,4}.py` keep it as annotated history. At
+    r = 10 — the radius used on dense geometry — this 1.70 sits ABOVE the old
+    band, so the old form understated the cut where this project operates.
+
+    *** NEITHER FORM IS HARDWARE-VALIDATED. *** This table is a fit pooled
+    over a mixed turn-angle corpus, and the loss is concentrated at reversals,
+    so a per-corner coefficient is expected to differ from it — above 1.70 at
+    reversals, below it near 90 degrees. That is what the c(theta) sweep
+    measures. Until it runs, treat these as the best available estimate and
+    not as measured truth.
     """
     if r_pct <= _C_OF_R[0][0]:
         return _C_OF_R[0][1]
@@ -104,17 +109,17 @@ def blend_cut(r_pct, l_in, l_out):
 def max_cut(l_in, l_out, r_limit=R_MEASURED_MAX):
     """Largest cut this junction can offer, inside the MEASURED r domain.
 
-    The contract's worked example evaluates the ceiling at r = 50, not at
-    r = 100, and so does this. c(r) past 50 has never been measured, and the
-    freeze rule forbids large r on dense geometry anyway — an infeasibility
-    verdict must not be talked away with an extrapolated coefficient.
+    The ceiling is evaluated at r = 50, not r = 100: c(r) past 50 has never
+    been measured, and large r on dense geometry cuts the corner too far off
+    the commanded polyline anyway — an infeasibility verdict must not be
+    talked away with an extrapolated coefficient.
     """
     return blend_cut(min(r_limit, R_MEASURED_MAX), l_in, l_out)
 
 
-# --- A.2.1 arc speed --------------------------------------------------------
+# --- arc speed --------------------------------------------------------
 def arc_radius_chord_sagitta(chord, sagitta):
-    """R from chord c and sagitta s — the contract's stated form [m]."""
+    """R from chord c and sagitta s [m]."""
     if sagitta <= 0.0:
         return float("inf")
     return (chord * chord / 4.0 + sagitta * sagitta) / (2.0 * sagitta)
@@ -164,7 +169,7 @@ def v_arc_max(R, a_lat):
     return math.sqrt(max(0.0, a_lat) * R)
 
 
-# --- A.2.2 junction speed step ---------------------------------------------
+# --- junction speed step ---------------------------------------------
 def required_cut(v_in, v_out, a):
     """Blend length the commanded speed CHANGE needs [m]."""
     if a <= 0.0:
@@ -175,8 +180,8 @@ def required_cut(v_in, v_out, a):
 def feasible_speed(v_other, cut, a):
     """Largest speed reachable across `cut` from `v_other` [m/s].
 
-    This is the "LOWER SPEED binds" resolution of A.2.2, solved for the speed
-    rather than the cut: v² = v_other² ± 2·a·cut.
+    The "lower speed binds" resolution, solved for the speed rather than the
+    cut: v^2 = v_other^2 +/- 2*a*cut.
     """
     return math.sqrt(max(0.0, v_other * v_other + 2.0 * a * cut))
 
@@ -215,11 +220,12 @@ def moves_of(mod, rung):
 
 
 def check_path(mod, rung, line_acc):
-    """Full A.2.1 + A.2.2 audit of a path module at one rung.
+    """Full ARC + STEP audit of a path module at one rung.
 
-    Returns (arcs, junctions, worst) — `worst` is the lowest speed any clause
-    binds the path to, or None when everything clears. A.2.1 and A.2.2 are
-    evaluated together, never separately.
+    Returns (arcs, junctions, worst) — `worst` is the lowest speed either check
+    PREDICTS the path is limited to, or None when everything clears. Advisory:
+    no caller should refuse a rung on it. ARC and STEP are evaluated together,
+    never separately.
     """
     mv = moves_of(mod, rung)
     r_list = getattr(mod, "R_LIST", None) or [0] * len(mv)
@@ -240,14 +246,14 @@ def check_path(mod, rung, line_acc):
         cut = blend_cut(r, l_in, l_out)
         need = required_cut(v_in, v_out, line_acc)
         ceiling = max_cut(l_in, l_out)
-        # A.2.2's resolution: the LOWER SPEED binds. Never a larger r.
+        # The resolution when infeasible: LOWER SPEED. Never a larger r.
         v_bind = feasible_speed(min(v_in, v_out), cut, line_acc)
         rec = {"i": i, "vertex": b_in, "r": r, "l_in": l_in, "l_out": l_out,
                "v_in": v_in, "v_out": v_out, "cut": cut, "need": need,
                "ceiling": ceiling, "v_bind": v_bind,
                "ok": cut + 1e-12 >= need,
                "infeasible_any_r": ceiling + 1e-12 < need}
-        # The compositional fix (A.2.1 + A.2.2 together): if the approach is
+        # The composite fix (ARC + STEP together): if the approach is
         # an arc it may be allowed to run faster than commanded, which shrinks
         # the step this junction has to absorb.
         if key_in is not None and R_in is not None:
@@ -266,16 +272,16 @@ def report(mod, rung, line_acc, name=""):
     """Human-readable audit. Returns (text, worst_binding_speed_or_None)."""
     arcs, junctions, worst = check_path(mod, rung, line_acc)
     L = []
-    L.append("A.2.1/A.2.2 JUNCTION AUDIT  %s  rung %.2f m/s  line_acc %.2f m/s^2"
+    L.append("JUNCTION AUDIT (ADVISORY)  %s  rung %.2f m/s  line_acc %.2f m/s^2"
              % (name, rung, line_acc))
     bad_a = [a for a in arcs if not a["ok"]]
-    L.append("  A.2.1 arcs: %d checked, %d over the lateral-acc limit"
+    L.append("  ARC arcs: %d checked, %d over the lateral-acc limit"
              % (len(arcs), len(bad_a)))
     for a in bad_a:
         L.append("    OVER  %-22s R %5.1f mm  v %.3f > sqrt(a*R) = %.3f m/s"
                  % (a["at"], a["R"] * 1000, a["v"], a["v_max"]))
     bad_j = [j for j in junctions if not j["ok"]]
-    L.append("  A.2.2 junctions: %d checked, %d short of the cut they need"
+    L.append("  STEP junctions: %d checked, %d short of the cut they need"
              % (len(junctions), len(bad_j)))
     for j in bad_j:
         tag = "INFEASIBLE AT EVERY r" if j["infeasible_any_r"] else "short at this r"
@@ -285,33 +291,32 @@ def report(mod, rung, line_acc, name=""):
                  "r=50 ceiling %5.1f mm"
                  % (j["v_in"], j["v_out"], j["need"] * 1000, j["r"],
                     j["cut"] * 1000, j["ceiling"] * 1000))
-        L.append("        LOWER SPEED BINDS -> v_out <= %.3f m/s (never a larger r)"
+        L.append("        lower speed suggested -> v_out <= %.3f m/s (never a larger r)"
                  % j["v_bind"])
         if "v_in_lifted" in j:
-            L.append("        A.2.1 composition: lift the approach arc to %.3f m/s "
+            L.append("        ARC composition: lift the approach arc to %.3f m/s "
                      "-> step needs %5.1f mm -> %s"
                      % (j["v_in_lifted"], j["need_lifted"] * 1000,
                         "CLEARS" if j["lifted_ok"] else "still short"))
     a_bind = min([a["v_max"] for a in arcs if not a["ok"]], default=None)
     if a_bind is None:
-        L.append("  VERDICT (A.2.1, BINDING): arcs clear this rung.")
+        L.append("  ARC (advisory): arcs clear this rung.")
     else:
-        L.append("  VERDICT (A.2.1, BINDING): arcs bind this rung to %.3f m/s."
+        L.append("  ARC (advisory): arcs predict this rung limited to %.3f m/s."
                  % a_bind)
     j_bind = min([j["v_bind"] for j in junctions if not j["ok"]], default=None)
     if j_bind is None:
-        L.append("  VERDICT (A.2.2, BINDING): junctions clear this rung.")
+        L.append("  STEP (advisory): junctions clear this rung.")
     else:
-        L.append("  VERDICT (A.2.2, BINDING): %d/%d junctions short on "
-                 "commanded speeds; the" % (len(bad_j), len(junctions)))
-        L.append("      LOWER SPEED binds this rung to %.3f m/s." % j_bind)
-        L.append("      ⚠ OPEN DISPUTE (for Newton — this module's docstring): "
-                 "run verbatim, A.2.2")
-        L.append("      refuses rungs C2 records as completed on hardware. It "
-                 "gates anyway: a frozen")
-        L.append("      clause is not a peer result's to suspend, and with it "
-                 "advisory nothing gates")
-        L.append("      a junction offline. Loud on purpose.")
+        L.append("  STEP (advisory): %d/%d junctions short on commanded "
+                 "speeds; the" % (len(bad_j), len(junctions)))
+        L.append("      lower speed would put this rung at %.3f m/s." % j_bind)
+        L.append("      NOT ENFORCED. This predictor is known to over-flag: run")
+        L.append("      verbatim it refuses rungs hardware has completed "
+                 "(19/19 at 0.45,")
+        L.append("      J4 47.8 %, 0 ms dwell). Score it against the recording; "
+                 "do not obey it,")
+        L.append("      and do not re-tune it to fit — measure c(theta).")
     return "\n".join(L), worst
 
 

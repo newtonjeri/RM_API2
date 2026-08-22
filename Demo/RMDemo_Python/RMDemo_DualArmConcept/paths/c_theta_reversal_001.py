@@ -1,9 +1,9 @@
 # =============================================================================
 # CUT-COEFFICIENT AT NEAR-REVERSALS, 166-176 deg  (c_theta_reversal_001)
 # =============================================================================
-# QUESTION (d9's open point on contract A.2, 2026-08-19): the contract's
+# QUESTION (d9's open point, 2026-08-19): the pooled fit's
 # c(r) — c(10)=1.70, c(25)=1.57, c(50)=1.33 — is POOLED over the corpus
-# angle mix, and A.2 records that 82-95 % of all blend loss lives at
+# angle mix, and the fit records that 82-95 % of all blend loss lives at
 # reversals > 165 deg while 90-deg-class corners are separately measured at
 # c ~= 0.70. If the pool contains 0.70-class corners, the true coefficient
 # AT REVERSALS must sit ABOVE the pooled 1.70 at r=10 — meaning even the
@@ -18,25 +18,25 @@
 # returns nearly parallel to the previous stroke, so it sits naturally
 # inside the hardware-proven box (x 515-788, y -65..+40, min box margin
 # 10.0 mm). Segments uniform 120 mm -> min(L_in, L_out) = 120 mm at every
-# measured corner. NO angle is exact 180: A.2 measures exact retraces as
+# measured corner. NO angle is exact 180: exact retraces measure as
 # ZERO cut (collinearity protects) while 172-176 deg near-reversals of the
 # same length cut at the FULL rate — 176 is the closest safe probe.
 #
 # TWO LOAD-BEARING PROPERTIES (same as blend_corner_001 — change knowingly):
 #   ORIENTATION IS IDENTICAL AT EVERY POINT — zero rotation on every
 #   segment, so nothing angular-throttles (H67).
-#   SPEED IS THE FACTORY 0.25 m/s — blend geometry is speed-independent
-#   (A.2), one rung suffices, no limit changes, J4 stays in the proven
+#   SPEED IS THE FACTORY 0.25 m/s — blend geometry is speed-independent,
+#   one rung suffices, no limit changes, J4 stays in the proven
 #   range on this box.
 #
 # PREDICTED SIGNATURES per corner and r (cut = c * (r/100) * 120 mm;
 # resolution ~4 mm, analyse_coverage.py):
 #
-#   if A.2's POOLED c(r) held at reversals:
+#   if the POOLED c(r) held at reversals:
 #       r=10 -> 20.4 mm    r=25 -> 47.1 mm    r=50 -> 79.8 mm
 #   if d9's pooling argument is right, c(10) at reversals > 1.70:
 #       r=10 -> ABOVE 20.4 mm, by the amount the 0.70-class drags the pool
-#   MECHANISM CHECK (A.2): at r=25/50 expect EARLY TURNAROUND, not corner
+#   MECHANISM CHECK: at r=25/50 expect EARLY TURNAROUND, not corner
 #   rounding — the vertex never approached within ~30 mm; at r=50 on the
 #   2026-08-14 geometries reversals removed ~250 mm per vertex on
 #   300-400 mm strokes, i.e. c ~= 250/(0.5*380) ~= 1.32 pooled-consistent.
@@ -71,7 +71,7 @@ BLEND_SWEEP = [10, 25, 50]
 
 TOOL_FRAME = "L_glove_4"
 
-# ONE rung: blend geometry is speed-independent (A.2); 0.25 keeps J4 in the
+# ONE rung: blend geometry is speed-independent; 0.25 keeps J4 in the
 # proven range on this box.
 SPEED_LADDER = [0.25]
 

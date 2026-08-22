@@ -75,7 +75,7 @@ independent of either clock.
 -> SIM -> REAL; H63 dwell rule everywhere; final-waypoint arrival
 verified per run; E-stop in hand on REAL.
 
-> **READING NOTE on item 1 — how to read the J4 screen. No contract term
+> **READING NOTE on item 1 — how to read the J4 screen. No spec term
 > changed.** *Rewritten 2026-08-17; the previous note argued the screen was
 > "necessary, not sufficient" and proposed adding a criterion. Withdrawn —
 > see §0b for the production-form measurements that refuted it.*
@@ -129,7 +129,7 @@ channel, all seven joints:
 
 **J4 binds on all three. All seven joints under limit. Zero dwell.** At
 0.45 J4 reads 87 %, inside the 90 % screen threshold, and the full audit
-confirms J4 is genuinely the worst joint. **On the contract's own motion form
+confirms J4 is genuinely the worst joint. **On this motion form
 the J4 screen names the right joint and is sufficient.** §0 item 1 stands
 unchanged.
 

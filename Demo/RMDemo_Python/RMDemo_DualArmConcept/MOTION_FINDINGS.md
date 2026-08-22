@@ -479,13 +479,15 @@ within 2–22 % — **the loss is entirely at corners**. Its distribution:
 
       cut(entry+exit) ≈ 1.3–1.5 × (r/100) × min(L_in, L_out)
 
-> ⚠ **Superseded by COMMODE_C_CLEANING_CONTRACT A.2** (frozen 2026-08-19).
-> The `1.3–1.5` band below is wrong: `c` is **not constant in r**, it
-> declines — `c(10)=1.70`, `c(25)=1.57`, `c(50)=1.33`, re-measured over
-> 1454 corners / 43 runs. At `r = 10`, which the freeze rule mandates
-> everywhere, **1.70 lies ABOVE the old band**, so this text understates
-> the cut exactly where the project operates. Where this file and the
-> contract disagree, the contract wins.
+> ⚠ **The `1.3–1.5` band below is disputed and under re-measurement.** A fit
+> over 1454 corners / 43 runs found `c` is **not constant in r** but declines
+> — `c(10)=1.70`, `c(25)=1.57`, `c(50)=1.33`. At `r = 10`, the radius used on
+> dense geometry, **1.70 lies ABOVE the old band**, so this text would
+> understate the cut where the project operates.
+> ⚠ **Neither form is hardware-validated.** The declining fit is pooled over a
+> mixed turn-angle corpus, and blend loss concentrates at reversals, so the
+> per-corner value is expected to differ from it. The `c(θ)` sweep is the
+> experiment that settles it. Treat both as candidates, not answers.
 
 
   (SIM medians 1.46–1.52 across r = 10/25/50; corr(L, cut) = 0.81–0.86.
