@@ -1,0 +1,79 @@
+# =============================================================================
+# CARTESIAN POSES (Position + Orientation)
+# =============================================================================
+# Format: [x, y, z, rx, ry, rz] — metres and RADIANS (rm_pose_t, R = Rz.Ry.Rx), all poses in arm_world.
+# pre_start_pose is DERIVED: start_pose backed off along the glove frame's
+# press normal (constants.PRE_START_RETRACT_M, clamped 20-70 mm and kept
+# clear of the pad's own compliance). Declare pre_start_retract_m on the
+# region to change it; do not hand-edit it back onto the surface.
+cartesian_poses:
+  start_pose: [0.582820777, -0.101244954, -0.102139318, 2.914505284, 0.429113471, -3.050705676]
+  pre_start_pose: [0.595247185, -0.10125459, -0.022648692, 2.885900403, 0.112452084, -3.058476034]
+
+# =============================================================================
+# CLEANING POINTS (Translation [x,y,z] + Rotation [r,p,y])
+# =============================================================================
+# Translation origin: start_pose; translation axes: arm_world
+cleaning_points:
+  point1:
+    translation: [-0.1475, 0.194, 0.011]
+    rotation: [0.0, 18.2, 0.0]
+  point2:
+    translation: [0.0505, 0.194, 0.0125]
+    rotation: [0.0, 18.2, 0.0]
+  point3:
+    translation: [0.1683, 0.1644, -0.0188]
+    rotation: [40.7, -6.3, -68.1]
+  point4:
+    translation: [0.1683, 0.1286, -0.0128]
+    rotation: [35.7, -6.3, -68.1]
+  point5:
+    translation: [0.0505, 0.1455, 0.0125]
+    rotation: [0.0, 18.2, 0.0]
+  point6:
+    translation: [-0.1475, 0.1455, 0.011]
+    rotation: [0.0, 18.2, 0.0]
+  point7:
+    translation: [-0.1475, 0.097, 0.011]
+    rotation: [0.0, 18.2, 0.0]
+  point8:
+    translation: [0.0505, 0.097, 0.0125]
+    rotation: [0.0, 18.2, 0.0]
+  point9:
+    translation: [0.161, 0.1009, -0.0096]
+    rotation: [37.8, -17.1, -93.8]
+  point10:
+    translation: [0.1601, 0.0518, -0.0103]
+    rotation: [37.0, -16.0, -90.0]
+  point11:
+    translation: [0.0505, 0.0485, 0.0125]
+    rotation: [0.0, 18.2, 0.0]
+  point12:
+    translation: [-0.1475, 0.0485, 0.011]
+    rotation: [0.0, 18.2, 0.0]
+  point13:
+    translation: [-0.1475, 0.0, 0.011]
+    rotation: [0.0, 18.2, 0.0]
+  point14:
+    translation: [0.0505, 0.0, 0.0125]
+    rotation: [0.0, 18.2, 0.0]
+  point15:
+    translation: [0.1567, -0.0008, -0.0137]
+    rotation: [35.3, -13.6, -79.1]
+
+# =============================================================================
+# CLEANING SEQUENCE
+# =============================================================================
+cleaning_sequence:
+  - [point14, point15]
+  - [point15, point13]
+  - [point13, point15]
+  - [point15, point13]
+  - [point13, point15]
+  - [point15, point13]
+  - [point13, point15]
+  - [point15, point13]
+  - [point13, point15]
+  - [point15, point13]
+  - [point13, point15]
+  - [point15, point14]
