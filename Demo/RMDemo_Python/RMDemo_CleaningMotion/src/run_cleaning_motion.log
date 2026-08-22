@@ -1,0 +1,2098 @@
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:08:53
+========================================================================
+  [SELFTEST] synthetic in-box square — this exercises the plumbing, it is not a cleaning motion.
+========================================================================
+motion    synthetic_square
+  source  (synthetic)  [synthetic]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 90.0 mm min / 90.0 mm median / 90.0 mm max, 360 mm total
+  r_list  [10 x 4]
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    560.0    -45.0   -272.0 mm   rpy   3.140   0.000   0.000 rad
+    start (arm)    xyz    560.0    -45.0   -272.0 mm   rpy   3.140   0.000   0.000 rad
+    displacement   0.0 mm
+
+speed plan (no speed given — FACTORY 0.250 m/s. Name one with --speed.)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 4, shortest 90.0 mm, longest 90.0 mm, total 360 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 252 % -> real >= 277 % -> REFUSED (abort is 95 %)
+  JUNCTION AUDIT (ADVISORY)  synthetic_square  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 3 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:09:09
+========================================================================
+========================================================================
+motion    blend_corner_001
+  source  ../../RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:10:22
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. This exercises the plumbing; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (the motion file's own ladder)
+  rungs      0.100, 0.200, 0.250, 0.350 m/s
+  coupling   omega = 1.250 * v
+    0.100 m/s -> line_acc 1.60, angular 0.125 rad/s, angular_acc 4.00
+    0.200 m/s -> line_acc 1.60, angular 0.250 rad/s, angular_acc 4.00
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+    0.350 m/s -> line_acc 1.60, angular 0.438 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.100 m/s   line_acc 1.60   angular 0.125 rad/s
+  J4 screen: 26 % of the J4 limit -> real >= 28 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.10 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+rung 0.200 m/s   line_acc 1.60   angular 0.250 rad/s
+  J4 screen: 52 % of the J4 limit -> real >= 57 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.20 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+rung 0.350 m/s   line_acc 1.60   angular 0.438 rad/s
+    above the factory default 0.250 m/s — RealMan advise against changing the TCP values (H62); these limits also RATCHET, so run reset_limits.py afterwards
+  J4 screen: 91 % -> real >= 100 % -> REFUSED (abort is 95 %)
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.35 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:10:29
+========================================================================
+========================================================================
+motion    json_adapter_check
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/mtest.json  [json]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  r_list  [10 x 6]
+  ladder  0.20, 0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (the motion file's own ladder)
+  rungs      0.200, 0.250 m/s
+  coupling   omega = 1.250 * v
+    0.200 m/s -> line_acc 1.60, angular 0.250 rad/s, angular_acc 4.00
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.200 m/s   line_acc 1.60   angular 0.250 rad/s
+  J4 screen: 29 % of the J4 limit -> real >= 32 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  json_adapter_check  rung 0.20 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 37 % of the J4 limit -> real >= 40 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  json_adapter_check  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:10:43
+========================================================================
+unknown argument: '--mode'
+
+USAGE
+    # offline — no arm, no network; everything except dispatch
+    python3 run_cleaning_motion.py --motion ../motions/<file> --dry-run
+
+    # plumbing selftest, no motion file needed
+    python3 run_cleaning_motion.py --selftest --dry-run
+    python3 run_cleaning_motion.py --selftest --mode SIM
+
+    # a real motion
+    python3 run_cleaning_motion.py --motion ../motions/<file> --mode SIM
+    python3 run_cleaning_motion.py --motion ../motions/<file> --mode REAL \
+            --speed 0.25
+    python3 run_cleaning_motion.py --motion ../motions/<file> --mode REAL \
+            --speeds 0.25,0.35,0.45
+
+    python3 run_cleaning_motion.py --list        # what is in motions/
+
+FLAGS
+    --motion PATH     the cleaning-motion file to run
+    --format NAME     force an adapter instead of sniffing the file
+    --side left|right override the side the motion declares
+    --speed X         one speed [m/s], off-ladder
+    --speeds a,b,c    an explicit ladder, run in order, stopping on failure
+    --line-acc X      pin the linear acceleration instead of deriving it
+    --angular-speed X pin the angular cap instead of coupling it to v
+    --coupling K      omega_cap = K * v (default from the concept tree)
+    --allow-over-limit  dispatch a rung the J4 screen refused. E-stop in hand.
+    --dry-run         offline only: load, convert, screen, print. No arm.
+    --selftest        use a synthetic in-box square instead of a motion file
+    --list            list the motion files and exit
+    --no-record       skip the UDP recording (it is on by default)
+
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:11:15
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. This exercises the plumbing; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  mode: REAL
+  [INFO] left: error state clean
+  tool frame L_glove_4 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s ===
+  limits set: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.3125, 'angular_acc': 4.0}
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  dispatched 6 segments in 4.15 s -> OK
+  parked at REST
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:11:55
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. This exercises the plumbing; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to SIMULATION (--mode)
+  [INFO] left: run mode = SIMULATION
+  [WARN] left is in SIMULATION — NO PHYSICAL MOTION will occur; flip to REAL in the Web GUI or rm_set_arm_run_mode(1) for a hardware run
+  mode: SIMULATION
+  [INFO] left: error state clean
+  tool frame L_glove_4 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s ===
+  limits set: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.3125, 'angular_acc': 4.0}
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260822T131201_selftest_blend_corner_001_v250_left  (100 Hz, ret=0)
+  dispatched 6 segments in 4.16 s -> OK
+  [INFO] recorded 406 samples (97.7 Hz measured) -> /tmp/emu_runs/20260822T131201_selftest_blend_corner_001_v250_left
+  recorded -> /tmp/emu_runs/20260822T131201_selftest_blend_corner_001_v250_left
+  parked at REST
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:12:15
+========================================================================
+--no-pole is not accepted by this test bed: the pole is never commanded here; it is ASSUMED at minimum and baked into the frame transform.
+  This is an ARM-ONLY bed (Newton, 2026-08-22). If you need a different pole height, the motion must be re-resolved at that height — see cm_frames.to_arm_base().
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:12:15
+========================================================================
+motions/ — /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions
+  (empty) — drop cleaning-motion files here. The loader reads them; see motions/README.md for what an adapter must return.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:13:30
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. This exercises the plumbing; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:13:30
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. This exercises the plumbing; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  mode: REAL
+  [INFO] left: error state clean
+  tool frame L_glove_4 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s ===
+  limits set: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.3125, 'angular_acc': 4.0}
+  entry: movej rest -> movej_p prestart (+50 mm world Z) -> movel 50 mm approach, all at 50 %
+  [INFO] recording -> 20260822T131335_selftest_blend_corner_001_v250_left  (100 Hz, ret=0)
+  dispatched 6 segments in 4.15 s -> OK
+  [INFO] smoothness: 1 decelerations below half cruise, 0.17 per segment, deepest 129 mm/s, 0% of the stage spent below it
+  [INFO] recorded 406 samples (97.8 Hz measured) -> /tmp/emu_runs/20260822T131335_selftest_blend_corner_001_v250_left
+  recorded -> /tmp/emu_runs/20260822T131335_selftest_blend_corner_001_v250_left
+  parked at REST
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:41:45
+========================================================================
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:41:57
+========================================================================
+  [NOTE] --blend 25 with --connect 0: a discrete move cannot blend into anything, so r is forced to 0 on every move. That is the control, not a bug.
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_movel
+  connect    0 (discrete, rest at every waypoint)
+  blend r    25 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 0, 0), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:42:00
+========================================================================
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.10 (handle 1)
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  tool frame L_glove_2 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s, connect 1, r 10 % ===
+  limits: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.3125, 'angular_acc': 4.0}
+  [INFO] recording -> 20260822T134203_toplid_left_v250_r10_c1_left  (100 Hz, ret=0)
+  1. movej   -> rest
+  2. movej_p -> start pose
+  3. cleaning path
+  cleaning path: 27 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 32.09 s
+  4. movej   -> rest
+  [INFO] smoothness: 17 decelerations below half cruise, 0.63 per segment, deepest 150 mm/s, 1% of the stage spent below it
+  [INFO] recorded 3742 samples (97.6 Hz measured) -> /tmp/emu_runs/20260822T134203_toplid_left_v250_r10_c1_left
+  recorded -> /tmp/emu_runs/20260822T134203_toplid_left_v250_r10_c1_left
+  rung OK in 38.36 s
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:42:55
+========================================================================
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_movel
+  connect    0 (discrete, rest at every waypoint)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 0, 0), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.10 (handle 1)
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  tool frame L_glove_2 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s, connect 0, r 0 % ===
+  limits: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.3125, 'angular_acc': 4.0}
+  1. movej   -> rest
+  2. movej_p -> start pose
+  3. cleaning path
+  cleaning path: 27 segments via rm_movel, v 100%, r 0%, connect discrete
+  cleaning path completed in 40.21 s
+  4. movej   -> rest
+  rung OK in 46.48 s
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:45:00
+========================================================================
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_moves
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:45:01
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. Exercises the bed; it is not a cleaning motion.
+--blend is a PERCENTAGE 0-100 (not mm), got 150
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 13:45:01
+========================================================================
+  [SELFTEST] paths/blend_corner_001.py — a PROVEN path with real recordings behind it. Exercises the bed; it is not a cleaning motion.
+========================================================================
+motion    selftest_blend_corner_001
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+execution
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+  program    6 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  selftest_blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:24:13
+========================================================================
+  [INFO] reference_frame 'alix_ref_frame' resolved to 'butterfli_ref_frame', the name this URDF uses for it.
+========================================================================
+motion    example_cleaning_motion
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  J4 screen: 137 % -> real >= 150 % -> REFUSED (abort is 95 %)
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:25:05
+========================================================================
+========================================================================
+motion    example_cleaning_motion
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/cfg_base.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   0.054  -0.001   0.000 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   0.054  -0.001   0.000 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  [INFO] elbow screen: IK failed on ALL 4 segments — this is the emulator intercepting the algorithm library, not a property of the path. Re-run without the emulator to screen it.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:25:09
+========================================================================
+  [WARN] start_pose has 7 values (a quaternion) while reference_frame 'arm_base' is the arm's own frame, where the expected form is [x y z rx ry rz]. Parsing it as a quaternion — check the file.
+========================================================================
+motion    example_cleaning_motion
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/cfg_mm1.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    605.0    291.7    -75.0 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    605.0    291.7    -75.0 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  J4 screen: 0 % of the J4 limit -> real >= 0 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:25:09
+========================================================================
+  [WARN] start_pose has 6 values (Euler RPY) while reference_frame 'alix_ref_frame' is a URDF frame, where the expected form is a quaternion. Parsing it as RPY — check the file.
+  [INFO] reference_frame 'alix_ref_frame' resolved to 'butterfli_ref_frame', the name this URDF uses for it.
+========================================================================
+motion    example_cleaning_motion
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/cfg_mm2.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    495.0   -204.3   -330.0 mm   rpy   0.054  -0.001   0.000 rad
+    start (arm)    xyz    495.0   -204.3   -330.0 mm   rpy   0.054  -0.001   0.000 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  [INFO] elbow screen: IK failed on ALL 4 segments — this is the emulator intercepting the algorithm library, not a property of the path. Re-run without the emulator to screen it.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:25:09
+========================================================================
+no task config; tried:
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/scratchpad/cfg_norf_cleaning_points.yaml
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/scratchpad/cfg_norf.yaml
+  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/cfg_norf.yaml
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:26:08
+========================================================================
+========================================================================
+motion    example_cleaning_motion
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/cfg_base.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  J4 screen: 144 % -> real >= 158 % -> REFUSED (abort is 95 %)
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:26:09
+========================================================================
+/tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/cfg_norf.yaml: no `reference_frame`. It decides both the transform into the arm's frame AND how `start_pose` is read, so it cannot be defaulted.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:26:09
+========================================================================
+========================================================================
+motion    toplid_left
+  source  ../../RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:26:38
+========================================================================
+  [INFO] reference_frame 'alix_ref_frame' resolved to 'butterfli_ref_frame', the name this URDF uses for it.
+========================================================================
+motion    toplid_left_cfg
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/real_cfg.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      2
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (the motion file's own ladder)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left_cfg  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.10 (handle 1)
+  [INFO] left: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] left: run mode set to REAL (--mode)
+  [INFO] left: run mode = REAL
+  [INFO] left: error state clean
+  tool frame L_glove_2 selected (was Hand)
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — 0.250 m/s, connect 1, r 10 % ===
+  limits: {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0}
+  1. movej   -> rest
+  --- loop 1/2 ---
+  2. movej_p -> start pose
+  3. cleaning path
+  cleaning path: 27 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 27.00 s
+  --- loop 2/2 ---
+  2. movej_p -> start pose
+  3. cleaning path
+  cleaning path: 27 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 26.99 s
+  4. movej   -> rest
+  rung OK in 60.82 s
+  tool frame restored to Hand (ret=0)
+  [INFO] left: run mode restored to REAL
+  limits restored to {'line_speed': 0.25, 'line_acc': 1.6, 'angular_speed': 0.6, 'angular_acc': 4.0, 'joint_speed': [180.0, 180.0, 225.0, 225.0, 225.0, 225.0, 225.0], 'joint_acc': [600.0, 600.0, 600.0, 600.0, 600.0, 600.0, 600.0]}
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:28:40
+========================================================================
+  [INFO] reference_frame 'alix_ref_frame' resolved to 'butterfli_ref_frame', the name this URDF uses for it.
+========================================================================
+motion    example_cleaning_motion
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  5  (4 movel segments)
+  lengths 71.4 mm min / 114.6 mm median / 246.8 mm max, 513 mm total
+  ladder  0.25 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+  line_acc   PINNED at 1.60 m/s^2
+  angular    PINNED at 0.600 rad/s
+    0.250 m/s -> line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  segments 4, shortest 71.4 mm, longest 246.8 mm, total 513 mm
+  program    4 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.600 rad/s
+  J4 screen: 137 % -> real >= 150 % -> REFUSED (abort is 95 %)
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_motion  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 2 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:28:40
+========================================================================
+========================================================================
+motion    toplid_left
+  source  ../../RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  program    27 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:28:40
+========================================================================
+========================================================================
+motion    blend_corner_001
+  source  ../../RMDemo_DualArmConcept/paths/blend_corner_001.py  [concept_path]
+  side    left      tool frame L_glove_4
+  frame   arm_base
+  points  7  (6 movel segments)
+  lengths 65.0 mm min / 65.0 mm median / 65.0 mm max, 390 mm total
+  ladder  0.10, 0.20, 0.25, 0.35 m/s
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    start (arm)    xyz    515.0     32.0   -323.6 mm   rpy  -3.117  -0.400   0.077 rad
+    displacement   0.0 mm
+
+execution (CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 6, shortest 65.0 mm, longest 65.0 mm, total 390 mm
+  program    6 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 65 % of the J4 limit -> real >= 71 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  blend_corner_001  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 5 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:43:16
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame R_arm_tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  program    24 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:45:26
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame R_arm_tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:45:39
+========================================================================
+========================================================================
+motion    toplid_left
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_DualArmConcept/task_configs/commode_c/toplid_left_cleaning_points.yaml  [task_yaml]
+  side    left      tool frame L_glove_2
+  frame   arm_base
+  points  28  (27 movel segments)
+  lengths 28.5 mm min / 292.5 mm median / 406.5 mm max, 6202 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    start (arm)    xyz    550.0     43.7   -202.5 mm   rpy   3.114  -0.030   0.004 rad
+    displacement   0.0 mm
+
+execution (CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (--speed (single, off-ladder))
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 27, shortest 28.5 mm, longest 406.5 mm, total 6202 mm
+  entry      movej_p -> first cleaning point
+  program    27 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s   line_acc 1.60   angular 0.312 rad/s
+  J4 screen: 75 % of the J4 limit -> real >= 82 % -> RANKED
+    Not a clearance: J4 is screened for being redundancy-invariant, not for being the binding joint.
+  JUNCTION AUDIT (ADVISORY)  toplid_left  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:45:39
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame R_arm_tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      2
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  [INFO] right: run mode restored to REAL
+  disconnected
+cannot select tool frame 'R_arm_tip' (ret=1: 1 (The controller returns false, indicating that the parameters are sent incorrectly or the robotic arm state is wrong.  FIX: - Validate JSON Command: ① Enable DEBUG logs for the API to capture the raw JSON data. ② Check JSON syntax: Ensure correct formatting of parentheses, quotes, commas, etc. (You can use a JSON validation tool). ③ Verify against the API documentation that parameter names, data types, and value ranges comply with the specifications. ④ After fixing the issues, resend the command and check if the controller returns a normal status code and business data.- Check Robot Arm Status: ① Check for real-time error messages in the robot arm controller or logs (such as hardware failures, over-limit conditions), and reset, calibrate, or troubleshoot hardware issues according to the prompts. ② After fixing the issues, resend the command and check if the controller returns a normal status code and business data.)).
+  The frame must exist on the controller — create it with RMDemo_DualArmConcept/src/test_frame_alignment.py --mode REAL --create-frames. Refusing to dispatch through the wrong frame.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:46:58
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      2
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  --- loop 1/2 ---
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  --- loop 2/2 ---
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 50.96 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:53:18
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 29.56 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+==================================================================
+           run_cleaning_motion   point_sequence
+movej_p    1                  1
+movel      25                 25
+  movej_p param mismatch: (20, 0, 0) vs (100, 0, 0)
+movej_p  max |pose difference| = 0.000e+00   params differing = 1
+movel    max |pose difference| = 0.000e+00   params differing = 0
+==================================================================
+VERDICT: THEY DIFFER
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:54:05
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+==================================================================
+           run_cleaning_motion   point_sequence
+movej_p    1                  1
+movel      25                 25
+movej_p  max |pose difference| = 0.000e+00   params differing = 0
+movel    max |pose difference| = 0.000e+00   params differing = 0
+==================================================================
+VERDICT: SAME MOTION — identical TCP path and per-move program
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:56:22
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:57:06
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 14:57:31
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 15:05:02
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 15:05:47
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 15:06:13
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
