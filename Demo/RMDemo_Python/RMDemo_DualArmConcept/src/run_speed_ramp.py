@@ -2,12 +2,12 @@
 """SPEED RAMP DRIVER — screen -> SIM -> REAL, one rung at a time.
 
 Newton, 2026-08-19: ramp the linear cap 0.45 -> 1.00 m/s in +0.1 steps with
-the angular cap coupled by C2 (omega = 1.25 * v), holding angular_acc at 4.0,
-and settle what the contract asserts without evidence.
+the angular cap coupled at omega = 1.25 * v, holding angular_acc at 4.0, and
+settle the behaviour on evidence.
 
 WHY A DRIVER AND NOT `test_blend_corner.py --path ... ` ON ITS OWN.
 A single invocation carries ONE `--angular-speed`, but this ramp needs the cap
-to move WITH the rung (that is the C2 coupling under test). So each rung is its
+to move WITH the rung (that coupling is under test). So each rung is its
 own invocation, and the sequencing rule lives here.
 
 THE RULE, in Newton's words: "screen -> SIM -> REAL, do not proceed to REAL if
@@ -17,14 +17,14 @@ consecutive failed rungs rather than walking every remaining rung into a wall.
 
 ABORT CRITERIA (agreed with Newton, 2026-08-19), applied to the REAL rung:
   * ANY joint above 95 % of its limit  — not J4 alone. J4 is screened because
-    it is the only redundancy-invariant joint (contract A.4), NOT because it
+    it is the only redundancy-invariant joint (measured, H66), NOT because it
     binds: J1 binds on 11 of 24 tasks, and at 0.8 m/s on toplid_left FOUR
     joints were over limit at once.
   * ANY dwell at >=98 % of a limit, for any duration at all (the H63 metric —
     0 ms at 0.45, 330 ms on the 0.8 run that did not finish).
 
-WHAT THIS RAMP SHOWED, and the law that explains it (contract A.6, and the
-ladder ran 2026-08-19). The prediction recorded here before the run used
+WHAT THIS RAMP SHOWED, and the tilt law that explains it (the ladder ran
+2026-08-19). The prediction recorded here before the run used
 kappa = 1.86 rad/m and was WRONG — it divided the rotation across the 420 mm
 PADDED span by the 380 mm STROKE, and read the pose in the wrong convention.
 rx/ry/rz in a controller pose are Euler RPY (Rz*Ry*Rx), NOT a rotation
@@ -32,7 +32,7 @@ vector. Measured: 36.03 deg over 380 mm, so
 
     kappa = 1.655 rad/m,  omega = kappa * v
 
-The C2 coupling COMMANDS omega = 1.25 * v while the path DEMANDS 1.655 * v,
+The coupling COMMANDS omega = 1.25 * v while the path DEMANDS 1.655 * v,
 so the demand exceeds the cap at every rung — and the commanded cap itself
 reaches 1.25 rad/s at v = 0.755 m/s, above which the far-reach end of the
 stroke, where the tilt is steepest, is asking for more angular rate than it
@@ -41,7 +41,8 @@ the true demand only up to
 
     v = angular_acc / (3 * kappa) = 4.0 / 4.965 = 0.806 m/s
 
-which is why 0.80 is the design speed and 0.90 was not survivable.
+which is why 0.80 was the highest rung with margin and 0.90 was not
+survivable.
 
 MEASURED, left arm, REAL (all three confirmed against the recordings):
     0.80  J4 87.6 %, 0 ms dwell, 6.8 A  -> completed, margin
@@ -53,9 +54,11 @@ MEASURED, left arm, REAL (all three confirmed against the recordings):
           only machine-readable evidence is truncated traced distance plus
           non-arrival at the final waypoint.
 
-DESIGN SPEED IS 0.80 m/s / 1.25 rad/s (contract C2), superseding the earlier
-1.0 m/s target. Raising the cap buys 8.9 s across the whole commode_c corpus
-(3.4 %) and is not worth the joint margin.
+0.80 m/s / 1.25 rad/s IS A MEASURED CEILING, not a design mandate — it is
+what this ladder reached with margin on 2026-08-19, on one path, once.
+Raising the cap bought 8.9 s across the whole commode_c corpus (3.4 %), which
+did not look worth the joint margin. Both halves of that are open to
+re-measurement; this driver exists to re-measure them.
 
 USAGE
     python3 run_speed_ramp.py --side left --mode SCREEN   # offline only (default)
@@ -64,7 +67,7 @@ USAGE
     python3 run_speed_ramp.py --side left --mode REAL     # the whole ladder
     python3 run_speed_ramp.py --side left --mode SIM --rungs 0.45,0.50
     python3 run_speed_ramp.py --side left --mode REAL --dry   # print, run nothing
-    python3 run_speed_ramp.py --side left --coupling 1.655    # omega = path demand (A.6)
+    python3 run_speed_ramp.py --side left --coupling 1.655    # omega = path demand (tilt law)
     python3 run_speed_ramp.py --side left --angular-acc 6.0   # pin the acc instead
 
 --mode names the HIGHEST rung the ladder may reach; every rung below it still
@@ -87,14 +90,14 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PATH = os.path.join(HERE, "..", "paths", "planar_speed_ramp_001.py")
 
-COUPLING = 1.25        # C2: omega_cap = COUPLING * v (Newton's ratio)
+COUPLING = 1.25        # omega_cap = COUPLING * v (Newton's ratio)
 # Settable with --coupling, and this is the knob that makes the angular_acc
-# cap removal MATTER. Under C2 = 1.25 even rung 1.00 needs only
+# cap removal MATTER. Under COUPLING = 1.25 even rung 1.00 needs only
 # angular_acc 3.75, i.e. under the shipped 4.00 — so the ratio ceiling never
 # fired in this ladder and lifting it alone changes nothing.
 #
 # What the PATH demands is different and larger: the conditioning tilt is
-# kappa = 1.655 rad/m (contract A.6), so a segment needs omega = 1.655 * v.
+# kappa = 1.655 rad/m (measured), so a segment needs omega = 1.655 * v.
 # At --coupling 1.655
 # the commanded cap finally matches the demand, and THEN the ratio asks for
 # angular_acc = 3 * 1.655 * v, which passes 4.00 at rung 0.806 and reaches
@@ -145,10 +148,10 @@ def angular_acc_for(cap):
     if ANGULAR_ACC_PINNED is not None:
         return ANGULAR_ACC_PINNED
     return max(ANGULAR_ACC_FLOOR, 3.0 * cap * (1 + 1e-9))
-SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
+SCREEN_GATE = 90.0     # % of the J4 limit
 
-# THE PREDICTION BAND [0.74 P, 1.08 P] IS WITHDRAWN — contract A.4, refuted
-# on the 2026-08-19 hardware ramp. It is gone in BOTH its value and its shape:
+# THE PREDICTION BAND [0.74 P, 1.08 P] IS WITHDRAWN — refuted on the
+# 2026-08-19 hardware ramp. It is gone in BOTH its value and its shape:
 #
 #   * Value, in the UNSAFE direction. Offline screen against the REAL worst
 #     joint on this very path, v = 0.45 … 0.90, ran 1.12 1.13 1.10 1.10 1.14
@@ -159,7 +162,8 @@ SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
 #     passed 51 % anywhere else. A scalar over 1220 samples cannot gate a
 #     3-sample event, it can only average it away.
 #
-# WHAT REPLACES IT (A.4, verbatim): "the screen ranks, geometry gates."
+# WHAT REPLACES IT: the screen RANKS, and geometry PREDICTS. Nothing
+# offline gates a rung any more — the ladder runs and the recording judges.
 #   * The screen may REJECT a speed. It may NEVER certify one — a J4 pass is
 #     not a clearance, because J4 is screened for being redundancy-invariant
 #     (hence offline-computable), NOT for being the binding joint. Measured:
@@ -167,9 +171,9 @@ SCREEN_GATE = 90.0     # % of the J4 limit (contract C3)
 #     were over limit at once.
 #   * Rejection uses the LOWEST measured under-read, 1.10, so a rung is
 #     refused only when even the most optimistic reading clears the abort.
-#   * The decision belongs to the junction carrying the screen's maximum and
-#     is taken there with A.2.1/A.2.2 (src/junction_limits.py) — geometry,
-#     exact, offline — not with this statistic.
+#   * The interesting junction is the one carrying the screen's maximum, and
+#     src/junction_limits.py says something exact and offline about it — but
+#     advisory only, and not with this statistic.
 SCREEN_UNDERREAD_MIN = 1.10
 JOINT_ABORT = 95.0     # % of any joint's limit
 FINAL_WAYPOINT_TOL_M = 0.020   # completed rungs land within 1 mm; the
@@ -179,7 +183,7 @@ TRACED_FLOOR = 0.90            # SIM traces 101 % of commanded, REAL 104 %;
 CONSECUTIVE_FAIL_STOP = 2
 
 
-# --- contact fraction, contract A.3 -----------------------------------------
+# --- contact fraction -----------------------------------------
 # APPLIED, NOT ENFORCED BY CAPPING (Newton, 2026-08-19: "apply the formula, do
 # not cap the angle, if you cap we add another limit"). The tilt along a stroke
 # is set by what the ARM needs to stay out of the elbow singularity; theta is
@@ -196,8 +200,8 @@ CONSECUTIVE_FAIL_STOP = 2
 # as pressing below it — not silently prevented.
 PAD_T = 0.020      # frame 2 compliance depth [m]
 PAD_L = 0.080      # frame 2 long edge [m]
-# Contract A.3 gate, moved 0.5 -> 0.40 by Newton on 2026-08-19 because at 0.5
-# the contact clause and the arm's kinematics could not both be satisfied: the
+# Contact gate, moved 0.5 -> 0.40 by Newton on 2026-08-19 because at 0.5 the
+# contact requirement and the arm's kinematics could not both be satisfied: the
 # tilt needed to keep the elbow off a singularity (theta_k ~ 30.9 deg) exceeded
 # the tilt the gate allowed (theta_c = 30.0 deg). At 0.40 the ceiling is 38.7.
 CONTACT_GATE = 0.40
@@ -264,7 +268,7 @@ def parse_ladder_mode(argv=None):
     Default SCREEN — the only rung that cannot move an arm.
 
     This extends the suite's shared `parse_mode_arg`, which is binary SIM|REAL,
-    because C9's ladder has four rungs and the whole point of this driver is to
+    because the ladder has four rungs and the whole point of this driver is to
     stop at a chosen one. Same spelling, same case-insensitivity, same usage
     error shape, so `--mode SIM` means here exactly what it means in every other
     script: run it in the controller's simulation mode.
@@ -415,7 +419,7 @@ def screen(mod, path, rung, cap):
 
 
 def run_emulated(side, path, rung, cap, line_acc, dry):
-    """C9 rung 1 — the emulator. Installs in-process BEFORE the SDK import, so
+    """Rung 1 — the emulator. Installs in-process BEFORE the SDK import, so
     the UNMODIFIED test program runs against realistic motion timing and
     arrival semantics with zero hardware and zero network (EMULATOR.md).
     This is the only rung that can run on a laptop with no arm attached."""
@@ -523,8 +527,9 @@ def check_recording(out):
     # PATH COMPLETION FIRST — it is the ONLY check SIM can make, and on the
     # 2026-08-19 ladder it was the one that mattered: SIM traced 2.372 m of a
     # 4.468 m program at v=1.00 and ended 350 mm from the last waypoint,
-    # reproducing the REAL failure offline. Contract C9 makes this mandatory
-    # in SIM; A.4 explains why the offline JOINT screen could not do it.
+    # reproducing the REAL failure offline. SIM is mandatory before REAL
+    # (Newton's screen -> SIM -> REAL rule); the offline JOINT screen could
+    # not have done it, because it averages a 3-sample event away.
     ok, why = check_completion(meta, rows)
     if not ok:
         return False, why
@@ -628,7 +633,7 @@ def main():
               "0.80 is removed; H62 stop-distance caveat accepted)")
     print("  abort: ANY joint > %.0f %% of limit, or ANY dwell >= 98 %%" % JOINT_ABORT)
     f_min, f_at, f_th = contact_profile(mod)
-    print("  contact (A.3, applied not capped): min f = %.3f at %s (theta %.1f deg)%s\n"
+    print("  contact (applied, not capped): min f = %.3f at %s (theta %.1f deg)%s\n"
           % (f_min, f_at, f_th,
              "   <-- BELOW the %.2f gate; recorded, not prevented" % CONTACT_GATE
              if f_min < CONTACT_GATE else "   (gate %.2f)" % CONTACT_GATE))
@@ -663,7 +668,7 @@ def main():
             print("  SCREEN: unavailable or degenerate (got %r) — refusing to "
                   "continue blind.\n    detail: %s" % (worst, seg))
             break
-        # A.4: the screen RANKS — it names the junction. It never certifies.
+        # The screen RANKS — it names the junction. It never certifies.
         optimistic = SCREEN_UNDERREAD_MIN * worst
         if optimistic > JOINT_ABORT:
             verdict, ok = "BLOCK", False
@@ -672,14 +677,19 @@ def main():
         print("  1. SCREEN   worst J4 %.0f %% at %s -> real >= %.0f %% -> %s"
               % (worst, seg, optimistic, verdict))
         if verdict == "RANKED":
-            print("     NOT a clearance (A.4). The screen has done its whole "
+            print("     NOT a clearance. The screen has done its whole "
                   "job: it named the junction. Geometry gates below.")
         if not ok:
             print("     rung refused before any motion: even at the lowest "
                   "measured under-read (x%.2f -> %.0f %%) it exceeds the %.0f %% "
                   "abort." % (SCREEN_UNDERREAD_MIN, optimistic, JOINT_ABORT))
 
-        # rung 1b — GEOMETRY GATE (A.2.1/A.2.2), which is what actually decides.
+        # rung 1b — GEOMETRY PREDICTION. ADVISORY: never refuses a rung.
+        # Standing this down is deliberate (Newton, 2026-08-22, restarting the
+        # test to understand the behaviour). The predictor over-flags — run
+        # verbatim it refuses rungs hardware completed — so gating on it would
+        # suppress the measurements that would fix it. It prints, the rung
+        # runs, the recording decides.
         if ok:
             try:
                 import junction_limits
@@ -687,20 +697,16 @@ def main():
                     mod, rung, line_acc, os.path.basename(path))
                 print("\n".join("  " + ln for ln in jtxt.splitlines()))
                 if jbind is not None and jbind < rung - 1e-9:
-                    print("     rung refused: A.2.1/A.2.2 bind this geometry "
-                          "to %.3f m/s, below the commanded %.2f. Per A.2.2 "
-                          "the LOWER SPEED binds — do NOT raise r."
-                          % (jbind, rung))
-                    print("     NOTE: A.2.2 run verbatim refuses rungs C2 "
-                          "records as completed on hardware — open calibration "
-                          "dispute, pending Newton (junction_limits docstring). "
-                          "It gates until he rules.")
-                    ok = False
+                    print("     PREDICTION: geometry would put this rung at "
+                          "%.3f m/s, below the commanded %.2f. NOT ENFORCED — "
+                          "the rung runs." % (jbind, rung))
+                    print("     Record whether it was right. If the rung "
+                          "completes clean, the predictor is miscalibrated "
+                          "here; do not re-tune it to fit — measure c(theta).")
             except Exception as exc:                          # noqa: BLE001
-                print("  1b. GEOMETRY  check UNAVAILABLE (%s) — NOT gated. "
-                      "A.2.1/A.2.2 were the only offline signal that saw the "
-                      "1.00 failure; treat an unscreened rung as unscreened."
-                      % exc)
+                print("  1b. GEOMETRY  prediction UNAVAILABLE (%s) — the rung "
+                      "still runs; there is simply no offline prediction to "
+                      "score against." % exc)
         if not ok:
             consecutive += 1
             if consecutive >= CONSECUTIVE_FAIL_STOP:
@@ -718,7 +724,7 @@ def main():
         if geometry_only:
             ok = True
             print("  2. EMULATOR -> ADVISORY (geometry not reproduced)")
-            print("     C9 caveat: the emulator cannot validate this path's arc "
+            print("     SIM caveat: the emulator cannot validate this path's arc "
                   "geometry and emits no joint telemetry, so this rung is a "
                   "DIFFERENT test, not a weaker one — it answers nothing about "
                   "joints and does not gate SIM.")
@@ -759,7 +765,7 @@ def main():
             break
 
     print("=" * 72)
-    print("Ramp finished. Per the ratchet rule (C2), run reset_limits.py "
+    print("Ramp finished. Per the ratchet rule, run reset_limits.py "
           "before any other work on this arm.")
     return 0
 

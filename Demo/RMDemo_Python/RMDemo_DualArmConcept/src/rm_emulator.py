@@ -610,8 +610,8 @@ def _corner_model(theta_deg, r_pct, min_l_m):
         return 0.0, 0.0, True            # no blend: dead stop [§2 / §9.3f]
     r = r_pct / 100.0
     # cut coefficient: ~0 below 60° [§9.2], 0.70 at 90°-class [§9.3d exact].
-    # Sharp corners/reversals: contract A.2 (re-measured 2026-08-19 over 1454
-    # corners) — c is NOT flat: c(10)=1.70, c(25)=1.57, c(50)=1.33. The old
+    # Sharp corners/reversals: the 2026-08-19 fit (1454 corners) — c is NOT
+    # flat: c(10)=1.70, c(25)=1.57, c(50)=1.33. POOLED and UNVALIDATED. The old
     # flat 1.4 UNDERSTATED the cut at the mandated r=10 (was here until
     # 2026-08-19; clamped to [10,50], the measured r domain).
     if theta_deg < 60.0:
