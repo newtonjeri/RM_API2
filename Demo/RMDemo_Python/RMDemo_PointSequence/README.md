@@ -45,29 +45,46 @@ python3 point_sequence.py --points ../points/my.yaml --loops 5 --v 30
 
 ## The points file
 
-Points are **absolute poses in the arm's world frame**. `translation` is
-`[x, y, z]` in **metres**; `rotation` is `[rx, ry, rz]` Euler RPY in
-**degrees** (set `rotation_units: rad` if yours are already radians).
+The generated cleaning config. **Two unit conventions live in one file** and
+they are not the same:
 
-```yaml
-rotation_units: deg
+| block | units | composition |
+|---|---|---|
+| `cartesian_poses` | metres and **RADIANS** | `R = Rz·Ry·Rx` (rm_pose_t) |
+| `cleaning_points.rotation` | **DEGREES** | `R_delta = Rx·Ry·Rz`, left-multiplied |
 
-cleaning_points:
-  point1:
-    translation: [0, 0, 0]
-    rotation: [0, 0, 0]
-  point2:
-    translation: [0.0405, 0.012, 0.1065]
-    rotation: [-10, 0, 0]
+Reading either in the other's units is silent — degrees-as-radians re-orients
+the whole path, radians-as-degrees flattens it — so the defaults are separate
+keys (`pose_units` rad, `rotation_units` deg) matching the generated files.
 
-cleaning_sequence:
-  - [point1, point2]
-  - [point3, point4]
-  - [point4, point1]
+The cleaning points are **deltas from `start_pose`**:
+
+```
+position     p = p_start + translation   <- in arm_world AXES, not rotated
+                                            into p_start
+orientation  R = R_delta @ R_start       <- LEFT-multiplied
 ```
 
-Optional keys: `rest_pose:` (overrides the arm-model table), and
-`rotation_units:`.
+```yaml
+cartesian_poses:
+  start_pose: [0.5828, -0.1012, -0.1021, 2.9145, 0.4291, -3.0507]
+cleaning_points:
+  point14:
+    translation: [0.0403, 0.0115, 0.0147]
+    rotation: [-12.2, -10.2, 64.5]
+cleaning_sequence:
+  - [point14, point15]
+```
+
+`movej_p` goes to `start_pose` — which is usually **not** one of the cleaning
+points, since no generated point has a zero delta — then the movel chain
+follows the sequence. A file with no `start_pose` is read as absolute poses
+instead. Optional: `rest_pose:`, `pose_units:`, `rotation_units:`.
+
+**This program composes poses; it does not transform frames.** A config whose
+`reference_frame` is not the arm's own needs the URDF and the pole height —
+that is `RMDemo_CleaningMotion`'s job, and such a file is refused here rather
+than resolved in the wrong frame.
 
 ## The sequence is a list of segments, and they need not join
 
@@ -120,13 +137,40 @@ so when it sees one.
                every 4th movel closes the chain (r=0, connect=0)
 ```
 
-Checked: degrees → radians (−80° → −1.396 rad), the `point2 → point3`
-discontinuity at 80.1 mm, per-segment overrides landing on the right move,
-`--connect 0` zeroing every `r`, unknown point names refused with the known
-list, and `--blend 250` refused as a percentage.
+Checked: the two unit conventions, discontinuity reporting with distances,
+per-segment overrides landing on the right move (including the +1 shift the
+prepended anchor introduces), `--connect 0` zeroing every `r`, unknown point
+names refused with the known list, and `--blend 250` refused as a percentage.
+
+**Cross-checked against `RMDemo_CleaningMotion`.** Both tools resolve the same
+config through completely separate code, and
+`RMDemo_CleaningMotion/src/verify_equivalence.py` diffs every dispatched call:
+max pose difference **0.000e+00** on the `movej_p` and all 25 `movel` moves,
+with identical per-move `(v, r, connect)`. Rotating one point by 1° flips it to
+`THEY DIFFER`, so the check has teeth.
 
 **Not exercised:** any run on real hardware.
 
 ⚠ Dry-run first and read the resolved pose table — the arm is driven to
 point 0 by `movej_p` before anything else, and those coordinates are yours to
 confirm. Keep the E-stop in hand.
+
+## Visualising the points — `points/plot_points.py`
+
+```bash
+cd points
+python3 plot_points.py example_points.yaml
+python3 plot_points.py a.yaml b.yaml c.yaml -o compare.png
+python3 plot_points.py a.yaml b.yaml --show
+```
+
+The **3D view takes two thirds** of the figure; **TOP (XY)**, **FRONT (XZ)**
+and **SIDE (YZ)** share the remaining third, stacked. Up to three files
+overlay, one colour each (blue / orange / aqua), named in the legend.
+
+**Uniform scale on every axis, in every panel.** One millimetre of X is one
+millimetre of Y is one millimetre of Z. Nothing is exaggerated or normalised,
+so a flat surface looks flat and a slope has its real slope — which means the
+elevations of a near-planar surface draw as thin strips, because that is what
+they are. The points are plotted as given, in the traversal order the sequence
+defines.

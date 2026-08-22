@@ -4,77 +4,49 @@
 Independent of the test bed: this file imports the RealMan SDK and PyYAML
 and nothing else. Copy it anywhere with a points file and it runs.
 
-    movej_p  -> the first point of the sequence
-    movel    -> through the sequence, connect and blend applied per segment
-    movej    -> rest
+    movej    -> rest          establishes the arm configuration
+    movej_p  -> start_pose
+    movel    -> through the sequence   (v, blend radius, connect)
+    movej    -> rest          parks
 
-`--loops N` repeats the motion N times before the final return to rest.
+The run OPENS at rest as well as closing there. `movej_p` names a pose, not
+a configuration, and a 7-axis arm reaches one pose from many — which branch
+it picks depends on where it started. Beginning from a known joint pose is
+what makes the whole path repeatable instead of dependent on wherever the
+previous run happened to stop.
 
-THE POINTS FILE IS THE GENERATED CLEANING CONFIG, and it carries TWO UNIT
-CONVENTIONS which are not the same:
+POINTS ARE ABSOLUTE poses in the arm's own frame. `translation` is the
+position, `rotation` is the orientation; nothing is added to `start_pose`
+and nothing is composed onto it. The values are dispatched as given.
 
-    cartesian_poses:  [x, y, z, rx, ry, rz]  metres and RADIANS
-                      (rm_pose_t, R = Rz.Ry.Rx), in arm_world
-    cleaning_points:  translation metres, rotation DEGREES
+A POINT'S ROTATION IS INTRINSIC XYZ, R = Rx.Ry.Rz — the convention
+`task_base.cpp` applies and the one the generator writes. The controller
+wants `rm_pose_t`, which is EXTRINSIC xyz, R = Rz.Ry.Rx. Those are opposite
+compositions, so converting is a re-decomposition and NOT a reordering of
+the triple: build the matrix, then read the other triple off it. Passing
+the angles through unconverted is 155 deg out on a typical cleaning point,
+and it looks like plausible angles the whole way.
+
+TWO UNIT CONVENTIONS live in one file and they are not the same:
+
+    cartesian_poses:  [x, y, z, rx, ry, rz]  metres and RADIANS (rm_pose_t)
+    cleaning_points:  translation metres,    rotation DEGREES
 
 Reading either in the other's units is silent — degrees-as-radians
-re-orients the whole path, radians-as-degrees flattens it — so the two
-defaults are separate (`pose_units`, `rotation_units`) and match the
-generated files.
+re-orients the whole path, radians-as-degrees flattens it. `pose_units` and
+`rotation_units` override them, and when a file declares neither the
+assumption is PRINTED rather than made quietly.
 
-The cleaning points are DELTAS from `start_pose`:
-
-    position     p = p_start + translation   <- in arm_world AXES, not
-                                                rotated into p_start
-    orientation  R = R_delta @ R_start       <- LEFT-multiplied,
-                                                R_delta = Rx.Ry.Rz
-
-    cartesian_poses:
-      start_pose: [0.5828, -0.1012, -0.1021, 2.9145, 0.4291, -3.0507]
-    cleaning_points:
-      point14:
-        translation: [0.0403, 0.0115, 0.0147]
-        rotation: [-12.2, -10.2, 64.5]
-    cleaning_sequence:
-      - [point14, point15]
-
-`movej_p` goes to `start_pose`; the movel chain follows the sequence. A
-file with no `start_pose` is read as absolute poses instead.
-
-THIS PROGRAM COMPOSES POSES, IT DOES NOT TRANSFORM FRAMES. A config whose
-`reference_frame` is not the arm's own needs the URDF and the pole height;
-that is RMDemo_CleaningMotion's job, and such a file is refused here rather
-than resolved in the wrong frame.
-
-THE SEQUENCE IS A LIST OF SEGMENTS, and consecutive segments need not
-join. In the example above segment 1 ends at `point2` while segment 2
-starts at `point3`, so there is a `point2 -> point3` move the sequence
-never names. Those DISCONTINUITIES are found, reported with their distance
-and traversed as ordinary moves — never silently, because an unannounced
-straight line across the workspace is exactly the move you did not intend.
-
-CONNECT AND BLEND. `--connect` and `--blend` set the default for every
-move; a segment can override them with an optional third element:
-
-      - [point1, point2, {r: 25, connect: 1, v: 40}]
-
-    r        blend radius: a PERCENTAGE 0-100 of the shorter adjoining
-             segment, NOT millimetres
-    connect  1 = this move joins the next into one continuous trajectory
-             0 = discrete; the arm comes to rest at the end of the move
-
-Two rules are enforced because both fail silently otherwise:
-  * the LAST move always closes the chain with r=0, connect=0 — a chain
-    whose final move still says connect=1 never closes, and the program
-    hangs waiting for a continuation that never comes;
-  * connect=0 forces r=0 on that move, because a discrete move has
-    nothing to blend into.
+THE TOOL FRAME IS NOT SET HERE. The poses mean nothing without it, and the
+controller uses whatever tool is currently selected on the pendant. The
+file's `ik_frame` is printed for that reason; select it before running.
 
 USAGE
-    python3 point_sequence.py --points ../points/example_points.yaml --dry-run
+    python3 point_sequence.py --points ../points/example_points_4.yaml --dry-run
     python3 point_sequence.py --points ../points/my.yaml --ip 192.168.1.18
-    python3 point_sequence.py --points ../points/my.yaml --blend 20 --connect 1
-    python3 point_sequence.py --points ../points/my.yaml --loops 5 --v 30
+    python3 point_sequence.py --points ../points/my.yaml --v 30 --blend 20
+    python3 point_sequence.py --points ../points/my.yaml --v 30,30,10,10 \
+                              --blend 0,20,20,0 --connect 1,1,1,0
 """
 
 import argparse
@@ -89,22 +61,22 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "Python"))
 
 from Robotic_Arm.rm_robot_interface import *          # noqa: E402,F403
 
-# Rest pose per arm model, in degrees — same values the vendor demo uses.
-# `--rest` overrides, and a `rest_pose:` in the points file overrides that.
-arm_models_to_rest = {
-    "RM_65":  [0, 0, 0, 0, 0, 0],
-    "RM_75":  [0, 20, 0, 70, 0, 90, 0],
-    "RML_63": [0, 20, 70, 0, 90, 0],
-    "ECO_65": [0, 20, 70, 0, -90, 0],
-    "ECO_63": [0, 20, 70, 0, -90, 0],
-    "GEN_72": [0, 0, 0, -90, 0, 0, 0],
+# Rest pose, in DEGREES, from the SRDF this fleet actually plans against:
+# alix_moveit_config/config/alix.srdf, group_state name="rest_pose".
+# The vendor demo's [0, 20, 0, 70, 0, 90, 0] is a different pose entirely —
+# 102 deg away at joint2 — so parking with it leaves the arm somewhere the
+# rest of the stack does not expect.
+# The two arms are NOT mirror images in every joint: 3 and 5 flip sign and
+# joint 7 differs outright, so they are written out rather than negated.
+REST_POSE_DEG = {
+    "right": [0.0, -81.9903, -26.0008, 97.9930, 5.9989, 61.9998, 69.0013],
+    "left":  [0.0, -81.9903, 26.0008, 97.9930, -5.9989, 61.9998, 110.9995],
 }
 
-
-# ── rotation helpers (no numpy — this file stays standalone) ────────────
 ARM_FRAMES = ("arm_world", "arm_base", "base", "base_link", "world", "arm")
 
 
+# ── rotation (no numpy — this file stays standalone) ─────────────────────
 def _mul(A, B):
     return [[sum(A[i][k] * B[k][j] for k in range(3)) for j in range(3)]
             for i in range(3)]
@@ -125,66 +97,25 @@ def _Rz(a):
     return [[c, -s, 0], [s, c, 0], [0, 0, 1]]
 
 
-def _pose_to_R(rx, ry, rz):
-    """R = Rz(rz) Ry(ry) Rx(rx) — the CONTROLLER's pose convention.
+def _intrinsic_xyz_to_pose(rx, ry, rz):
+    """A point's rotation (intrinsic XYZ, R = Rx.Ry.Rz) -> `rm_pose_t`
+    (extrinsic xyz, R = Rz.Ry.Rx). Radians in, radians out.
 
-    Used for `cartesian_poses`, which are rm_pose_t values in RADIANS.
+    Opposite compositions, so this is a re-decomposition and not a reorder.
+    Checked against `alix_dispatch` on the toplid chain: with it all 25
+    moves agree to 7e-5 deg, without it they are 158 deg out.
+
+    `start_pose` does NOT come through here — it is already `rm_pose_t`.
     """
-    return _mul(_Rz(rz), _mul(_Ry(ry), _Rx(rx)))
+    m = _mul(_Rx(rx), _mul(_Ry(ry), _Rz(rz)))
+    out_ry = math.asin(max(-1.0, min(1.0, -m[2][0])))
+    if abs(m[2][0]) < 0.99999:
+        return math.atan2(m[2][1], m[2][2]), out_ry, math.atan2(m[1][0], m[0][0])
+    return math.atan2(-m[1][2], m[1][1]), out_ry, 0.0          # gimbal lock
 
 
-def _delta_to_R(r, p, y):
-    """R = Rx(r) Ry(p) Rz(y) — the DELTA convention for cleaning points.
-
-    NOTE THE OPPOSITE COMPOSITION ORDER to `_pose_to_R`. Both live here
-    because the file genuinely uses both: a `cartesian_poses` entry is a
-    controller pose, while a cleaning point's rotation is a delta the
-    runtime builds as Rx*Ry*Rz and LEFT-multiplies onto the anchor.
-    Collapsing them into one helper is the bug waiting to happen, and
-    neither mistake fails loudly — the arm just cleans somewhere else.
-    """
-    return _mul(_Rx(r), _mul(_Ry(p), _Rz(y)))
-
-
-def _R_to_pose(R):
-    """R -> (rx, ry, rz) with R = Rz(rz) Ry(ry) Rx(rx). Inverse of
-    `_pose_to_R`, so what goes to `rm_movel` is in the controller's own
-    convention."""
-    ry = math.asin(max(-1.0, min(1.0, -R[2][0])))
-    if abs(R[2][0]) < 0.99999:
-        rx = math.atan2(R[2][1], R[2][2])
-        rz = math.atan2(R[1][0], R[0][0])
-    else:                                     # gimbal lock
-        rx = math.atan2(-R[1][2], R[1][1])
-        rz = 0.0
-    return rx, ry, rz
-
-
-# ── the points file ─────────────────────────────────────────────────────
 def load_points(path):
-    """(points, sequence, doc) — absolute arm-world poses, validated.
-
-    TWO UNIT CONVENTIONS LIVE IN ONE FILE, and they are not the same:
-
-        cartesian_poses:   [x, y, z, rx, ry, rz]  metres and RADIANS
-                           (rm_pose_t, R = Rz.Ry.Rx)
-        cleaning_points:   translation metres, rotation DEGREES
-
-    That is the format as generated, and reading either one in the other's
-    units is silent: degrees-as-radians re-orients the whole path, and
-    radians-as-degrees flattens it. `rotation_units` / `pose_units`
-    override, but the defaults match the generated files.
-
-    RESOLUTION. When the file declares a `start_pose`, the cleaning points
-    are DELTAS from it:
-
-        position     p = p_start + translation   <- in arm_world AXES,
-                                                    not rotated into p_start
-        orientation  R = R_delta @ R_start       <- LEFT-multiplied
-
-    With no `start_pose` the translations are read as absolute poses
-    directly. The file says which it is; nothing is guessed.
-    """
+    """(points, sequence, doc, notes) — absolute poses in the arm's frame."""
     p = pathlib.Path(path)
     if not p.is_file():
         raise SystemExit("no such points file: %s" % p)
@@ -199,10 +130,9 @@ def load_points(path):
     if not sequence:
         raise SystemExit("%s: no `cleaning_sequence` block" % p)
 
-    # This program composes poses; it does NOT transform between frames.
-    # A config authored against a fixture frame needs the URDF and the pole
-    # height, which is a different tool's job — say so instead of resolving
-    # it in the wrong frame.
+    # This program dispatches poses in the arm's own frame; it does NOT
+    # transform between frames. A config authored against a fixture frame
+    # needs the URDF and the pole height, which is a different tool's job.
     tp = doc.get("task_parameters") or {}
     ref = (doc.get("reference_frame") or doc.get("ref_frame")
            or tp.get("reference_frame"))
@@ -217,33 +147,21 @@ def load_points(path):
             "    python3 run_cleaning_motion.py --motion %s --dry-run"
             % (p, ref, p))
 
+    # UNITS. Assuming is fine; assuming SILENTLY is not — the two mistakes
+    # this guards against both look like a working run that cleans the wrong
+    # place, so the assumption is reported with the numbers it produced.
+    notes = []
     rot_units = str(doc.get("rotation_units", "deg")).lower()
-    if not rot_units.startswith(("deg", "rad")):
-        raise SystemExit("%s: rotation_units must be deg or rad, got %r"
-                         % (p, rot_units))
+    pose_units = str(doc.get("pose_units", "rad")).lower()
+    for key, value in (("rotation_units", rot_units), ("pose_units", pose_units)):
+        if not value.startswith(("deg", "rad")):
+            raise SystemExit("%s: %s must be deg or rad, got %r"
+                             % (p, key, value))
+        if key not in doc:
+            notes.append("%s not declared — assuming %s"
+                         % (key, "DEGREES" if value.startswith("deg") else "RADIANS"))
     to_rad = math.pi / 180.0 if rot_units.startswith("deg") else 1.0
-
-    # ── the anchor ──
-    anchor = (doc.get("start_pose")
-              or (doc.get("cartesian_poses") or {}).get("start_pose"))
-    if anchor is not None:
-        vals = [float(v) for v in anchor]
-        if len(vals) != 6:
-            raise SystemExit(
-                "%s: start_pose has %d values; this program wants 6, "
-                "[x y z rx ry rz] in the arm's own frame." % (p, len(vals)))
-        pu = str(doc.get("pose_units", "rad")).lower()
-        if not pu.startswith(("deg", "rad")):
-            raise SystemExit("%s: pose_units must be deg or rad" % p)
-        # RADIANS by default, and deliberately NOT governed by
-        # `rotation_units`: that key describes the point DELTAS, which the
-        # generated files write in degrees, while cartesian_poses are
-        # rm_pose_t values in radians.
-        ps = math.pi / 180.0 if pu.startswith("deg") else 1.0
-        p0 = vals[:3]
-        R0 = _pose_to_R(vals[3] * ps, vals[4] * ps, vals[5] * ps)
-    else:
-        p0, R0 = None, None
+    pose_scale = math.pi / 180.0 if pose_units.startswith("deg") else 1.0
 
     resolved = {}
     for name, body in points.items():
@@ -257,191 +175,192 @@ def load_points(path):
         if len(t) != 3 or len(r) != 3:
             raise SystemExit("%s: point %r wants 3 values each, got %d and %d"
                              % (p, name, len(t), len(r)))
-        t = [float(v) for v in t]
-        r = [float(v) * to_rad for v in r]
-        if not all(math.isfinite(v) for v in t + r):
+        q = [float(v) for v in t] + list(_intrinsic_xyz_to_pose(
+            *(float(v) * to_rad for v in r)))
+        if not all(math.isfinite(v) for v in q):
             raise SystemExit("%s: point %r has a non-finite value" % (p, name))
-        if p0 is None:
-            resolved[name] = t + r                      # absolute already
-        else:
-            R = _mul(_delta_to_R(r[0], r[1], r[2]), R0)  # LEFT-multiplied
-            rx, ry, rz = _R_to_pose(R)
-            resolved[name] = [p0[0] + t[0], p0[1] + t[1], p0[2] + t[2],
-                              rx, ry, rz]
+        resolved[name] = q
 
-    if p0 is not None:
-        # The anchor is a waypoint in its own right: `movej_p` goes there
-        # first, and it is usually NOT one of the cleaning points.
-        rx, ry, rz = _R_to_pose(R0)
-        resolved.setdefault("start_pose", p0 + [rx, ry, rz])
+    anchor = (doc.get("start_pose")
+              or (doc.get("cartesian_poses") or {}).get("start_pose"))
+    if anchor is not None:
+        vals = [float(v) for v in anchor]
+        if len(vals) != 6:
+            raise SystemExit(
+                "%s: start_pose has %d values; this program wants 6, "
+                "[x y z rx ry rz] in the arm's own frame." % (p, len(vals)))
+        resolved.setdefault("start_pose",
+                            vals[:3] + [v * pose_scale for v in vals[3:]])
 
     far = max(max(abs(v) for v in q[:3]) for q in resolved.values())
     if far > 5.0:
-        print("  [WARN] largest |coordinate| is %.1f. Translations are "
-              "METRES here — a file written in millimetres would be 1000x "
-              "out." % far)
-    return resolved, sequence, doc
+        notes.append("largest |coordinate| is %.1f — translations are METRES "
+                     "here, so a file written in millimetres is 1000x out" % far)
+    return resolved, sequence, doc, notes
 
 
-def build_traversal(points, sequence):
-    """[(name, from_jump)] — the waypoints to visit, in order.
+def traversal(points, sequence):
+    """The waypoint names to visit, in order.
 
-    The first entry is the `movej_p` target; every entry after it is a
-    `movel` target. `from_jump` marks a waypoint reached across a
-    discontinuity, i.e. one the sequence implies but never writes down.
+    The first is the `movej_p` target; the rest are `movel` targets.
+
+    Consecutive segments need not join: where one ends at `point2` and the
+    next starts at `point3` there is a `point2 -> point3` move the sequence
+    never writes down. It is traversed as an ordinary move and reported,
+    never taken silently — an unannounced straight line across the
+    workspace is exactly the move you did not intend.
     """
-    traversal, prev_end = [], None
+    out, prev_end = [], None
     for i, seg in enumerate(sequence):
         if not isinstance(seg, (list, tuple)) or len(seg) < 2:
-            raise SystemExit("sequence entry %d is %r; expected "
-                             "[from, to] with an optional third {params} "
-                             "element" % (i, seg))
+            raise SystemExit("sequence entry %d is %r; expected [from, to]"
+                             % (i, seg))
         a, b = seg[0], seg[1]
         for n in (a, b):
             if n not in points:
-                raise SystemExit("sequence entry %d names %r, which is not "
-                                 "in cleaning_points. Known: %s"
+                raise SystemExit("sequence entry %d names %r, which is not in "
+                                 "cleaning_points. Known: %s"
                                  % (i, n, ", ".join(points)))
-        if prev_end is None:
-            traversal.append((a, False))
-        elif a != prev_end:
-            traversal.append((a, True))          # discontinuity
-        traversal.append((b, False))
-        prev_end = b
-    return traversal
-
-
-def segment_params(sequence):
-    """Per-segment overrides, indexed by the MOVE they belong to.
-
-    Returns {move_index: {...}}. A segment's params attach to the move that
-    lands on its `.second`, which is the move the segment describes.
-    """
-    params, tlen, prev_end = {}, 0, None
-    for seg in sequence:
-        a, b = seg[0], seg[1]
         if prev_end is None or a != prev_end:
-            tlen += 1                # `a` was appended (start, or a jump)
-        tlen += 1                    # `b` was appended
-        # `b` sits at traversal index tlen-1, and traversal[0] is the
-        # movej_p target, so the movel that lands on it is index tlen-2.
-        if len(seg) > 2 and isinstance(seg[2], dict):
-            params[tlen - 2] = seg[2]
+            out.append(a)
+        out.append(b)
         prev_end = b
-    return params
+
+    # The anchor is the movej_p target. In the generated files the first
+    # cleaning point sits exactly ON start_pose, and commanding both would
+    # be a zero-length move — so that ONE duplicate is dropped. Checked
+    # only against the sequence's first point, which is the only place it
+    # can occur.
+    if "start_pose" in points and out and out[0] != "start_pose":
+        if math.dist(points["start_pose"][:3], points[out[0]][:3]) > 1e-6:
+            out.insert(0, "start_pose")
+        else:
+            out[0] = "start_pose"
+    return out
 
 
-def build_program(n_moves, v=20, r=0, connect=1, overrides=None):
-    """[(v, r, connect)] per move, built once and printed once.
+def per_move(text, n_moves, name, low, high):
+    """One value for every movel, from `--v 20` or `--v 20,20,30,...`.
 
-    Rules: the last move closes the chain (r=0, connect=0); connect=0
-    forces r=0, because a discrete move has nothing to blend into.
+    A single number applies to all of them; a list gives each move its own.
+    The length must be exactly 1 or `n_moves` — accepting a short list and
+    padding it would silently run the tail of the path at a speed nobody
+    chose, which is the failure this refuses rather than guesses through.
     """
-    overrides = overrides or {}
+    try:
+        vals = [int(x) for x in str(text).replace(" ", "").split(",") if x != ""]
+    except ValueError:
+        raise SystemExit("%s: %r is not a number or a comma-separated list"
+                         % (name, text))
+    if not vals:
+        raise SystemExit("%s: no value given" % name)
+    for v in vals:
+        if not low <= v <= high:
+            raise SystemExit("%s must be %d-%d, got %d" % (name, low, high, v))
+    if len(vals) == 1:
+        return vals * n_moves
+    if len(vals) != n_moves:
+        raise SystemExit("%s has %d values but there are %d movel moves — "
+                         "give one value or exactly %d"
+                         % (name, len(vals), n_moves, n_moves))
+    return vals
+
+
+def build_program(n_moves, v, r, connect):
+    """[(v, r, connect)] per move, from three per-move lists.
+
+    Two rules, because both fail silently otherwise: the LAST move closes
+    the chain (r=0, connect=0) — one that still says connect=1 never closes
+    and the program waits for a continuation that never comes — and
+    connect=0 forces r=0, because a discrete move has nothing to blend into.
+    """
     prog = []
     for i in range(n_moves):
-        o = overrides.get(i, {})
-        mv = int(o.get("v", v))
-        mr = int(o.get("r", o.get("blend", r)))
-        mc = int(o.get("connect", connect))
-        last = (i == n_moves - 1)
-        if last:
-            mr, mc = 0, 0
-        elif not mc:
-            mr = 0
-        prog.append((mv, mr, mc))
+        if i == n_moves - 1:
+            prog.append((v[i], 0, 0))
+        else:
+            prog.append((v[i], r[i] if connect[i] else 0, connect[i]))
     return prog
 
 
-# ── the arm ─────────────────────────────────────────────────────────────
 class RobotArmController:
     def __init__(self, ip, port=8080, level=3, mode=2):
-        self.thread_mode = rm_thread_mode_e(mode)              # noqa: F405
-        self.robot = RoboticArm(self.thread_mode)              # noqa: F405
+        self.robot = RoboticArm(rm_thread_mode_e(mode))        # noqa: F405
         self.handle = self.robot.rm_create_robot_arm(ip, port, level)
         if self.handle.id == -1:
-            print("\nFailed to connect to the robot arm\n")
-            sys.exit(1)
-        print("\nSuccessfully connected to the robot arm: %d\n"
-              % self.handle.id)
-
-    def get_arm_model(self):
-        res, model = self.robot.rm_get_robot_info()
-        if res == 0:
-            return model["arm_model"]
-        print("\nFailed to get robot arm model\n")
-        return None
+            raise SystemExit("\nFailed to connect to the robot arm\n")
+        print("\nSuccessfully connected to the robot arm: %d\n" % self.handle.id)
 
     def disconnect(self):
         h = self.robot.rm_delete_robot_arm()
         print("\nSuccessfully disconnected from the robot arm\n" if h == 0
               else "\nFailed to disconnect from the robot arm\n")
 
-    def movej(self, joint, v=20, r=0, connect=0, block=1):
-        ret = self.robot.rm_movej(joint, v, r, connect, block)
+    def movej(self, joint, v=20, block=1):
+        ret = self.robot.rm_movej(joint, v, 0, 0, block)
         print("movej succeeded" if ret == 0
               else "movej FAILED, error code: %s" % ret)
         return ret == 0
 
-    def movej_p(self, pose, v=20, r=0, connect=0, block=1):
-        ret = self.robot.rm_movej_p(pose, v, r, connect, block)
+    def movej_p(self, pose, v=20, block=1):
+        ret = self.robot.rm_movej_p(pose, v, 0, 0, block)
         print("movej_p succeeded" if ret == 0
               else "movej_p FAILED, error code: %s" % ret)
         return ret == 0
 
-    def movel(self, pose, v=20, r=0, connect=0, block=1):
-        ret = self.robot.rm_movel(pose, v, r, connect, block)
-        if ret != 0:
-            print("movel FAILED, error code: %s" % ret)
-        return ret == 0
+    def run_sequence(self, poses, program, names, block=1):
+        """movel through `poses`, one (v, r, connect) per pose.
 
-    def run_sequence(self, poses, program, names=None, block=1):
-        """movel through `poses`, one (v, r, connect) per pose."""
+        A connect=1 move is QUEUED, not executed — the SDK returns 0 without
+        the controller having planned anything. Only the final connect=0
+        move plans and runs the chain, so a failure reported there is a
+        failure of the CHAIN and says nothing about that point in
+        particular.
+        """
         for i, pose in enumerate(poses):
             v, r, c = program[i]
-            label = names[i] if names else "move %d" % i
             ret = self.robot.rm_movel(list(pose), v, r, c, block)
             if ret != 0:
                 print("\nmovel FAILED at %s (v=%d r=%d connect=%d), "
-                      "error code: %s\n" % (label, v, r, c, ret))
-                if ret == 1 and r:
-                    print("  a bare ret=1 on a blended move often means the "
-                          "blend could not carry the speed step into that "
-                          "corner — lower r, or lower the speed.\n")
+                      "error code: %s" % (names[i], v, r, c, ret))
+                if c == 0 and i == len(poses) - 1:
+                    print("  This is the move that CLOSES the chain, so the "
+                          "controller planned every queued move here — the "
+                          "fault may lie anywhere in the sequence.")
+                print("  ret=1 is the controller returning false: bad "
+                      "parameters, or the arm is already in an error state.\n")
                 return False
         print("\nsequence succeeded\n")
         return True
 
 
-# ── reporting ───────────────────────────────────────────────────────────
-def describe(traversal, poses, program, names):
-    out = ["points   %d in the traversal (%d movel moves after the movej_p)"
-           % (len(traversal), len(traversal) - 1)]
-    jumps = [(i, n) for i, (n, j) in enumerate(traversal) if j]
-    if jumps:
-        out.append("")
-        out.append("  DISCONTINUITIES — the sequence does not join here, so "
-                   "these moves are implied,")
-        out.append("  not written down. Each is an ordinary straight line "
-                   "the arm will travel:")
-        for i, n in jumps:
-            d = math.dist(poses[i - 1][:3], poses[i][:3])
-            out.append("    %-10s <- %-10s   %.1f mm"
-                       % (n, traversal[i - 1][0], 1000 * d))
+def describe(names, poses, program, doc, notes, rest):
+    tp = doc.get("task_parameters") or {}
+    out = ["plan     movej rest -> movej_p start_pose -> %d x movel -> movej rest"
+           % (len(names) - 1),
+           "rest     %s" % " ".join("%.1f" % v for v in rest),
+           "points   %d in the traversal (%d movel moves after the movej_p)"
+           % (len(names), len(names) - 1),
+           "tool     %s   <- SELECT THIS ON THE PENDANT; it is not set here"
+           % (tp.get("ik_frame") or "NOT DECLARED in the file")]
+    for note in notes:
+        out.append("note     %s" % note)
     out.append("")
     out.append("  %-4s %-12s %-34s %s" % ("#", "point", "pose [m, rad]",
                                           "v /  r / connect"))
-    for i, (name, jump) in enumerate(traversal):
+    prev = None
+    for i, name in enumerate(names):
         q = poses[i]
         pose = ("%8.4f %8.4f %8.4f  %7.3f %7.3f %7.3f"
                 % (q[0], q[1], q[2], q[3], q[4], q[5]))
-        if i == 0:
-            tag = "movej_p"
-        else:
-            v, r, c = program[i - 1]
-            tag = "%3d / %2d / %d" % (v, r, c)
-        out.append("  %-4s %-12s %s   %s%s"
-                   % (i, name, pose, tag, "   <- JUMP" if jump else ""))
+        tag = "movej_p" if i == 0 else "%3d / %2d / %d" % program[i - 1]
+        jump = ""
+        if i and prev is not None:
+            d = math.dist(poses[i - 1][:3], q[:3])
+            if d > 0.15:
+                jump = "   <- %.0f mm" % (1000 * d)
+        out.append("  %-4s %-12s %s   %s%s" % (i, name, pose, tag, jump))
+        prev = name
     return "\n".join(out)
 
 
@@ -453,58 +372,58 @@ def parse_args():
     ap.add_argument("--points", required=True, help="YAML points file")
     ap.add_argument("--ip", default="192.168.1.18", help="arm IP")
     ap.add_argument("--port", type=int, default=8080)
-    ap.add_argument("--v", type=int, default=20,
-                    help="speed %%, all moves (default 20)")
-    ap.add_argument("--blend", "-r", type=int, default=0,
-                    help="blend radius %%%% 0-100, default for every move")
-    ap.add_argument("--connect", type=int, default=1, choices=(0, 1),
-                    help="1 = chain the moves, 0 = discrete (default 1)")
+    ap.add_argument("--v", default="20",
+                    help="speed %%%% 1-100: one value for every movel, or a "
+                         "comma-separated value per move (default 20)")
+    ap.add_argument("--blend", "-r", default="0",
+                    help="blend radius %%%% 0-100: one value, or one per move "
+                         "(default 0)")
+    ap.add_argument("--connect", default="1",
+                    help="1 = chain the move into the next, 0 = discrete: one "
+                         "value, or one per move (default 1)")
     ap.add_argument("--block", type=int, default=1, choices=(0, 1),
                     help="1 = blocking SDK calls (default 1)")
-    ap.add_argument("--loops", type=int, default=1,
-                    help="repeat the motion N times (default 1)")
+    ap.add_argument("--side", choices=("right", "left"), default=None,
+                    help="which arm, for the rest pose (default: from ik_frame)")
     ap.add_argument("--rest", default=None,
                     help="rest joint pose, comma-separated degrees")
     ap.add_argument("--dry-run", action="store_true",
                     help="resolve and print; never touch the arm")
-    args = ap.parse_args()
-    if not 0 <= args.blend <= 100:
-        ap.error("--blend is a PERCENTAGE 0-100 (not mm), got %d" % args.blend)
-    if not 1 <= args.v <= 100:
-        ap.error("--v is a percentage 1-100, got %d" % args.v)
-    if args.loops < 1:
-        ap.error("--loops must be at least 1, got %d" % args.loops)
-    return args
+    return ap.parse_args()
+
+
+def rest_pose(args, doc, notes):
+    """Joint degrees to park at. `--rest`, then the file, then the SRDF."""
+    if args.rest:
+        return [float(x) for x in args.rest.split(",")]
+    if doc.get("rest_pose"):
+        return [float(x) for x in doc["rest_pose"]]
+    side = args.side
+    if side is None:
+        ik = str((doc.get("task_parameters") or {}).get("ik_frame") or "")
+        side = "left" if ik.startswith("L_") else "right"
+        if not ik:
+            notes.append("no ik_frame and no --side — resting the RIGHT arm")
+    return REST_POSE_DEG[side]
 
 
 def main():
     args = parse_args()
-
-    points, sequence, doc = load_points(args.points)
-    traversal = build_traversal(points, sequence)
-    # THE ANCHOR IS THE movej_p TARGET. `start_pose` is usually NOT one of
-    # the cleaning points — in the generated files no point has a zero
-    # delta — so it is prepended as waypoint 0 and the move onto the first
-    # stroke is a real movel. Where it DOES coincide with the first point,
-    # the duplicate is dropped rather than commanded as a zero-length move.
-    if "start_pose" in points and traversal and traversal[0][0] != "start_pose":
-        if math.dist(points["start_pose"][:3],
-                     points[traversal[0][0]][:3]) > 1e-6:
-            traversal.insert(0, ("start_pose", False))
-        else:
-            traversal[0] = ("start_pose", traversal[0][1])
-    poses = [points[n] for n, _ in traversal]
-    names = [n for n, _ in traversal]
-    program = build_program(len(poses) - 1, v=args.v, r=args.blend,
-                            connect=args.connect,
-                            overrides=segment_params(sequence))
+    points, sequence, doc, notes = load_points(args.points)
+    names = traversal(points, sequence)
+    poses = [points[n] for n in names]
+    n_moves = len(poses) - 1
+    program = build_program(
+        n_moves,
+        per_move(args.v, n_moves, "--v", 1, 100),
+        per_move(args.blend, n_moves, "--blend", 0, 100),
+        per_move(args.connect, n_moves, "--connect", 0, 1))
+    speed = program[0][0] if program else 20
+    rest = rest_pose(args, doc, notes)
 
     print()
-    print(describe(traversal, poses, program, names))
+    print(describe(names, poses, program, doc, notes, rest))
     print()
-    if args.blend and not args.connect:
-        print("  [NOTE] --blend %d with --connect 0: a discrete move cannot "
-              "blend into anything, so r is 0 on every move.\n" % args.blend)
 
     if args.dry_run:
         print("dry run — the arm was never contacted.\n")
@@ -512,33 +431,13 @@ def main():
 
     controller = RobotArmController(args.ip, args.port)
     print("API Version: ", rm_api_version(), "\n")        # noqa: F405
-
-    if args.rest:
-        rest = [float(x) for x in args.rest.split(",")]
-    elif doc.get("rest_pose"):
-        rest = [float(x) for x in doc["rest_pose"]]
-    else:
-        rest = arm_models_to_rest.get(controller.get_arm_model())
-    if not rest:
-        controller.disconnect()
-        raise SystemExit(
-            "no rest pose: the arm model is not in `arm_models_to_rest`. "
-            "Pass --rest, or add a `rest_pose:` to the points file.")
-
-    ok = True
-    for loop in range(args.loops):
-        print("--- loop %d/%d ---" % (loop + 1, args.loops))
-        if not controller.movej_p(poses[0], v=args.v, block=args.block):
-            ok = False
-            break
-        if not controller.run_sequence(poses[1:], program, names[1:],
-                                       block=args.block):
-            ok = False
-            break
-
+    ok = (controller.movej(rest, v=speed, block=args.block)
+          and controller.movej_p(poses[0], v=speed, block=args.block)
+          and controller.run_sequence(poses[1:], program, names[1:],
+                                      block=args.block))
     # Rest is attempted even after a failure: an arm left mid-path is worse
     # than one parked, and the failure is already reported above.
-    controller.movej(rest, v=args.v, block=args.block)
+    controller.movej(rest, v=speed, block=args.block)
     controller.disconnect()
     return 0 if ok else 1
 

@@ -2096,3 +2096,183 @@ current c api version:  emu-1.1.6
   rung OK in 21.81 s
   [INFO] right: run mode restored to REAL
   disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-22 15:57:57
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  /home/newtonjeri/realman_API/RM_API2/Demo/RMDemo_Python/RMDemo_CleaningMotion/motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    start (arm)    xyz    623.1    -89.7    -87.4 mm   rpy  -3.121   0.278  -1.820 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 44.4 mm before the first cleaning point
+  program    25 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose, 44.4 mm before the first cleaning point
+  3. cleaning path (25 movel segments)
+  cleaning path: 25 segments via rm_movel, v 100%, r 10%, connect chained
+  cleaning path completed in 19.85 s
+  4. movej   -> rest
+  rung OK in 21.81 s
+  [INFO] right: run mode restored to REAL
+  disconnected
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-23 01:52:20
+========================================================================
+========================================================================
+motion    example_cleaning_config
+  source  ../motions/example_cleaning_config.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 34.3 mm min / 139.7 mm median / 337.0 mm max, 3782 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz     40.3     11.5     14.7 mm   rpy  -0.213  -0.178   1.126 rad
+    start (arm)    xyz     40.3     11.5     14.7 mm   rpy  -0.213  -0.178   1.126 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    0 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 20 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 34.3 mm, longest 337.0 mm, total 3782 mm
+  entry      movej_p -> start_pose, 566.3 mm before the first cleaning point
+  program    25 moves; first (100, 0, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  example_cleaning_config  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+dry run — nothing dispatched.
+
+========================================================================
+  Script : run_cleaning_motion.py
+  Log    : run_cleaning_motion.log
+  Started: 2026-08-23 01:52:53
+========================================================================
+========================================================================
+motion    new_fmt
+  source  /tmp/claude-1000/-home-newtonjeri-realman-API-RM-API2/0bf8ba81-d029-4c2b-95b2-c60a36b848a7/scratchpad/new_fmt.yaml  [cleaning_config]
+  side    right      tool frame Arm_Tip
+  frame   arm_base
+  points  25  (24 movel segments)
+  lengths 48.5 mm min / 198.0 mm median / 420.8 mm max, 4646 mm total
+  frame conversion: source frame is the arm base — no transform applied (pole irrelevant to the poses; assumed at 0.005 m)
+    start (source) xyz    636.2    -38.5   -402.5 mm   rpy  -2.877   0.087   1.811 rad
+    start (arm)    xyz    636.2    -38.5   -402.5 mm   rpy  -2.877   0.087   1.811 rad
+    displacement   0.0 mm
+
+execution (config + CLI)
+  loops      1
+  primitive  rm_movel
+  connect    1 (chained into one trajectory)
+  blend r    10 % of the shorter adjoining segment
+  block      0 (non-blocking, arrival events)
+  v          cleaning 100 %, transit 100 %
+
+speed plan (no speed given — the arm KEEPS its controller's current line_speed; screens assume the factory 0.250 m/s until the arm is read)
+  rungs      0.250 m/s
+  coupling   omega = 1.250 * v
+    0.250 m/s -> line_acc 1.60, angular 0.312 rad/s, angular_acc 4.00
+  segments 24, shortest 48.5 mm, longest 420.8 mm, total 4646 mm
+  entry      movej_p -> start_pose (== the first cleaning point)
+  program    24 moves; first (100, 10, 1), last (100, 0, 0) (the chain-close rule)
+
+------------------------------------------------------------------------
+rung 0.250 m/s  ASSUMED for the screens only — nothing will be written to the
+     controller, and its own settings decide the real speed.
+  J4 screen: UNAVAILABLE — rung is UNSCREENED. This is not a clearance.
+  JUNCTION AUDIT (ADVISORY)  new_fmt  rung 0.25 m/s  line_acc 1.60 m/s^2
+    ARC arcs: 0 checked, 0 over the lateral-acc limit
+    STEP junctions: 13 checked, 0 short of the cut they need
+    ARC (advisory): arcs clear this rung.
+    STEP (advisory): junctions clear this rung.
+------------------------------------------------------------------------
+current c api version:  emu-1.1.6
+  connected to 192.168.1.103 (handle 1)
+  [INFO] right: self-collision detection was OFF -> enabling (ret=0)
+  [INFO] right: run mode set to REAL (--mode)
+  [INFO] right: run mode = REAL
+  [INFO] right: error state clean
+  tool frame Arm_Tip already active
+  starting in 3 ...
+  starting in 2 ...
+  starting in 1 ...
+
+=== rung 1/1 — connect 1, r 10 % ===
+  limits UNCHANGED — using the controller's own settings
+  in force: line_speed 0.250 m/s, line_acc 1.60, angular 0.600 rad/s, angular_acc 4.00
+  1. movej   -> rest
+  2. movej_p -> start_pose (== the first cleaning point)
+  3. cleaning path (24 movel segments)
+  cleaning path: 24 segments via rm_movel, v 100%, r 10%, connect chained
+[emu] WARNING: 1455 of 2343 samples had no IK solution — joint rates are an UNDER-estimate (offline-solver limitation, not the arm)
+  cleaning path completed in 24.99 s
+  4. movej   -> rest
+  rung OK in 26.86 s
+  [INFO] right: run mode restored to REAL
+  disconnected

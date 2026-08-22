@@ -8,15 +8,16 @@ sets nothing. This one is the opposite: it reads the frames from the
 config, computes the transformation into the arm's frame itself, and SETS
 what the controller needs (tool frame, speed limits) before moving.
 
-THE POINTS ARE DELTAS FROM THE START POSE.
+THE POINTS ARE ABSOLUTE POSES, NOT DELTAS (Newton, 2026-08-22).
+`translation` is the position in the reference frame and `rotation` is the
+orientation; nothing is added to `start_pose` and nothing is composed onto
+it. In the generated files the first cleaning point sits exactly ON
+`start_pose`, which is how you can tell at a glance.
 
-    position     p = p_start + translation      <- in REFERENCE FRAME AXES,
-                 not rotated into the start pose's own frame
-    orientation  R = R_delta @ R_start          <- LEFT-multiplied
-                 R_delta = Rx(roll) Ry(pitch) Rz(yaw), in DEGREES
-
-Both of those are easy to invert and neither fails loudly if you do: the
-arm simply cleans somewhere else.
+ROTATIONS ARE EXTRINSIC EULER XYZ, in DEGREES. Extrinsic XYZ — rotating
+about the FIXED x, then y, then z — composes as R = Rz.Ry.Rx, which is
+exactly the controller's own `rm_pose_t` convention, so the angles carry
+through unchanged apart from the unit conversion.
 
 THE START POSE FORMAT DEPENDS ON THE REFERENCE FRAME (Newton, 2026-08-22):
 
@@ -302,9 +303,7 @@ class CleaningConfig:
 
     # ── resolution ──────────────────────────────────────────────────────
     def waypoints_ref(self):
-        """[(name, 4x4 in the REFERENCE frame)] — anchor plus the deltas."""
-        T0 = self.start_pose_matrix()
-        p0, R0 = T0[:3, 3], T0[:3, :3]
+        """[(name, 4x4 in the REFERENCE frame)] — the points, as given."""
         to_rad = self._to_rad
         out = []
         for name, _ in self.traversal():
@@ -319,10 +318,13 @@ class CleaningConfig:
                 raise SystemExit("%s: point %r wants 3 values each"
                                  % (self.path, name))
             T = np.eye(4)
-            # Left-multiplied, matching the C++ runtime: R_delta * R_start.
-            T[:3, :3] = _rpy_to_R_xyz(r[0], r[1], r[2]) @ R0
-            # Added in REFERENCE FRAME axes — NOT rotated into R0.
-            T[:3, 3] = p0 + t
+            # ABSOLUTE, not a delta (Newton, 2026-08-22). The point IS the
+            # pose: nothing is added to the anchor and nothing is composed
+            # onto it. Rotations are EXTRINSIC EULER XYZ, which is the same
+            # composition as the controller's own pose convention
+            # (R = Rz.Ry.Rx), so the angles carry straight through.
+            T[:3, :3] = _rpy_to_R(r[0], r[1], r[2])
+            T[:3, 3] = t
             out.append((name, T))
         return out
 
@@ -506,13 +508,14 @@ def _rpy_to_R(rx, ry, rz):
 
 
 def _rpy_to_R_xyz(rx, ry, rz):
-    """R = Rx(rx) Ry(ry) Rz(rz) — the DELTA convention for cleaning points.
+    """R = Rx(rx) Ry(ry) Rz(rz) — INTRINSIC xyz, i.e. the delta composition
+    the older configs used.
 
-    Note the opposite composition order to `_rpy_to_R`. The two live side
-    by side because the config genuinely uses both: the start pose is a
-    controller-convention pose, while a cleaning point's rotation is a
-    delta the C++ runtime builds as Rx*Ry*Rz and LEFT-multiplies onto the
-    anchor. Collapsing them into one helper is the bug waiting to happen.
+    UNUSED as of 2026-08-22: the points are absolute and their rotations are
+    EXTRINSIC XYZ, which is `_rpy_to_R` above. Kept only so the difference
+    stays written down — extrinsic XYZ and intrinsic xyz are the same three
+    angles composed in opposite orders, and swapping them silently
+    re-orients every waypoint.
     """
     cx, sx = math.cos(rx), math.sin(rx)
     cy, sy = math.cos(ry), math.sin(ry)
