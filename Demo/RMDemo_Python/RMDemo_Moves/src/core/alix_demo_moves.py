@@ -246,6 +246,37 @@ class RobotArmController:
         else:
             print(f"\nSuccessfully connected to the robot arm: {self.handle.id}\n")
 
+    def error_state(self):
+        """(clean, text) — what the controller says about itself.
+
+        `ret=1` from a motion call means "controller returned false:
+        parameter error OR ARM STATE ERROR", and those are very different
+        faults. Without reading the state back there is no way to tell a
+        rejected trajectory from an arm that is already latched in an error
+        and refusing everything.
+        """
+        ret, st = self.robot.rm_get_current_arm_state()
+        if ret != 0 or not isinstance(st, dict):
+            return None, "arm state unreadable (ret=%s)" % ret
+        err = st.get("err") or {}
+        flags = {k: v for k, v in err.items()
+                 if (any(v) if isinstance(v, (list, tuple)) else v)}
+        pose = st.get("pose") or []
+        where = ("at %s" % " ".join("%.4f" % v for v in pose[:3])) if pose else ""
+        if not flags:
+            return True, "controller reports NO error   %s" % where
+        return False, "controller ERROR: %s   %s" % (flags, where)
+
+    def report_state(self, tag):
+        clean, text = self.error_state()
+        print("  [%s] %s" % (tag, text))
+        return clean
+
+    def clear_errors(self):
+        ret = self.robot.rm_clear_system_err()
+        print("  clear_system_err -> ret=%s" % ret)
+        return ret == 0
+
     def get_arm_model(self):
         """Get robotic arm mode."""
         res, model = self.robot.rm_get_robot_info()
@@ -345,8 +376,12 @@ class RobotArmController:
                 pos, v[i], 0 if last else r[i], current_connect, block)
             if moves_result != 0:
                 label = names[i] if names else "index %d" % i
-                print("\nmoves operation failed, error code: %s, at %s: %s\n"
+                print("\nmoves operation failed, error code: %s, at %s: %s"
                       % (moves_result, label, pos))
+                # ret=1 is ambiguous between a refused trajectory and an arm
+                # already in an error state. Ask which it is, immediately,
+                # while the state is still the one that caused it.
+                self.report_state("state at failure")
                 if last:
                     print("  This is the move that CLOSES the chain, so the "
                           "controller planned every queued move here — the "
@@ -401,6 +436,8 @@ def parse_args():
                     help="repeat the moves sequence N times (default 1)")
     ap.add_argument("--block", type=int, default=1, choices=(0, 1),
                     help="1 = blocking SDK calls (default 1)")
+    ap.add_argument("--clear-errors", action="store_true",
+                    help="clear latched controller errors before starting")
     ap.add_argument("--dry-run", action="store_true",
                     help="resolve and print; never touch the arm")
     args = ap.parse_args()
@@ -450,6 +487,10 @@ def main():
             "worse accepted, on a different arm."
             % (ARM_MODEL, args.ip, arm_model))
 
+    if args.clear_errors:
+        robot_controller.clear_errors()
+    robot_controller.report_state("state before the run")
+
     ok = robot_controller.movej(rest, v=v[0], block=args.block)
     if ok:
         ok = robot_controller.movej_p(start_pose, v=v[0], block=args.block)
@@ -461,6 +502,11 @@ def main():
                                         block=args.block, names=names)
             if not ok:
                 break
+            # Between loops: the chain has closed and the arm has arrived.
+            # If a loop leaves the controller latched, the NEXT loop is the
+            # one that reports it, so check here rather than guessing later.
+            if args.loops > 1:
+                robot_controller.report_state("state after loop %d" % (loop + 1))
 
     # Rest is attempted even after a failure: an arm left mid-path is worse
     # than one parked, and the failure is already reported above.
