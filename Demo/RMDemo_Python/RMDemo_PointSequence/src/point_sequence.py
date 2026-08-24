@@ -437,7 +437,7 @@ def main():
                                       block=args.block))
     # Rest is attempted even after a failure: an arm left mid-path is worse
     # than one parked, and the failure is already reported above.
-    controller.movej(rest, v=speed, block=args.block)
+    # controller.movej(rest, v=speed, block=args.block)
     controller.disconnect()
     return 0 if ok else 1
 

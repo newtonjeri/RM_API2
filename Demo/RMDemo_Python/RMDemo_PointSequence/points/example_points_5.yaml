@@ -1,0 +1,66 @@
+# region to change it; do not hand-edit it back onto the surface.
+cartesian_poses:
+  start_pose: [0.582820777, -0.101244954, -0.037139318, 2.914505284, 0.429113471, -3.050705676]
+  pre_start_pose: [0.595247185, -0.10125459, 0.042351308, 2.885900403, 0.112452084, -3.058476034]
+
+# =============================================================================
+# CLEANING POINTS (Absolute pose per point)
+# =============================================================================
+# ABSOLUTE poses in arm_world at pole minimum_length — NOT offsets from start_pose.
+# Encoding: translation [x, y, z] in metres, rotation [r, p, y] in DEGREES (intrinsic XYZ).
+# SAME keys and units as a delta file: task_parameters.point_form
+# is the ONLY thing that tells the two apart, and a reader that
+# assumes deltas would place every point near the frame origin.
+cleaning_points:
+  point1:
+    translation: [0.435314, 0.092755, -0.026147]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point2:
+    translation: [0.633314, 0.092755, -0.024647]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point3:
+    translation: [0.751095, 0.063106, -0.055964]
+    rotation: [-156.4217, 28.687, -114.6722]
+  point4:
+    translation: [0.751095, 0.027317, -0.049918]
+    rotation: [-161.4217, 28.687, -114.6722]
+  point5:
+    translation: [0.633314, 0.044255, -0.024647]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point6:
+    translation: [0.435314, 0.044255, -0.026147]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point7:
+    translation: [0.435314, -0.004245, -0.026147]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point8:
+    translation: [0.633314, -0.004245, -0.024647]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point9:
+    translation: [0.743863, -0.000337, -0.04674]
+    rotation: [-169.4023, 29.0227, -83.3678]
+  point10:
+    translation: [0.742955, -0.049414, -0.047436]
+    rotation: [-169.1765, 29.6767, -87.6684]
+  point11:
+    translation: [0.633314, -0.052745, -0.024647]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point12:
+    translation: [0.435314, -0.052745, -0.026147]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point13:
+    translation: [0.435314, -0.101245, -0.026147]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point14:
+    translation: [0.633314, -0.101245, -0.024647]
+    rotation: [-164.8108, 5.0127, 173.7365]
+  point15:
+    translation: [0.739512, -0.102091, -0.050795]
+    rotation: [-167.3452, 31.8628, -99.9928]
+
+# =============================================================================
+# CLEANING SEQUENCE
+# =============================================================================
+cleaning_sequence:
+  - [point14, point13]
+  - [point13, point15]
