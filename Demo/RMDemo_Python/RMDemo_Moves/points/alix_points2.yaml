@@ -93,18 +93,90 @@ points:
 # The original traversal, densified: a move along a row now visits
 # every column between its endpoints; a move between rows is unchanged.
 sequence:
-  - [point40, point39]
-  - [point39, point38]
-  - [point38, point37]
-  - [point37, point28]
-  - [point28, point19]
-  - [point19, point10]
-  - [point10, point1]
-  - [point1, point2]
-  - [point2, point3]
-  - [point3, point4]
-  - [point4, point5]
+# Test Sequence 3 — SEQUENCE 2, INTERPOLATED. Same path, more waypoints.
+#
+# Every point inserted below lies EXACTLY on a segment of sequence 2
+# (checked to 1e-4 m), so the geometry the arm traces is unchanged — only
+# the number of waypoints along it. Sequence 2's Y strokes ran row 1 to
+# row 5 in one move, past three existing points each; those points are now
+# commanded.
+#
+# The diagonals get nothing inserted, and that is correct rather than an
+# omission: no point in the file lies on them. Inserting the nearest
+# point instead would bend a straight move into a staircase.
+#
+#   36 segments, 37 waypoints, chained end to end
+#   starts point5, ends point41 (start_pose) — same as sequence 2
+#   reaches all 25 points of columns 4-8 x 5 rows; rows touched 0..4
+  - [point5, point42]
+  - [point42, point33]
+  - [point33, point24]
+  - [point24, point15]
+  - [point15, point6]
+  - [point6, point43]
+  - [point43, point34]
+  - [point34, point25]
+  - [point25, point16]
+  - [point16, point7]
+  - [point7, point44]
+  - [point44, point9]
+  - [point9, point18]
+  - [point18, point27]
+  - [point27, point36]
+  - [point36, point45]
+  - [point45, point8]
+  - [point8, point17]
+  - [point17, point26]
+  - [point26, point35]
+  - [point35, point44]
+  - [point44, point7]
+  - [point7, point16]
+  - [point16, point25]
+  - [point25, point34]
+  - [point34, point43]
+  - [point43, point6]
+  - [point6, point15]
+  - [point15, point24]
+  - [point24, point33]
+  - [point33, point42]
+  - [point42, point5]
   - [point5, point14]
   - [point14, point23]
   - [point23, point32]
   - [point32, point41]
+
+# Test Sequence 2 — only the two extreme rows; the Y traverses skip
+# rows 2, 3 and 4.
+  # - [point5, point42]
+  # - [point42, point6]
+  # - [point6, point43]
+  # - [point43, point7]
+  # - [point7, point44]
+  # - [point44, point9]
+  # - [point9, point45]
+  # - [point45, point8]
+  # - [point8, point44]
+  # - [point44, point7]
+  # - [point7, point43]
+  # - [point43, point6]
+  # - [point6, point42]
+  # - [point42, point5]
+  # - [point5, point41]
+
+  
+# Test Sequence 1
+  # - [point40, point39]
+  # - [point39, point38]
+  # - [point38, point37]
+  # - [point37, point28]
+  # - [point28, point19]
+  # - [point19, point10]
+  # - [point10, point1]
+  # - [point1, point2]
+  # - [point2, point3]
+  # - [point3, point4]
+  # - [point4, point5]
+  # - [point5, point14]
+  # - [point14, point23]
+  # - [point23, point32]
+  # - [point32, point41]
