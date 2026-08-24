@@ -1,0 +1,110 @@
+# ==========================================================================
+# alix moves points — rm_pose_t, 9 x 5 grid
+# ==========================================================================
+# EVERY pose is rm_pose_t: [x, y, z, rx, ry, rz], METRES and RADIANS,
+# R = Rz.Ry.Rx, in the RIGHT arm's frame at pole minimum. Dispatched
+# exactly as written.
+#
+# GENERATED from alix_points.yaml by interpolating along X: that file is
+# a 3 x 5 grid, and each of its two X intervals is subdivided into 4,
+# so the three measured columns land on columns 0, 4 and 8 here and
+# are reproduced EXACTLY. Nothing measured has been moved.
+#
+# POSITIONS are linear in x, y AND z — the third column drifts a few mm
+# in y and z off its row, so all three are carried, not just x.
+#
+# ROTATIONS ARE SLERPED, not angle-interpolated. The three Euler angles
+# are a chart, not a vector space: a straight line through them is a
+# curved, non-uniform path through orientation, and near a wrap it is
+# wildly wrong. Each pose is converted to a quaternion, interpolated
+# along the shortest arc at constant angular rate, and converted back.
+# It matters here — along a row the first two columns share one
+# orientation and the third tilts by up to 18 deg.
+#
+# Naming is row-major: point1..point9 are row 1 (largest y),
+# point10..point18 row 2, and so on. start_pose is point41.
+# ==========================================================================
+
+arm_model: RM_75
+
+# WHICH ARM THESE POINTS BELONG TO — not a preference. Each arm has its
+# own base frame, so these poses name a different place on the left arm.
+side: right
+
+rest_pose:
+  right: [0, -82, -26, 98, 6, 62, 69]
+  left:  [0, -82, 26, 98, -6, 62, 111]
+
+# The movej_p target — unchanged, and still a grid point (point41).
+start_pose: [0.63618352, -0.038476499, -0.262499889, -3.12115105, 0.278084253, -1.8193734]
+
+points:
+  # row 1   y ~ +0.1555   (measured columns: point1, point5, point9)
+  point1:   [0.438184, 0.155524, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point2:   [0.487684, 0.155524, -0.263625, -3.12115148, 0.278084888, -1.81937328]
+  point3:   [0.537184, 0.155524, -0.26325, -3.12115148, 0.278084888, -1.81937328]
+  point4:   [0.586684, 0.155524, -0.262875, -3.12115148, 0.278084888, -1.81937328]
+  point5:   [0.636184, 0.155524, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point6:   [0.690763, 0.156784, -0.26085925, -3.04367765, 0.321165539, -1.81307957]
+  point7:   [0.745342, 0.158044, -0.2592185, -2.96472455, 0.363644831, -1.80314196]
+  point8:   [0.799921, 0.159304, -0.25757775, -2.8839617, 0.405242284, -1.78942107]
+  point9:   [0.8545, 0.160564, -0.255937, -2.80105948, 0.445661206, -1.77177078]
+  # row 2   y ~ +0.1070   (measured columns: point10, point14, point18)
+  point10:  [0.438184, 0.107024, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point11:  [0.487684, 0.107024, -0.263625, -3.12115148, 0.278084888, -1.81937328]
+  point12:  [0.537184, 0.107024, -0.26325, -3.12115148, 0.278084888, -1.81937328]
+  point13:  [0.586684, 0.107024, -0.262875, -3.12115148, 0.278084888, -1.81937328]
+  point14:  [0.636184, 0.107024, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point15:  [0.690763, 0.10701175, -0.261281, -3.03776758, 0.300161527, -1.80856282]
+  point16:  [0.745342, 0.1069995, -0.260062, -2.95355665, 0.321293487, -1.79577736]
+  point17:  [0.799921, 0.10698725, -0.258843, -2.86846784, 0.341320615, -1.7810608]
+  point18:  [0.8545, 0.106975, -0.257624, -2.78246772, 0.360085562, -1.76447478]
+  # row 3   y ~ +0.0585   (measured columns: point19, point23, point27)
+  point19:  [0.438184, 0.058524, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point20:  [0.487684, 0.058524, -0.263625, -3.12115148, 0.278084888, -1.81937328]
+  point21:  [0.537184, 0.058524, -0.26325, -3.12115148, 0.278084888, -1.81937328]
+  point22:  [0.586684, 0.058524, -0.262875, -3.12115148, 0.278084888, -1.81937328]
+  point23:  [0.636184, 0.058524, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point24:  [0.690763, 0.0572075, -0.26159025, -3.0320935, 0.279109662, -1.80421702]
+  point25:  [0.745342, 0.055891, -0.2606805, -2.94302005, 0.278834212, -1.78902441]
+  point26:  [0.799921, 0.0545745, -0.25977075, -2.85398471, 0.277260884, -1.77392147]
+  point27:  [0.8545, 0.053258, -0.258861, -2.76504, 0.274403073, -1.75903309]
+  # row 4   y ~ +0.0100   (measured columns: point28, point32, point36)
+  point28:  [0.438184, 0.010024, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point29:  [0.487684, 0.010024, -0.263625, -3.12115148, 0.278084888, -1.81937328]
+  point30:  [0.537184, 0.010024, -0.26325, -3.12115148, 0.278084888, -1.81937328]
+  point31:  [0.586684, 0.010024, -0.262875, -3.12115148, 0.278084888, -1.81937328]
+  point32:  [0.636184, 0.010024, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point33:  [0.69102, 0.008716, -0.26149325, -3.02770835, 0.280216968, -1.80275585]
+  point34:  [0.745856, 0.007408, -0.2604865, -2.93420408, 0.280848715, -1.78599729]
+  point35:  [0.800692, 0.0061, -0.25947975, -2.8407052, 0.279974164, -1.76925114]
+  point36:  [0.855528, 0.004792, -0.258473, -2.74727807, 0.277601571, -1.75267075]
+  # row 5   y ~ -0.0385   (measured columns: point37, point41, point45)
+  point37:  [0.438184, -0.038476, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point38:  [0.487684, -0.038476, -0.263625, -3.12115148, 0.278084888, -1.81937328]
+  point39:  [0.537184, -0.038476, -0.26325, -3.12115148, 0.278084888, -1.81937328]
+  point40:  [0.586684, -0.038476, -0.262875, -3.12115148, 0.278084888, -1.81937328]
+  point41:  [0.636184, -0.038476, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point42:  [0.691529, -0.03976575, -0.26128575, -3.01892945, 0.282416341, -1.79981549]
+  point43:  [0.746874, -0.0410555, -0.2600715, -2.91653868, 0.284805615, -1.77988026]
+  point44:  [0.802219, -0.04234525, -0.25885725, -2.81407654, 0.285225403, -1.75978679]
+  point45:  [0.857564, -0.043635, -0.257643, -2.71164329, 0.283670895, -1.73975728]
+
+# The original traversal, densified: a move along a row now visits
+# every column between its endpoints; a move between rows is unchanged.
+sequence:
+  - [point40, point39]
+  - [point39, point38]
+  - [point38, point37]
+  - [point37, point28]
+  - [point28, point19]
+  - [point19, point10]
+  - [point10, point1]
+  - [point1, point2]
+  - [point2, point3]
+  - [point3, point4]
+  - [point4, point5]
+  - [point5, point14]
+  - [point14, point23]
+  - [point23, point32]
+  - [point32, point41]

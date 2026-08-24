@@ -1,0 +1,60 @@
+# ==========================================================================
+# alix moves points — rm_pose_t format
+# ==========================================================================
+# EVERY pose below is rm_pose_t: [x, y, z, rx, ry, rz], METRES and RADIANS,
+# R = Rz.Ry.Rx (extrinsic xyz), in the arm's own frame at pole minimum.
+# Dispatched to rm_movej_p / rm_moves exactly as written — no conversion,
+# no units to get wrong, nothing added to anything.
+#
+# Converted from RMDemo_PointSequence/points/example_points_4.yaml, whose
+# points are intrinsic-XYZ degrees. That is a RE-DECOMPOSITION, not a
+# reorder of the triple: R = Rx.Ry.Rz is built, then the Rz.Ry.Rx angles
+# are read back off it. Verified on point14, which sits on start_pose —
+# its converted rotation matches start_pose to 6.4e-07 rad.
+# ==========================================================================
+
+arm_model: RM_75
+
+# WHICH ARM THESE POINTS BELONG TO — not a preference.
+# Each arm has its own base frame, so every pose below names a point in the
+# RIGHT arm's frame. On the left arm the same numbers are a different place:
+# the run would be accepted and the arm would go somewhere else. Driving the
+# left arm needs points authored for the left arm; `--side left` against this
+# file is refused rather than run.
+side: right
+
+# Joint degrees, one per arm. Both are listed because the rest pose is a
+# JOINT pose and so is arm-specific in a way the points are too — but only
+# the entry matching `side` above is ever used. They are NOT mirror images:
+# joints 3, 5 and 7 differ.
+rest_pose:
+  right: [0, -82, -26, 98, 6, 62, 69]
+  left:  [0, -82, 26, 98, -6, 62, 111]
+
+# The movej_p target. point14 sits exactly on it.
+start_pose: [0.63618352, -0.038476499, -0.262499889, -3.12115105, 0.278084253, -1.8193734]
+
+points:
+  point1:  [0.438184, 0.155524, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point2:  [0.636184, 0.155524, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point3:  [0.8545, 0.160564, -0.255937, -2.80105948, 0.445661206, -1.77177078]
+  point4:  [0.8545, 0.106975, -0.257624, -2.78246772, 0.360085562, -1.76447478]
+  point5:  [0.636184, 0.107024, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point6:  [0.438184, 0.107024, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point7:  [0.438184, 0.058524, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point8:  [0.636184, 0.058524, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point9:  [0.8545, 0.053258, -0.258861, -2.76504, 0.274403073, -1.75903309]
+  point10: [0.855528, 0.004792, -0.258473, -2.74727807, 0.277601571, -1.75267075]
+  point11: [0.636184, 0.010024, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point12: [0.438184, 0.010024, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point13: [0.438184, -0.038476, -0.264, -3.12115148, 0.278084888, -1.81937328]
+  point14: [0.636184, -0.038476, -0.2625, -3.12115148, 0.278084888, -1.81937328]
+  point15: [0.857564, -0.043635, -0.257643, -2.71164329, 0.283670895, -1.73975728]
+
+# A list of SEGMENTS, [from, to]. Replace with your own.
+# When --loops > 1 the traversal MUST end where it began (a point at
+# start_pose), or each repeat would jump back across the workspace.
+sequence:
+  - [point13, point6]
+  - [point6, point5]
+  - [point5, point14]
